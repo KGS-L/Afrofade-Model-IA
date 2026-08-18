@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static P0 security/commercial integrity checks that require no external services."""
+"""Static P0/P1 security and role-dashboard integrity checks requiring no external services."""
 
 from pathlib import Path
 import sys
@@ -33,6 +33,14 @@ def main() -> int:
     api_main = read("api/main.py")
     migration02 = read("web/supabase/migrations/02_p0_security_commerce.sql")
     migration03 = read("web/supabase/migrations/03_dual_payment_providers.sql")
+    migration04 = read("web/supabase/migrations/04_role_dashboards.sql")
+    customer_api = read("web/src/app/api/account/overview/route.ts")
+    salon_api = read("web/src/app/api/salon/dashboard/route.ts")
+    salon_onboard = read("web/src/app/api/salon/onboard/route.ts")
+    admin_api = read("web/src/app/api/admin/overview/route.ts")
+    customer_page = read("web/src/app/account/page.tsx")
+    salon_page = read("web/src/app/dashboard/page.tsx")
+    admin_page = read("web/src/app/admin/page.tsx")
 
     checks = [
         require("No demo OTP bypass", "token === '123456'" not in auth and 'token === "123456"' not in auth, "hard-coded OTP bypass absent"),
@@ -64,10 +72,22 @@ def main() -> int:
         require("Internal API secret is forwarded", "x-internal-api-key" in reconstruct.lower() and "API_INTERNAL_SECRET" in reconstruct, "Next-to-FastAPI calls are authenticated"),
         require("FastAPI is not wildcard CORS", 'allow_origins=["*"]' not in api_main and "API_ALLOWED_ORIGINS" in api_main, "origins come from explicit configuration"),
         require("FastAPI business routes are protected", "API_INTERNAL_SECRET" in api_main and "require_internal_api_key" in api_main and "X-Internal-API-Key" in api_main, "inference endpoints require internal credential"),
+        require("Role routes are isolated", all(token in middleware for token in ["/account", "principal.role !== 'customer'", "principal.role !== 'salon'", "principal.role !== 'admin'"]), "customer, salon and admin dashboards have server middleware boundaries"),
+        require("New auth users default safely", "handle_afrofade_auth_user_created" in migration04 and "VALUES (NEW.id, 'customer')" in migration04, "new accounts cannot self-mint salon/admin roles"),
+        require("Customer profile is persisted", "customer_profiles" in migration04 and "customer_profiles" in customer_api and ".upsert(" in customer_api, "customer name/phone/country live in Supabase"),
+        require("Customer account is real", "credit_wallets" in customer_api and "credit_transactions" in customer_api and "payment_transactions" in customer_api and "B2C_CREDIT_PACKS" in customer_page, "customer dashboard reads wallet/ledger/payments and can buy server-priced packs"),
+        require("Salon profile is persisted", ".from('salons')" in salon_api and ".update(" in salon_api and "profileCompletion" in salon_api, "salon profile edits are stored server-side"),
+        require("Salon onboarding is authenticated", "getVerifiedPrincipal" in salon_onboard and "principal.role === 'admin'" in salon_onboard and "role: 'salon'" in salon_onboard, "customer can create only their own salon while admin conversion is blocked"),
+        require("Salon dashboard uses real data", "clients_heads" in salon_api and "subscriptions" in salon_api and "payment_transactions" in salon_api and "Stats mock" not in salon_page, "salon KPIs and histories come from Supabase"),
+        require("Admin API enforces role", "principal.role !== 'admin'" in admin_api and "getVerifiedPrincipal" in admin_api, "admin analytics cannot be read by non-admins"),
+        require("Admin dashboard has no fixtures", "const KPIS" not in admin_page and "RECENT_SALONS" not in admin_page and "/api/admin/overview" in admin_page, "admin UI consumes real server analytics"),
+        require("Checkout is role-aware", "purpose === 'credits' && principal.role !== 'customer'" in checkout and "principal.role !== 'salon'" in checkout, "B2C and salon purchases cannot cross role boundaries"),
+        require("Checkout return paths match role", "purpose === 'credits' ? '/account' : '/dashboard'" in checkout, "payment redirects land in the correct operational dashboard"),
+        require("Subscription discounts are server-verified", "discountEligible" in checkout and "previousPayment" in checkout and "salon?.country" in checkout, "client cannot unlock first-subscription discounts locally"),
     ]
 
     passed = sum(checks)
-    print(f"\nP0 invariants: {passed}/{len(checks)} passed")
+    print(f"\nSecurity + role-dashboard invariants: {passed}/{len(checks)} passed")
     return 0 if passed == len(checks) else 1
 
 
