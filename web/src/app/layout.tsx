@@ -36,6 +36,11 @@ export const metadata = {
   title: 'Afrofade — Le Rituel du Miroir : voyez la coupe avant de couper',
   description:
     'Afrofade reconstruit la tête de votre client en 3D à partir de quelques photos et lui essaye fades, locks, tresses et barbes avant le premier coup de tondeuse. Pensé pour les salons et les textures crépues.',
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/logo.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({

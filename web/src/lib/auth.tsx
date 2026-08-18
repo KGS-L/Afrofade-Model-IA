@@ -216,18 +216,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const subscribe = useCallback((plan: PlanName, amount: number, term: TermId) => {
+  const subscribe = useCallback(async (plan: PlanName, amount: number, term: TermId) => {
+    if (!user) return;
+    const eligible = isProfileComplete(user.profile) && !user.everSubscribed;
+    const discount = eligible ? TERMS.find((t) => t.id === term)?.discount ?? 0 : 0;
+    const finalPrice = monthlyPrice(amount, discount);
+
+    try {
+      const res = await fetch('/api/v1/payments/money-fusion/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planName: plan,
+          amountFcfa: finalPrice,
+          termId: term,
+          salonName: user.profile.salonName || user.name,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.warn('[Money Fusion Checkout Error]:', err);
+    }
+
     setUser((prev) => {
       if (!prev) return prev;
-      const eligible = isProfileComplete(prev.profile) && !prev.everSubscribed;
-      const discount = eligible ? TERMS.find((t) => t.id === term)?.discount ?? 0 : 0;
       const next: AuthUser = {
         ...prev,
         everSubscribed: true,
         subscription: {
           plan,
           term,
-          monthlyFcfa: monthlyPrice(amount, discount),
+          monthlyFcfa: finalPrice,
           startedAt: new Date().toISOString(),
           isFirstWithDiscount: discount > 0,
         },
@@ -239,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
-  }, []);
+  }, [user]);
 
   const value = useMemo(
     () => ({
