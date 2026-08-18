@@ -36,7 +36,7 @@ tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
   epic-1: backlog
-  1-1-migration-du-schéma-postgresql-stratégie-rls-supabase: backlog
+  1-1-schéma-de-base-de-données-postgresql-middleware-de-sécurité: backlog
   1-2-authentification-salon-google-oauth-e-mail-code-otp: backlog
   epic-1-retrospective: optional
 

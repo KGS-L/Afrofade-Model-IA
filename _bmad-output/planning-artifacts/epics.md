@@ -77,16 +77,16 @@ Ce document fournit le découpage complet des Epics et User Stories pour le proj
 
 **Goal**: Établir la base de données Supabase, la sécurité RLS, les schémas PostgreSQL et le flux d'authentification Google/OTP.
 
-### Story 1.1: Migration du Schéma PostgreSQL & Stratégie RLS Supabase
-As an Architect,
-I want to apply the core PostgreSQL schema (`salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog`) with strict RLS policies,
-So that each salon's data is isolated and secured at the database level.
+### Story 1.1: Schéma de Base de Données PostgreSQL & Middleware de Sécurité Next.js
+As a Developer,
+I want to establish the PostgreSQL database schema (`salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog`) and Next.js middleware access control,
+So that Next.js securely handles all salon authentication, quota checks, and data isolation.
 
 **Acceptance Criteria:**
-**Given** a Supabase PostgreSQL database
+**Given** a PostgreSQL database (Supabase/Postgres)
 **When** the migration script runs
 **Then** tables `salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog` are created
-**And** RLS policy `salon_id = auth.uid()` is enforced on `salons` and `clients_heads`.
+**And** Next.js middleware/API routes verify `salon_id` on every protected request.
 
 ### Story 1.2: Authentification Salon (Google OAuth & E-mail Code OTP)
 As a Salon Manager,

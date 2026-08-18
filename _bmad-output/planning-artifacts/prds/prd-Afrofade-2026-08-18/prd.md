@@ -157,8 +157,8 @@ Le système doit supporter 3 plans tarifaires :
 #### FR-11: Webhook de Paiement Mobile Money
 Les paiements effectués via GeniusPay / Money Fusion (Wave, Orange Money, MTN, Moov) doivent déclencher le webhook `/api/webhooks/payment` pour mettre à jour instantanément le plan du salon et réinitialiser le quota le 1er de chaque mois. Realizes UJ-3.
 
-#### FR-12: Isolation Row Level Security (RLS)
-Chaque requête de base de données PostgreSQL/Supabase doit être strictement isolée par RLS pour garantir qu'un salon ne peut accéder qu'à ses propres fiches clients et statistiques (`salon_id = auth.uid()`).
+#### FR-12: Isolation & Contrôle d'Accès Next.js
+Chaque requête d'API ou action Next.js doit vérifier la session du salon authentifié afin de garantir qu'un salon ne peut accéder ou modifier que ses propres fiches clients, abonnements et statistiques (`salon_id = session.salon_id`).
 
 ---
 
