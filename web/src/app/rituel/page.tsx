@@ -56,7 +56,7 @@ const SLOTS: { key: AngleKey; label: string; desc: string }[] = [
 ];
 
 const STEPS = [
-  { n: 1, label: 'Photos' },
+  { n: 1, label: 'Scan 3D Vidéo' },
   { n: 2, label: 'Avatar 3D' },
   { n: 3, label: 'Coiffure' },
   { n: 4, label: 'Finition' },
@@ -298,16 +298,19 @@ export default function RituelPage() {
             })}
           </ol>
 
-          {/* ---------------- ÉTAPE 1 — Photos ---------------- */}
+          {/* ---------------- ÉTAPE 1 — Scan Vidéo Guidé ---------------- */}
           {step === 1 && (
-            <section aria-label="Étape 1 — dépôt des photos" className="space-y-6">
+            <section aria-label="Étape 1 — scan vidéo guidé 3D" className="space-y-6">
               <div className="text-center space-y-2">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-terracotta bg-terracotta-wash px-3 py-1 rounded-pill">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Scanner 3D Guidé Temps Réel (Style FaceID)
+                </span>
                 <h1 className="font-display text-2xl sm:text-3xl">
-                  Ajoutez les 4 photos
+                  Lancez le Scan Vidéo 3D
                 </h1>
                 <p className="text-sm text-ink-soft max-w-md mx-auto">
-                  Face, profil gauche, profil droit et arrière — c’est tout ce
-                  qu’il faut pour votre avatar 3D.
+                  Positionnez votre visage devant la caméra. L’application suit vos mouvements et valide automatiquement la Face, les Profils et la Nuque.
                 </p>
               </div>
 
@@ -324,8 +327,8 @@ export default function RituelPage() {
                       }
                       aria-label={
                         has
-                          ? `Photo ${slot.label} ajoutée — toucher pour reprendre`
-                          : `Ajouter la photo ${slot.label}`
+                          ? `Étape ${slot.label} validée — toucher pour réinitialiser`
+                          : `Lancer le scan ${slot.label}`
                       }
                       className={`group relative h-40 rounded-frame border-2 border-dashed flex flex-col items-center justify-center p-2 cursor-pointer transition-all overflow-hidden ${
                         has
@@ -346,13 +349,13 @@ export default function RituelPage() {
                             <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
                           </span>
                           <span className="absolute bottom-2 left-2 right-2 bg-ink/85 backdrop-blur-sm rounded-lg px-2 py-1 text-[10px] text-center font-bold text-white">
-                            {slot.label} ✓
+                            {slot.label} ✓ (Validé)
                           </span>
                         </>
                       ) : (
                         <div className="text-center space-y-1.5 p-2">
                           <div className="w-8 h-8 rounded-full bg-terracotta-wash border border-terracotta/30 flex items-center justify-center mx-auto text-terracotta group-hover:bg-terracotta group-hover:text-white transition-colors">
-                            <Upload className="w-4 h-4" />
+                            <Sparkles className="w-4 h-4" />
                           </div>
                           <span className="text-xs font-bold block">{slot.label}</span>
                           <span className="text-[9px] text-ink-soft block leading-tight">
@@ -366,15 +369,18 @@ export default function RituelPage() {
               </div>
 
               <ul className="grid sm:grid-cols-3 gap-3">
-                {REQUIREMENTS.map((req) => (
-                  <li
-                    key={req}
-                    className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
-                    {req}
-                  </li>
-                ))}
+                <li className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
+                  Cadrage automatique ovale vert
+                </li>
+                <li className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
+                  Guidage vocal & indicateur d’angle
+                </li>
+                <li className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
+                  Capture automatique sans toucher
+                </li>
               </ul>
 
               <button
@@ -387,7 +393,7 @@ export default function RituelPage() {
                     : 'bg-ink/10 text-ink-soft/70 cursor-not-allowed border border-ink/10'
                 }`}
               >
-                Créer mon avatar 3D
+                Lancer la Reconstruction 3D (Scan Validé)
                 <ArrowRight className="w-4 h-4" />
               </button>
 
