@@ -2,15 +2,15 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Check } from 'lucide-react';
+import { Check, Eye } from 'lucide-react';
 import { stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
+import { Hairstyle3DPreviewModal } from './Hairstyle3DPreviewModal';
 
 export interface HairstyleItem {
   id: string;
   category: 'fade' | 'locks' | 'tresses' | 'afro' | 'barbe';
   title: string;
   subtitle: string;
-  thumbnail: string;
   color: string;
   isPremium: boolean;
 }
@@ -22,7 +22,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'fade',
     title: 'Low Taper Fade & Line-Up',
     subtitle: 'Dégradé bas progressif avec contours rectilignes nets au rasoir',
-    thumbnail: '/models/result-final-profil-droit.png',
     color: '#1a110b',
     isPremium: false,
   },
@@ -31,7 +30,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'fade',
     title: 'Burst Fade Mohawk Afro',
     subtitle: 'Dégradé arrondi autour des oreilles & crête naturelle haut de tête',
-    thumbnail: '/models/result-final-face.png',
     color: '#1c120c',
     isPremium: false,
   },
@@ -40,7 +38,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'fade',
     title: 'High Drop Fade & Sharp Edge',
     subtitle: 'Dégradé haut qui plonge à la nuque avec tracé temporal ultra-précis',
-    thumbnail: '/models/result-final-nuque.png',
     color: '#180e09',
     isPremium: true,
   },
@@ -49,7 +46,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'fade',
     title: 'Mid Temple Fade & C-Cup',
     subtitle: 'Dégradé moyen aux tempes avec contours en C sculptés',
-    thumbnail: '/models/result-final-profil-droit.png',
     color: '#150c07',
     isPremium: false,
   },
@@ -60,7 +56,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'locks',
     title: 'Short Locks High Top',
     subtitle: 'Locks courtes sculptées avec dégradé à blanc sur les tempes',
-    thumbnail: '/models/result-final-face.png',
     color: '#140c07',
     isPremium: true,
   },
@@ -69,7 +64,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'locks',
     title: 'Dreadlocks Faded Sides',
     subtitle: 'Locks mi-longues relevées en chignon avec côtés dégradés à ras',
-    thumbnail: '/models/result-final-profil-droit.png',
     color: '#1b1009',
     isPremium: true,
   },
@@ -78,7 +72,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'locks',
     title: 'Sisterlocks & Contours Fins',
     subtitle: 'Micro-locks affinées et bien définies avec ligne temporale naturelle',
-    thumbnail: '/models/result-final-face.png',
     color: '#160d08',
     isPremium: true,
   },
@@ -87,7 +80,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'locks',
     title: 'Freeform Locks Natural',
     subtitle: 'Locks authentiques freeform avec contours des oreilles nettoyés',
-    thumbnail: '/models/result-final-nuque.png',
     color: '#1d120a',
     isPremium: false,
   },
@@ -98,7 +90,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'tresses',
     title: 'Cornrows Géométriques',
     subtitle: 'Tresses plaquées motifs géométriques & ligne nette au rasoir',
-    thumbnail: '/models/result-final-face.png',
     color: '#1a100a',
     isPremium: true,
   },
@@ -107,7 +98,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'tresses',
     title: 'Fulani Braids Traditionnelles',
     subtitle: 'Tresses symétriques d’inspiration peule avec détails de nuque sculptés',
-    thumbnail: '/models/result-final-nuque.png',
     color: '#180e08',
     isPremium: true,
   },
@@ -116,7 +106,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'tresses',
     title: 'Box Braids Masculines',
     subtitle: 'Tresses carrées courtes structurées avec dégradé undercut',
-    thumbnail: '/models/result-final-profil-droit.png',
     color: '#150c07',
     isPremium: true,
   },
@@ -125,7 +114,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'tresses',
     title: 'Twists Sénégalais Sculptés',
     subtitle: 'Torsades à deux brins denses avec contours rasoir rafraîchis',
-    thumbnail: '/models/result-final-face.png',
     color: '#190f09',
     isPremium: false,
   },
@@ -136,7 +124,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'afro',
     title: 'Afro Sponge Twists & Taper',
     subtitle: 'Texture torsadée au sponge brush avec contours fins et nuque propre',
-    thumbnail: '/models/result-final-profil-droit.png',
     color: '#24150b',
     isPremium: false,
   },
@@ -145,7 +132,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'afro',
     title: 'Afro High Top Vintage',
     subtitle: 'Volume rectangulaire sculpté style 90s avec dégradé temporel net',
-    thumbnail: '/models/result-final-face.png',
     color: '#1d110a',
     isPremium: false,
   },
@@ -156,7 +142,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'barbe',
     title: 'Barbe Sculptée & Contours Rasoir',
     subtitle: 'Taille au millimètre, contours nets & soin huile finition miroir',
-    thumbnail: '/models/result-final-profil-droit.png',
     color: '#110b07',
     isPremium: true,
   },
@@ -165,7 +150,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     category: 'barbe',
     title: 'Moustache & Goatee Sculptée',
     subtitle: 'Bouc taillé au fil du rasoir avec moustaches fines dessinées',
-    thumbnail: '/models/result-final-face.png',
     color: '#130c07',
     isPremium: false,
   },
@@ -184,6 +168,7 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
   query = '',
 }) => {
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [previewItem, setPreviewItem] = useState<HairstyleItem | null>(null);
 
   const filteredItems = HAIRSTYLES_DATA.filter(
     (item) =>
@@ -222,12 +207,12 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
             {HAIRSTYLES_DATA.length} modèles de coiffures afro signés
           </h2>
           <p className="text-xs text-ink-soft mt-1">
-            Touchez une coupe pour la projeter instantanément sur le modèle 3D du client.
+            Touchez l’œil pour l’inspection 3D ou sélectionnez la coupe à projeter.
           </p>
         </div>
       </div>
 
-      {/* Filter Tabs — tablist ARIA, navigation flèches gauche/droite */}
+      {/* Filter Tabs — tablist ARIA */}
       <div
         role="tablist"
         aria-label="Familles de coiffures"
@@ -257,7 +242,7 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
         })}
       </div>
 
-      {/* Grille de style_card — panneau piloté par les onglets */}
+      {/* Grille de style_card */}
       <div
         role="tabpanel"
         id={PANEL_ID}
@@ -285,7 +270,7 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
               {/* Photo Portrait Container */}
               <div className="relative aspect-[4/3] w-full overflow-hidden bg-terracotta-wash">
                 <Image
-                  src={item.thumbnail}
+                  src={`/models/hairstyles/${item.id}/model-1-face.png`}
                   alt={`Rendu 3D — ${item.title}`}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -298,6 +283,19 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
                 >
                   {plan}
                 </span>
+
+                {/* Bouton Inspection 3D (Icône Oeil) */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewItem(item);
+                  }}
+                  title="Inspecter en 3D 360°"
+                  className="absolute bottom-3 right-3 bg-ink/80 hover:bg-terracotta text-white p-2 rounded-full shadow-soft transition-all duration-300 hover:scale-110 flex items-center justify-center gap-1 text-[11px] font-bold px-3"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>Aperçu 3D</span>
+                </button>
 
                 {/* Selected Checkmark */}
                 {isSelected && (
@@ -325,6 +323,12 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
           );
         })}
       </div>
+
+      {/* Modal Inspection 3D */}
+      <Hairstyle3DPreviewModal
+        item={previewItem}
+        onClose={() => setPreviewItem(null)}
+      />
     </div>
   );
 };

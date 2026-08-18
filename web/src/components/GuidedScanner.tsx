@@ -47,10 +47,10 @@ interface AngleDef {
  *  Un seul personnage : profil gauche = miroir du profil droit, nuque =
  *  recadrage zoom sur l'arrière de l'Afro de la photo de profil. */
 const ANGLES: AngleDef[] = [
-  { key: 'face', label: 'Face', cue: 'Regardez la caméra', deg: '0°', sample: '/models/client-face.jpg', demoPos: '50% 22%' },
-  { key: 'profil_droit', label: 'Profil droit', cue: 'Tournez doucement la tête vers la droite', deg: '+90°', sample: '/models/client-profil.jpg', demoPos: '42% 26%' },
-  { key: 'profil_gauche', label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', sample: '/models/client-profil.jpg', demoPos: '42% 26%', mirror: true },
-  { key: 'nuque', label: 'Nuque', cue: 'Présentez la nuque à la caméra', deg: '180°', sample: '/models/client-profil.jpg', demoPos: '42% 26%', demoClass: 'scale-[2.15] origin-[67%_18%]' },
+  { key: 'face', label: 'Face', cue: 'Regardez la caméra', deg: '0°', sample: '/models/demo/client-face.jpg', demoPos: '50% 22%' },
+  { key: 'profil_droit', label: 'Profil droit', cue: 'Tournez doucement la tête vers la droite', deg: '+90°', sample: '/models/demo/client-profil.jpg', demoPos: '42% 26%' },
+  { key: 'profil_gauche', label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', sample: '/models/demo/client-profil.jpg', demoPos: '42% 26%', mirror: true },
+  { key: 'nuque', label: 'Nuque', cue: 'Présentez la nuque à la caméra', deg: '180°', sample: '/models/demo/client-profil.jpg', demoPos: '42% 26%', demoClass: 'scale-[2.15] origin-[67%_18%]' },
 ];
 
 /* Paramètres du moteur de stabilité */

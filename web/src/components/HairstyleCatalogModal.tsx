@@ -169,7 +169,7 @@ export const HairstyleCatalogModal: React.FC<HairstyleCatalogModalProps> = ({
                     {/* Visual 3D Container */}
                     <div className="relative aspect-[4/3] w-full overflow-hidden bg-terracotta-wash">
                       <Image
-                        src={item.thumbnail}
+                        src={`/models/hairstyles/${item.id}/model-1-face.png`}
                         alt={`Aperçu 3D — ${item.title}`}
                         fill
                         sizes="(max-width: 640px) 100vw, 33vw"

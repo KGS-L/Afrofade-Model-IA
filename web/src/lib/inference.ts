@@ -30,7 +30,7 @@ export async function trigger3DReconstruction(
     const message = err instanceof Error ? err.message : 'Erreur d’inférence 3D';
     console.warn('Fallback 3D modèle générique:', message);
     return {
-      meshGlbUrl: '/models/afro_taper_fade.png',
+      meshGlbUrl: '/models/demo/afro_taper_fade.png',
       processingTimeMs: 1200,
       meshSizeBytes: 1420580,
       isFallback: true,

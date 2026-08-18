@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const processingTimeMs = endTime - startTime;
 
     // Draco compressed .glb mesh model under 2MB (NFR-1)
-    const meshGlbUrl = '/models/afro_taper_fade.png';
+    const meshGlbUrl = '/models/demo/afro_taper_fade.png';
     const meshSizeBytes = 1420580; // ~1.42 MB
 
     return NextResponse.json<ReconstructionResponse>({

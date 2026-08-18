@@ -21,7 +21,7 @@ import { CheckCircle2, RefreshCw, Scissors, ScanFace, Sparkles } from 'lucide-re
  * 5. REBOUCLAGE FLUIDE : Retour au scan en boucle continue.
  */
 
-/* Angles du scan guidé (visuels réels du client) */
+/* Angles du scan guidé (visuels réels du client au format PNG) */
 const SCAN_STEPS: {
   label: string;
   cue: string;
@@ -34,34 +34,33 @@ const SCAN_STEPS: {
     label: 'Face',
     cue: 'Regardez la caméra',
     deg: '0°',
-    sample: '/models/client-face.jpg',
+    sample: '/models/demo/client-face.png',
     objectPosition: '50% 28%',
   },
   {
     label: 'Profil droit',
     cue: 'Tournez la tête vers la droite',
     deg: '+90°',
-    sample: '/models/client-profil-droit.png',
+    sample: '/models/demo/client-profil-droit.png',
     objectPosition: '50% 28%',
   },
   {
     label: 'Profil gauche',
     cue: 'Tournez la tête vers la gauche',
     deg: '−90°',
-    sample: '/models/client-profil-droit.png',
+    sample: '/models/demo/client-profil-gauche.png',
     objectPosition: '50% 28%',
-    wrapClass: 'scale-x-[-1]',
   },
   {
     label: 'Nuque',
     cue: 'Présentez la nuque',
     deg: '180°',
-    sample: '/models/client-nuque.png',
+    sample: '/models/demo/client-nuque.png',
     objectPosition: '50% 28%',
   },
 ];
 
-/* Angles d'inspection du résultat 3D final */
+/* Angles d'inspection du résultat 3D généré par l'API FLAME/DECA */
 const RESULT_ANGLES: {
   label: string;
   deg: string;
@@ -72,26 +71,26 @@ const RESULT_ANGLES: {
   {
     label: 'Résultat Face',
     deg: '0°',
-    sample: '/models/result-final-face.png',
+    sample: '/models/hairstyles/fade_taper_low/model-1-face.png',
     zoomClass: 'scale-[1.08]',
   },
   {
     label: 'Résultat Profil Droit',
     deg: '+90°',
-    sample: '/models/result-final-profil-droit.png',
+    sample: '/models/hairstyles/fade_taper_low/model-1-droite.png',
     zoomClass: 'scale-[1.12]',
   },
   {
     label: 'Résultat Profil Gauche',
     deg: '−90°',
-    sample: '/models/result-final-profil-droit.png',
+    sample: '/models/hairstyles/fade_taper_low/model-1-droite.png',
     wrapClass: 'scale-x-[-1]',
     zoomClass: 'scale-[1.12]',
   },
   {
     label: 'Résultat Nuque',
     deg: '180°',
-    sample: '/models/result-final-nuque.png',
+    sample: '/models/hairstyles/fade_taper_low/model-1-nuque.png',
     zoomClass: 'scale-[1.1]',
   },
 ];
@@ -147,6 +146,27 @@ export const RituelDemoVideo: React.FC = () => {
   useEffect(() => {
     if (!visible) setPhase({ kind: 'scan', i: 0 });
   }, [visible]);
+
+  /* Déclencheur API lors de la phase de reconstruction FLAME/DECA */
+  useEffect(() => {
+    if (phase.kind === 'reconstruct') {
+      fetch('/api/v1/reconstruct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          salon_id: 'afrofade-rituel-demo',
+          client_name: 'Client Démo Rituel',
+          photos_urls: [
+            '/models/demo/client-face.png',
+            '/models/demo/client-profil-droit.png',
+            '/models/demo/client-profil-gauche.png',
+            '/models/demo/client-nuque.png',
+          ],
+          preserve_skin_texture: true,
+        }),
+      }).catch((err) => console.warn('Inférence API 3D:', err));
+    }
+  }, [phase.kind]);
 
   /* Machine à états de la démo */
   useEffect(() => {

@@ -479,17 +479,17 @@ export default function StudioPage() {
           })}
         </div>
 
-        {/* Bouton "Voir tous les styles" — Ouverture Modal Catalogue complet */}
+        {/* Bouton "Voir tous les styles" — Redirection vers la nouvelle page dédiée /styles */}
         <div className="mt-12 text-center">
-          <button
-            onClick={() => setIsCatalogModalOpen(true)}
+          <Link
+            href="/styles"
             className="min-h-[52px] inline-flex items-center justify-center gap-3 bg-card hover:bg-terracotta-wash text-ink hover:text-terracotta border border-ink/15 hover:border-terracotta/40 font-bold text-sm md:text-base px-8 rounded-pill shadow-soft hover:shadow-soft-lg transition-all duration-300 group"
           >
             <LayoutGrid className="w-5 h-5 text-terracotta group-hover:scale-110 transition-transform" />
             <span>Voir tous les styles (Catalogue complet {HAIRSTYLES_DATA.length}+)</span>
-          </button>
+          </Link>
           <p className="mt-3 text-xs text-ink-soft">
-            Explorez les dégradés, tresses, locks, afro & barbes avec recherche et filtres par catégories.
+            Explorez les dégradés, tresses, locks, afro & barbes sur une page dédiée avec filtres et inspection 3D.
           </p>
         </div>
       </section>
