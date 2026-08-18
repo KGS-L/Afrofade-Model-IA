@@ -75,7 +75,7 @@ jobs:
           docker compose build
 
   deploy-vps:
-    name: Deploy Afrofade to VPS (project/Afrofade)
+    name: Deploy Afrofade to VPS (projects/Afrofade)
     environment: prod
     runs-on: [self-hosted, Linux, X64]
     needs: [docker-build]
@@ -91,7 +91,7 @@ jobs:
           DOMAIN: "afrofade.pro"
           EMAIL: "contact@afrofade.pro"
         run: |
-          TARGET_DIR="${VPS_AFROFADE_PATH:-$HOME/project/Afrofade}"
+          TARGET_DIR="${VPS_AFROFADE_PATH:-$HOME/projects/Afrofade}"
           echo "Dossier cible sur le VPS : $TARGET_DIR"
           
           mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"

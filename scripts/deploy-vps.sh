@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Script de déploiement local / VPS pour Afrofade sur /root/project/Afrofade ou ~/project/Afrofade
+# Script de déploiement local / VPS pour Afrofade sur /root/projects/Afrofade ou ~/projects/Afrofade
 
-TARGET_DIR="${1:-$HOME/project/Afrofade}"
+TARGET_DIR="${1:-$HOME/projects/Afrofade}"
 DOMAIN="${2:-afrofade.pro}"
 EMAIL="${3:-contact@afrofade.pro}"
 
