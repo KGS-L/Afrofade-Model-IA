@@ -1,0 +1,75 @@
+name: Afrofade CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-web:
+    name: Build & Validate Web Frontend (Next.js 14)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd web
+          npm install
+
+      - name: Build Next.js Production Bundle
+        run: |
+          cd web
+          npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_APP_URL: https://afrofade.pro
+          NEXT_PUBLIC_API_URL: https://afrofade.pro/api
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+
+  test-api:
+    name: Validate Backend 3D AI Engine (FastAPI & OpenCV)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Python Dependencies
+        run: |
+          cd api
+          pip install --upgrade pip
+          pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
+      - name: Check AI Model Downloader & Gatekeeper
+        run: |
+          python3 api/scripts/download_models.py
+
+  docker-build:
+    name: Test Docker Compose Multi-Stage Build
+    runs-on: ubuntu-latest
+    needs: [test-web, test-api]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Containers
+        run: |
+          docker compose build
