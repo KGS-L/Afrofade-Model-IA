@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-web:
-    name: Build & Validate Web Frontend (Next.js 14)
+    name: Build & Validate Web Frontend (Next.js 16)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,18 +21,29 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Normalize stale lockfile and install reproducibly
+      - name: Normalize lockfile for patched dependency graph
         run: |
           cd web
           npm install --package-lock-only --ignore-scripts
-          echo '--- package-lock changes required by npm ---'
-          git diff -- package-lock.json || true
           npm ci
+
+      - name: Export normalized lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-normalized-package-lock
+          path: web/package-lock.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Audit production dependencies
         run: |
           cd web
           npm audit --omit=dev --audit-level=high
+
+      - name: TypeScript validation
+        run: |
+          cd web
+          npm run typecheck
 
       - name: Build Next.js Production Bundle
         run: |
