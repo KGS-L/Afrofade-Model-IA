@@ -120,6 +120,7 @@ export async function POST(req: NextRequest) {
       normalizeOptionalString(salon?.name) ||
       normalizeOptionalString(metadata.full_name) ||
       normalizeOptionalString(metadata.name) ||
+      normalizeOptionalString(body?.customerName) ||
       principal.user.email ||
       'Client Afrofade';
     const customerPhone =
