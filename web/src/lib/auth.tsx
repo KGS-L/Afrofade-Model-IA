@@ -48,6 +48,8 @@ interface ServerSessionUser {
   name: string;
   role: 'customer' | 'salon' | 'admin';
   salonId: string | null;
+  subscription: AuthUser['subscription'];
+  everSubscribed: boolean;
 }
 
 function mergeServerUser(serverUser: ServerSessionUser, cached: AuthUser | null): AuthUser {
@@ -57,9 +59,16 @@ function mergeServerUser(serverUser: ServerSessionUser, cached: AuthUser | null)
     name: serverUser.name,
     role: serverUser.role,
     profile: cached?.profile || { salonName: '', country: '', phone: '' },
-    subscription: cached?.subscription || null,
-    everSubscribed: cached?.everSubscribed || false,
+    subscription: serverUser.subscription,
+    everSubscribed: serverUser.everSubscribed,
   };
+}
+
+async function fetchServerSession(): Promise<ServerSessionUser | null> {
+  const response = await fetch('/api/auth/session', { cache: 'no-store' });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return (data.user ?? null) as ServerSessionUser | null;
 }
 
 async function establishServerSession(accessToken: string): Promise<ServerSessionUser | null> {
@@ -90,6 +99,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cached: AuthUser | null = null;
+    let paymentPollTimer: number | null = null;
+    let paymentPollStopTimer: number | null = null;
+
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       cached = raw ? (JSON.parse(raw) as AuthUser) : null;
@@ -97,18 +109,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cached = null;
     }
 
-    fetch('/api/auth/session', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        const data = await response.json();
-        return (data.user ?? null) as ServerSessionUser | null;
-      })
+    fetchServerSession()
       .then((serverUser) => {
         if (serverUser) persist(mergeServerUser(serverUser, cached));
         else persist(null);
       })
       .catch(() => persist(null))
       .finally(() => setHydrated(true));
+
+    // The provider redirect can arrive a few seconds before its webhook. When
+    // returning with payment=pending, re-read server billing state briefly so
+    // a verified subscription unlocks the UI without any client-side trust.
+    const paymentPending = new URLSearchParams(window.location.search).get('payment') === 'pending';
+    if (paymentPending) {
+      paymentPollTimer = window.setInterval(async () => {
+        try {
+          const serverUser = await fetchServerSession();
+          if (!serverUser) return;
+          setUser((previous) => {
+            const next = mergeServerUser(serverUser, previous);
+            try {
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            } catch {
+              /* ignore */
+            }
+            return next;
+          });
+          if (serverUser.subscription && paymentPollTimer !== null) {
+            window.clearInterval(paymentPollTimer);
+            paymentPollTimer = null;
+          }
+        } catch {
+          /* transient provider/webhook lag; next poll will retry */
+        }
+      }, 2000);
+
+      paymentPollStopTimer = window.setTimeout(() => {
+        if (paymentPollTimer !== null) {
+          window.clearInterval(paymentPollTimer);
+          paymentPollTimer = null;
+        }
+      }, 30000);
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session?.access_token) return;
@@ -117,7 +159,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser((previous) => mergeServerUser(serverUser, previous));
     });
 
-    return () => authListener.subscription.unsubscribe();
+    return () => {
+      authListener.subscription.unsubscribe();
+      if (paymentPollTimer !== null) window.clearInterval(paymentPollTimer);
+      if (paymentPollStopTimer !== null) window.clearTimeout(paymentPollStopTimer);
+    };
   }, [persist]);
 
   const loginWithEmail = useCallback(async (email: string): Promise<boolean> => {
