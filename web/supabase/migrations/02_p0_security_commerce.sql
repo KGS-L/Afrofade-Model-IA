@@ -65,24 +65,101 @@ ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_purchases ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS user_profiles_select_own ON user_profiles;
-CREATE POLICY user_profiles_select_own ON user_profiles
-FOR SELECT USING (auth.uid() = user_id);
-
+CREATE POLICY user_profiles_select_own ON user_profiles FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS payment_transactions_select_own ON payment_transactions;
-CREATE POLICY payment_transactions_select_own ON payment_transactions
-FOR SELECT USING (auth.uid() = user_id);
-
+CREATE POLICY payment_transactions_select_own ON payment_transactions FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS credit_wallets_select_own ON credit_wallets;
-CREATE POLICY credit_wallets_select_own ON credit_wallets
-FOR SELECT USING (auth.uid() = user_id);
-
+CREATE POLICY credit_wallets_select_own ON credit_wallets FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS credit_transactions_select_own ON credit_transactions;
-CREATE POLICY credit_transactions_select_own ON credit_transactions
-FOR SELECT USING (auth.uid() = user_id);
-
+CREATE POLICY credit_transactions_select_own ON credit_transactions FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS credit_purchases_select_own ON credit_purchases;
-CREATE POLICY credit_purchases_select_own ON credit_purchases
-FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY credit_purchases_select_own ON credit_purchases FOR SELECT USING (auth.uid() = user_id);
+
+-- Atomic, idempotent commerce finalization. Only the service role may execute it.
+CREATE OR REPLACE FUNCTION finalize_afrofade_payment(
+    p_payment_id UUID,
+    p_provider_transaction_id TEXT
+) RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    payment payment_transactions%ROWTYPE;
+    credit_count INT;
+    subscription_months INT;
+BEGIN
+    SELECT * INTO payment
+    FROM payment_transactions
+    WHERE id = p_payment_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'payment_not_found';
+    END IF;
+
+    IF payment.status = 'paid' THEN
+        RETURN jsonb_build_object('status', 'already_paid', 'payment_id', payment.id);
+    END IF;
+
+    IF payment.status <> 'pending' THEN
+        RAISE EXCEPTION 'payment_not_pending';
+    END IF;
+
+    UPDATE payment_transactions
+    SET status = 'paid',
+        provider_transaction_id = COALESCE(NULLIF(p_provider_transaction_id, ''), provider_transaction_id),
+        paid_at = NOW(),
+        updated_at = NOW()
+    WHERE id = payment.id;
+
+    IF payment.purpose = 'credits' THEN
+        credit_count := COALESCE((payment.metadata ->> 'credits')::INT, 0);
+        IF credit_count <= 0 THEN
+            RAISE EXCEPTION 'invalid_credit_amount';
+        END IF;
+
+        INSERT INTO credit_purchases (user_id, payment_transaction_id, pack_id, credits, status, credited_at)
+        VALUES (payment.user_id, payment.id, payment.product_id, credit_count, 'credited', NOW())
+        ON CONFLICT (payment_transaction_id) DO NOTHING;
+
+        INSERT INTO credit_wallets (user_id, balance, updated_at)
+        VALUES (payment.user_id, credit_count, NOW())
+        ON CONFLICT (user_id) DO UPDATE
+        SET balance = credit_wallets.balance + EXCLUDED.balance,
+            updated_at = NOW();
+
+        INSERT INTO credit_transactions (user_id, delta, reason, reference_id, idempotency_key)
+        VALUES (payment.user_id, credit_count, 'credit_purchase', payment.id, 'payment:' || payment.id::TEXT)
+        ON CONFLICT (idempotency_key) DO NOTHING;
+    ELSIF payment.purpose = 'subscription' THEN
+        IF payment.salon_id IS NULL THEN
+            RAISE EXCEPTION 'subscription_requires_salon';
+        END IF;
+
+        subscription_months := COALESCE((payment.metadata ->> 'months')::INT, 1);
+
+        INSERT INTO subscriptions (salon_id, provider, amount_fcfa, status, expires_at)
+        VALUES (
+            payment.salon_id,
+            'money_fusion',
+            payment.amount_fcfa,
+            'active',
+            NOW() + make_interval(months => subscription_months)
+        );
+
+        UPDATE salons
+        SET plan = payment.product_id,
+            updated_at = NOW()
+        WHERE id = payment.salon_id;
+    END IF;
+
+    RETURN jsonb_build_object('status', 'paid', 'payment_id', payment.id, 'purpose', payment.purpose);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION finalize_afrofade_payment(UUID, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION finalize_afrofade_payment(UUID, TEXT) TO service_role;
 
 -- Only trusted server code (service role) mutates commerce tables.
 -- No INSERT/UPDATE/DELETE policies are intentionally granted to authenticated clients.
