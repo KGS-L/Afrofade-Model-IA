@@ -12,7 +12,7 @@ API_URL = "http://localhost:8005"
 
 def request(url: str, method: str = "GET", data: dict | None = None, headers: dict | None = None, timeout: int = 10):
     payload = json.dumps(data).encode("utf-8") if data is not None else None
-    req_headers = {"User-Agent": "Afrofade-E2E-Tester/2.0", **(headers or {})}
+    req_headers = {"User-Agent": "Afrofade-E2E-Tester/3.0", **(headers or {})}
     if data is not None:
         req_headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=payload, headers=req_headers, method=method)
@@ -60,11 +60,32 @@ def run_all_e2e_tests():
     results.append(expect("Upload signing requires user auth", status == 401, f"HTTP {status}"))
 
     status, _ = request(
+        f"{WEB_URL}/api/v1/payments/checkout",
+        method="POST",
+        data={"provider": "genius_pay", "purpose": "credits", "packId": "pack-essai"},
+    )
+    results.append(expect("Unified payment checkout requires user auth", status == 401, f"HTTP {status}"))
+
+    status, _ = request(
+        f"{WEB_URL}/api/webhooks/genius-pay",
+        method="POST",
+        data={"event": "payment.success", "data": {"transaction": {"reference": "fake"}}},
+    )
+    results.append(expect("GeniusPay rejects unsigned webhook", status in (401, 503), f"HTTP {status}"))
+
+    status, _ = request(
+        f"{WEB_URL}/api/webhooks/money-fusion",
+        method="POST",
+        data={"event": "payin.session.completed"},
+    )
+    results.append(expect("Money Fusion webhook requires tokenPay before provider lookup", status == 400, f"HTTP {status}"))
+
+    status, _ = request(
         f"{WEB_URL}/api/webhooks/payment",
         method="POST",
         data={"status": "paid", "paymentId": "fake", "token": "fake"},
     )
-    results.append(expect("Payment webhook rejects unsigned requests", status in (401, 503), f"HTTP {status}"))
+    results.append(expect("Legacy generic payment webhook is retired", status == 410, f"HTTP {status}"))
 
     status, _ = request(f"{WEB_URL}/api/cron/purge-biometric")
     results.append(expect("Biometric purge rejects missing secret", status in (401, 503), f"HTTP {status}"))
