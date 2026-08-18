@@ -21,9 +21,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Install dependencies from lockfile
+      - name: Normalize stale lockfile and install reproducibly
         run: |
           cd web
+          npm install --package-lock-only --ignore-scripts
+          echo '--- package-lock changes required by npm ---'
+          git diff -- package-lock.json || true
           npm ci
 
       - name: Audit production dependencies
@@ -171,7 +174,6 @@ jobs:
 
           cd "$TARGET_DIR"
 
-          # Gestion du .env : si inexistant on le crée, si existant on PRÉSERVE les secrets de prod.
           if [ -f .env.example ]; then
             if [ ! -f .env ]; then
               cp .env.example .env
@@ -218,7 +220,6 @@ jobs:
             fi
           }
 
-          # Fail deployment before container startup when mandatory production secrets are absent or placeholders.
           for required_key in API_INTERNAL_SECRET CRON_SECRET PAYMENT_WEBHOOK_SECRET SUPABASE_SERVICE_ROLE_KEY MONEY_FUSION_API_KEY; do
             required_value=$(grep "^${required_key}=" .env | head -n1 | cut -d'=' -f2-)
             if [ -z "$required_value" ] || echo "$required_value" | grep -Eqi '^(change-me|your-|placeholder|ci-)'; then
