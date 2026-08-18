@@ -7,11 +7,13 @@ import { X, RotateCw, ArrowRight, Eye, Cpu, CheckCircle2, User, Layers, Sparkles
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stage, useGLTF } from '@react-three/drei';
 import { HairstyleItem } from './HairstyleCatalog';
+import { HeadModel } from './HeadModel3D';
 import { stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
 
-// Composant interne pour charger et afficher le modèle 3D
+// Composant interne pour charger et afficher le modèle 3D avec tolérance aux pannes
 function ModelViewer({ url }: { url: string }) {
-  const { scene } = useGLTF(url);
+  const targetUrl = url || '/models/generated/fallback.gltf';
+  const { scene } = useGLTF(targetUrl);
   return <primitive object={scene} />;
 }
 
@@ -183,21 +185,19 @@ export const Hairstyle3DPreviewModal: React.FC<Hairstyle3DPreviewModalProps> = (
         {/* Visionneuse Multi-angles & Rendu 3D API */}
         <div className="p-6 bg-card space-y-4">
           <div className="relative aspect-[4/3] w-full rounded-card overflow-hidden bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)] border border-ink/10 shadow-soft">
-            {photoSources[viewMode].endsWith('.glb') || photoSources[viewMode].endsWith('.gltf') ? (
+            {viewMode === 'reconstruction3d' ? (
               <div className="absolute inset-0 cursor-move">
-                <Canvas shadows camera={{ position: [0, 0, 4], fov: 45 }}>
-                  <color attach="background" args={['#24150b']} />
-                  <Suspense fallback={
-                    <mesh>
-                      <sphereGeometry args={[1, 32, 32]} />
-                      <meshStandardMaterial color="#c7816f" wireframe />
-                    </mesh>
-                  }>
-                    <Stage environment="city" intensity={0.6}>
-                      <ModelViewer url={photoSources[viewMode]} />
-                    </Stage>
-                  </Suspense>
-                  <OrbitControls autoRotate autoRotateSpeed={2} />
+                <Canvas shadows camera={{ position: [0, 0.4, 2.8], fov: 42 }}>
+                  <color attach="background" args={['#1F1B17']} />
+                  <ambientLight intensity={0.8} />
+                  <directionalLight position={[3, 4, 3]} intensity={1.5} color="#fff1e0" />
+                  <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#C7816F" />
+                  <HeadModel
+                    hairstyleId={item.id}
+                    lineUpCutoff={50}
+                    isAutoRotate={true}
+                  />
+                  <OrbitControls enableZoom={true} minDistance={1.8} maxDistance={4} />
                 </Canvas>
               </div>
             ) : (
