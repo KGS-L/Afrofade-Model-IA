@@ -17,10 +17,15 @@ import {
   CheckCircle2,
   Sparkles,
   PartyPopper,
+  Chrome,
+  Mail,
+  KeyRound,
+  BadgePercent,
 } from 'lucide-react';
 import { HeadModel } from '@/components/HeadModel3D';
 import { HAIRSTYLES_DATA } from '@/components/HairstyleCatalog';
-import { PLANS } from '@/lib/plans';
+import { PLANS, PlanName, formatFcfa, isProfileComplete, monthlyPrice, TERMS, TermId } from '@/lib/plans';
+import { useAuth } from '@/lib/auth';
 
 /* ------------------------------------------------------------------ */
 /* Wizard « Tester le rituel 1mn » — 4 étapes + gating freemium        */
@@ -28,9 +33,9 @@ import { PLANS } from '@/lib/plans';
 /* 1. Dépôt des 4 photos (face, profils G/D, arrière)                  */
 /* 2. Création de l'avatar 3D réaliste — flouté pour les visiteurs     */
 /* 3. Choix de la coiffure appliquée à l'avatar                        */
-/* 4. Finition — rendu final non modifiable : mur de connexion pour    */
-/*    les visiteurs (compte + abonnement), puis dévoilement +          */
-/*    téléchargement PNG.                                              */
+/* 4. Finition — rendu final non modifiable : connexion (Google ou     */
+/*    e-mail + OTP) puis premier abonnement (remises si profil 100 %), */
+/*    puis dévoilement + téléchargement PNG.                           */
 /* ------------------------------------------------------------------ */
 
 type Step = 1 | 2 | 3 | 4;
@@ -120,6 +125,8 @@ const AvatarCanvas: React.FC<{
 );
 
 export default function RituelPage() {
+  const { user, loginWithEmail, loginWithGoogle, subscribe } = useAuth();
+
   const [step, setStep] = useState<Step>(1);
   const [photos, setPhotos] = useState<Record<AngleKey, boolean>>({
     face: false,
@@ -131,14 +138,16 @@ export default function RituelPage() {
   const [styleId, setStyleId] = useState<string>(HAIRSTYLES_DATA[0].id);
   const [finalReady, setFinalReady] = useState(false);
 
-  // Mock d'authentification : visiteur par défaut (ni compte, ni abonnement)
-  const [hasAccount, setHasAccount] = useState(false);
-  const [hasSubscription, setHasSubscription] = useState(false);
-  const revealed = hasAccount && hasSubscription;
+  // Connexion du mur (étape 4) : Google ou e-mail + OTP (démo : 123456)
+  const [authMode, setAuthMode] = useState<'choix' | 'otp'>('choix');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [busy, setBusy] = useState(false);
+  const [term, setTerm] = useState<TermId>('mensuel');
 
-  const [form, setForm] = useState({ salon: '', email: '', password: '' });
-  const [showPlans, setShowPlans] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
+
+  const revealed = Boolean(user?.subscription);
 
   const allPhotos = Object.values(photos).every(Boolean);
   const selectedStyle =
@@ -162,7 +171,8 @@ export default function RituelPage() {
     setPhotos({ face: false, profil_gauche: false, profil_droit: false, arriere: false });
     setProcessing(false);
     setFinalReady(false);
-    setShowPlans(false);
+    setAuthMode('choix');
+    setOtp(['', '', '', '', '', '']);
   };
 
   const handleDownload = () => {
@@ -174,6 +184,32 @@ export default function RituelPage() {
     a.download = 'afrofade-rendu-3d.png';
     a.click();
   };
+
+  const onDigit = (i: number, value: string) => {
+    const digit = value.replace(/\D/g, '').slice(-1);
+    setOtp((prev) => prev.map((d, idx) => (idx === i ? digit : d)));
+  };
+
+  const wallGoogle = () => {
+    setBusy(true);
+    window.setTimeout(() => {
+      loginWithGoogle();
+      setBusy(false);
+    }, 1100);
+  };
+
+  const wallOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp.every((d) => d !== '')) return;
+    setBusy(true);
+    window.setTimeout(() => {
+      loginWithEmail(email);
+      setBusy(false);
+    }, 900);
+  };
+
+  const eligible = Boolean(user && isProfileComplete(user.profile) && !user.everSubscribed);
+  const activeTerm = TERMS.find((t) => t.id === term) ?? TERMS[0];
 
   return (
     <div className="min-h-screen bg-cream text-ink flex flex-col">
@@ -515,8 +551,8 @@ export default function RituelPage() {
                     </button>
                   </div>
                 </>
-              ) : (
-                /* Mur de connexion : compte puis abonnement, puis dévoilement */
+              ) : !user ? (
+                /* Mur de connexion : Google ou e-mail + code OTP */
                 <div className="rounded-card border border-ink/10 bg-card shadow-soft p-6 sm:p-8 space-y-6">
                   <div className="text-center space-y-2">
                     <div className="w-14 h-14 mx-auto rounded-full bg-terracotta-wash border border-terracotta/40 flex items-center justify-center text-terracotta">
@@ -526,125 +562,178 @@ export default function RituelPage() {
                       Votre rendu est prêt !
                     </h2>
                     <p className="text-sm text-ink-soft max-w-sm mx-auto">
-                      Créez votre compte et choisissez votre abonnement pour
-                      dévoiler votre avatar {selectedStyle.title.toLowerCase()}{' '}
-                      en HD et le télécharger.
+                      Connectez-vous pour dévoiler votre avatar{' '}
+                      {selectedStyle.title.toLowerCase()} en HD et le
+                      télécharger.
                     </p>
                   </div>
 
-                  {!showPlans ? (
-                    <form
-                      className="space-y-3"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        if (form.salon && form.email && form.password) {
-                          setHasAccount(true);
-                          setShowPlans(true);
-                        }
-                      }}
-                    >
-                      <div>
-                        <label htmlFor="salon" className="block text-xs font-bold mb-1.5">
-                          Nom du salon
-                        </label>
-                        <input
-                          id="salon"
-                          type="text"
-                          required
-                          value={form.salon}
-                          onChange={(e) => setForm({ ...form, salon: e.target.value })}
-                          placeholder="Barber Shop Abidjan"
-                          className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 text-sm focus:outline-none focus:border-terracotta"
-                        />
+                  {authMode === 'choix' ? (
+                    <div className="space-y-4">
+                      <button
+                        type="button"
+                        onClick={wallGoogle}
+                        disabled={busy}
+                        className="w-full min-h-[52px] rounded-pill border-[1.5px] border-ink/15 bg-cream hover:bg-terracotta-wash font-bold text-sm inline-flex items-center justify-center gap-3 transition-colors disabled:opacity-60"
+                      >
+                        <Chrome className="w-5 h-5 text-terracotta" />
+                        {busy ? 'Connexion Google…' : 'Continuer avec Google'}
+                      </button>
+
+                      <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.14em] text-ink-soft">
+                        <span className="flex-1 h-px bg-ink/10" />
+                        ou par e-mail
+                        <span className="flex-1 h-px bg-ink/10" />
                       </div>
-                      <div>
-                        <label htmlFor="email" className="block text-xs font-bold mb-1.5">
-                          E-mail
-                        </label>
+
+                      <div className="flex items-center gap-2 min-h-[48px] border border-ink/15 rounded-input bg-cream px-4 focus-within:border-terracotta">
+                        <Mail className="w-4 h-4 text-ink-soft shrink-0" />
                         <input
-                          id="email"
                           type="email"
-                          required
-                          value={form.email}
-                          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                          aria-label="Votre e-mail"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           placeholder="vous@salon.com"
-                          className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 text-sm focus:outline-none focus:border-terracotta"
+                          className="w-full bg-transparent text-sm focus:outline-none"
                         />
+                        <button
+                          type="button"
+                          onClick={() => email.includes('@') && setAuthMode('otp')}
+                          disabled={!email.includes('@')}
+                          className="shrink-0 inline-flex items-center gap-1.5 text-xs font-bold text-terracotta hover:underline disabled:opacity-40"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          Code OTP
+                        </button>
                       </div>
-                      <div>
-                        <label htmlFor="password" className="block text-xs font-bold mb-1.5">
-                          Mot de passe
-                        </label>
-                        <input
-                          id="password"
-                          type="password"
-                          required
-                          minLength={6}
-                          value={form.password}
-                          onChange={(e) => setForm({ ...form, password: e.target.value })}
-                          placeholder="••••••••"
-                          className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 text-sm focus:outline-none focus:border-terracotta"
-                        />
+
+                      <p className="text-center text-[10px] text-ink-soft">
+                        Démo : OTP fictif <strong>123456</strong> · Google OAuth
+                        réel avec Supabase Auth.{' '}
+                        <Link href="/connexion" className="text-terracotta underline underline-offset-2">
+                          Page de connexion complète
+                        </Link>
+                      </p>
+                    </div>
+                  ) : (
+                    <form onSubmit={wallOtp} className="space-y-4">
+                      <p className="text-center text-xs text-ink-soft">
+                        Code envoyé à <strong className="text-ink">{email}</strong> —
+                        démo : <strong>123456</strong>
+                      </p>
+                      <div className="flex justify-center gap-2" role="group" aria-label="Code OTP">
+                        {otp.map((digit, i) => (
+                          <input
+                            key={i}
+                            type="text"
+                            inputMode="numeric"
+                            aria-label={`Chiffre ${i + 1}`}
+                            value={digit}
+                            onChange={(e) => onDigit(i, e.target.value)}
+                            className="w-10 h-11 text-center text-base font-bold rounded-input border border-ink/15 bg-cream focus:outline-none focus:border-terracotta"
+                          />
+                        ))}
                       </div>
                       <button
                         type="submit"
-                        className="w-full min-h-[52px] rounded-pill bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm shadow-soft transition-colors"
+                        disabled={busy || !otp.every((d) => d !== '')}
+                        className="w-full min-h-[52px] rounded-pill bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm shadow-soft transition-colors disabled:opacity-60"
                       >
-                        Créer mon compte et voir mon résultat
+                        Vérifier et dévoiler mon rendu
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setHasAccount(true);
-                          setHasSubscription(true);
-                        }}
+                        onClick={() => setAuthMode('choix')}
                         className="w-full text-center text-xs font-medium text-terracotta hover:underline"
                       >
-                        Déjà inscrit ? Se connecter
+                        ← Changer de méthode
                       </button>
                     </form>
-                  ) : (
-                    <div className="space-y-3" aria-label="Choix de l'abonnement">
-                      <p className="text-xs font-bold uppercase tracking-[0.1em] text-ink-soft text-center">
-                        Choisissez votre abonnement
-                      </p>
-                      {PLANS.map((plan) => (
+                  )}
+                </div>
+              ) : (
+                /* Connecté, pas encore abonné : premier abonnement */
+                <div className="rounded-card border border-ink/10 bg-card shadow-soft p-6 sm:p-8 space-y-5">
+                  <div className="text-center space-y-2">
+                    <h2 className="font-display text-xl sm:text-2xl">
+                      Plus qu’une étape
+                    </h2>
+                    <p className="text-sm text-ink-soft max-w-sm mx-auto">
+                      Choisissez votre abonnement pour dévoiler votre rendu et
+                      le télécharger.
+                    </p>
+                  </div>
+
+                  {eligible && (
+                    <div role="radiogroup" aria-label="Durée d'engagement" className="grid grid-cols-3 gap-3">
+                      {TERMS.filter((t) => t.discount > 0).map((t) => (
                         <button
                           type="button"
-                          key={plan.name}
-                          onClick={() => setHasSubscription(true)}
-                          className={`w-full text-left rounded-card border p-4 transition-all hover:border-terracotta/60 ${
-                            plan.popular
-                              ? 'border-terracotta bg-terracotta-wash ring-1 ring-terracotta/30'
-                              : 'border-ink/10 bg-cream'
+                          key={t.id}
+                          role="radio"
+                          aria-checked={term === t.id}
+                          onClick={() => setTerm(t.id)}
+                          className={`rounded-card border p-3 text-center transition-all ${
+                            term === t.id
+                              ? 'border-terracotta bg-terracotta-wash ring-2 ring-terracotta/30'
+                              : 'border-ink/10 bg-cream hover:border-terracotta/50'
                           }`}
                         >
-                          <span className="flex items-center justify-between">
-                            <span className="font-bold text-sm">
-                              {plan.name}
-                              {plan.popular && (
-                                <span className="ml-2 text-[9px] font-bold uppercase tracking-[0.1em] text-white bg-terracotta px-2 py-0.5 rounded-pill">
-                                  Le plus choisi
-                                </span>
-                              )}
-                            </span>
-                            <span className="font-display text-base">
-                              {plan.price}
-                              <span className="text-[10px] text-ink-soft font-body">/mois</span>
-                            </span>
-                          </span>
-                          <span className="block text-xs text-ink-soft mt-1">
-                            {plan.features[0]}
+                          <span className="block text-xs font-bold">{t.label}</span>
+                          <span className="block text-[11px] font-bold text-terracotta mt-0.5">
+                            {t.hint}
                           </span>
                         </button>
                       ))}
                     </div>
                   )}
 
-                  <p className="text-center text-[10px] text-ink-soft">
-                    Démo : aucune donnée n’est réellement envoyée — Mobile Money
-                    (Wave, Orange Money, MTN, Moov) à l’activation réelle.
-                  </p>
+                  <div className="space-y-3">
+                    {PLANS.map((plan) => {
+                      const price = monthlyPrice(plan.amount, eligible ? activeTerm.discount : 0);
+                      const discounted = eligible && activeTerm.discount > 0;
+                      return (
+                        <button
+                          type="button"
+                          key={plan.name}
+                          onClick={() => subscribe(plan.name as PlanName, plan.amount, eligible ? activeTerm.id : 'mensuel')}
+                          className={`w-full text-left rounded-card border p-4 transition-all hover:border-terracotta/60 flex items-center justify-between gap-3 ${
+                            plan.popular ? 'border-terracotta bg-terracotta-wash ring-1 ring-terracotta/30' : 'border-ink/10 bg-cream'
+                          }`}
+                        >
+                          <span>
+                            <span className="flex items-center gap-2 text-sm font-bold">
+                              {plan.name}
+                              {discounted && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.1em] text-white bg-terracotta px-2 py-0.5 rounded-pill">
+                                  <BadgePercent className="w-3 h-3" />
+                                  −{Math.round(activeTerm.discount * 100)} %
+                                </span>
+                              )}
+                            </span>
+                            <span className="block text-xs text-ink-soft mt-1">
+                              {plan.features[0]}
+                            </span>
+                          </span>
+                          <span className="text-right shrink-0">
+                            <span className="font-display text-base">{formatFcfa(price)}</span>
+                            <span className="block text-[10px] text-ink-soft">FCFA/mois</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!eligible && (
+                    <p className="text-center text-[11px] text-ink-soft">
+                      Astuce : complétez votre profil salon à 100 % dans{' '}
+                      <Link href="/dashboard" className="text-terracotta underline underline-offset-2">
+                        votre espace
+                      </Link>{' '}
+                      pour débloquer −10 % (3 mois), −25 % (6 mois) ou −40 % (annuel)
+                      sur votre premier abonnement.
+                    </p>
+                  )}
                 </div>
               )}
             </section>

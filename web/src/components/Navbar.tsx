@@ -49,6 +49,14 @@ export const Navbar: React.FC = () => {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
+          {/* Espace salon / connexion */}
+          <Link
+            href="/connexion"
+            className="hidden sm:inline-flex min-h-[44px] items-center px-3 rounded-pill text-sm font-medium text-ink-soft hover:text-terracotta transition-colors"
+          >
+            Espace salon
+          </Link>
+
           {/* CTA pill terracotta → page dédiée au test du Rituel */}
           <Link
             href="/rituel"
@@ -93,6 +101,13 @@ export const Navbar: React.FC = () => {
               {link.label}
             </a>
           ))}
+          <Link
+            href="/connexion"
+            onClick={() => setMenuOpen(false)}
+            className="min-h-[48px] flex items-center px-3 rounded-pill text-sm font-medium text-ink hover:bg-terracotta-wash transition-colors"
+          >
+            Espace salon
+          </Link>
           <Link
             href="/rituel"
             onClick={() => setMenuOpen(false)}

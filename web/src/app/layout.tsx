@@ -1,6 +1,7 @@
 import './globals.css';
 import React from 'react';
 import localFont from 'next/font/local';
+import { AuthProvider } from '@/lib/auth';
 
 /**
  * Identité typographique Afrofade (DESIGN.md › Typography) :
@@ -52,7 +53,9 @@ export default function RootLayout({
         <noscript>
           <style>{`.fade-safe{opacity:1 !important}`}</style>
         </noscript>
-        <main className="min-h-screen bg-cream text-ink">{children}</main>
+        <main className="min-h-screen bg-cream text-ink">
+          <AuthProvider>{children}</AuthProvider>
+        </main>
       </body>
     </html>
   );

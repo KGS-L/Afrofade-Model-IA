@@ -88,3 +88,46 @@ export const PLAN_BADGE_CLASS: Record<StylePlanLabel, string> = {
   PRO: 'bg-ink-soft text-white',
   VIP: 'bg-terracotta-dark text-white',
 };
+
+/* ------------------------------------------------------------------ */
+/* Profil salon & remises premier abonnement                           */
+/* ------------------------------------------------------------------ */
+
+export interface SalonProfileFields {
+  salonName: string;
+  country: string;
+  phone: string;
+}
+
+/** Complétion du profil en pourcentage (nom, pays, numéro du salon). */
+export function profileCompletion(profile: Partial<SalonProfileFields>): number {
+  const fields = [profile.salonName, profile.country, profile.phone];
+  const filled = fields.filter((f) => Boolean(f && f.trim())).length;
+  return Math.round((filled / fields.length) * 100);
+}
+
+export function isProfileComplete(profile: Partial<SalonProfileFields>): boolean {
+  return profileCompletion(profile) === 100;
+}
+
+export type TermId = 'mensuel' | '3mois' | '6mois' | 'annuel';
+
+/** Engagements proposés. Remises réservées au premier abonnement,
+ *  profil 100 % obligatoire (décision Jonas-dev 2026-08-18). */
+export const TERMS: {
+  id: TermId;
+  label: string;
+  months: number;
+  discount: number;
+  hint: string;
+}[] = [
+  { id: 'mensuel', label: 'Mensuel', months: 1, discount: 0, hint: 'Sans engagement' },
+  { id: '3mois', label: '3 mois', months: 3, discount: 0.1, hint: '−10 % pendant 3 mois' },
+  { id: '6mois', label: '6 mois', months: 6, discount: 0.25, hint: '−25 % pendant 6 mois' },
+  { id: 'annuel', label: 'Annuel', months: 12, discount: 0.4, hint: '−40 % pendant 1 an' },
+];
+
+/** Prix mensuel effectif après remise d'engagement. */
+export function monthlyPrice(amountFcfa: number, discount: number): number {
+  return Math.round(amountFcfa * (1 - discount));
+}
