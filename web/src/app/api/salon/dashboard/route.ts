@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
       if (result.error) throw new Error(result.error.message);
     }
 
+    if (!salonResult.data) throw new Error('Salon profile not found.');
     const salon = salonResult.data;
     const profileCompletion = completion(salon.name, salon.country, salon.phone);
     const hasPaidBefore = (paymentsResult.data || []).some((payment) => payment.status === 'paid');
@@ -134,7 +135,7 @@ export async function PATCH(req: NextRequest) {
       .select('id, name, phone, country, plan, quota_limit, quota_used, storage_used_bytes')
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !data) throw new Error(error?.message || 'Salon profile not found.');
 
     return NextResponse.json({
       salon: {
