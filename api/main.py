@@ -1,6 +1,8 @@
 import os
+import re
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -25,11 +27,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "X-Internal-API-Key"],
 )
 
 PUBLIC_PATHS = {"/", "/health"}
+GENERATED_MODELS_DIR = Path("/tmp/generated_models")
+GENERATED_MODEL_PATTERN = re.compile(r"^recon_[0-9]+\.glb$")
+
 
 @app.middleware("http")
 async def require_internal_api_key(request: Request, call_next):
@@ -46,7 +51,9 @@ async def require_internal_api_key(request: Request, call_next):
 
     return await call_next(request)
 
+
 app.include_router(quality_router)
+
 
 class ReconstructionRequest(BaseModel):
     salon_id: str
@@ -54,14 +61,17 @@ class ReconstructionRequest(BaseModel):
     photos_urls: List[str]
     preserve_skin_texture: Optional[bool] = True
 
+
 class ReconstructionResponse(BaseModel):
     status: str
+    job_id: str
     mesh_3d_url: str
     processing_time_ms: int
     vertices_count: int
     texture_resolution: str
     identity_preserved: bool
     message: str
+
 
 @app.get("/")
 def read_root():
@@ -71,6 +81,7 @@ def read_root():
         "features": ["3D Head Reconstruction", "Real-Time Quality Gatekeeper", "UV Texture Blending"]
     }
 
+
 @app.get("/health")
 def health_check():
     return {
@@ -78,6 +89,37 @@ def health_check():
         "service": "afrofade-api-3d",
         "version": "1.0.0"
     }
+
+
+@app.get("/api/v1/models/{filename}")
+def get_generated_model(filename: str):
+    if not GENERATED_MODEL_PATTERN.fullmatch(filename):
+        raise HTTPException(status_code=400, detail="Invalid generated model filename.")
+
+    model_path = GENERATED_MODELS_DIR / filename
+    if not model_path.is_file():
+        raise HTTPException(status_code=404, detail="Generated model not found.")
+
+    return FileResponse(
+        path=model_path,
+        media_type="model/gltf-binary",
+        filename=filename,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+@app.delete("/api/v1/models/{filename}")
+def delete_generated_model(filename: str):
+    if not GENERATED_MODEL_PATTERN.fullmatch(filename):
+        raise HTTPException(status_code=400, detail="Invalid generated model filename.")
+
+    model_path = GENERATED_MODELS_DIR / filename
+    if model_path.is_file():
+        model_path.unlink()
+        return {"deleted": True, "filename": filename}
+
+    return {"deleted": False, "filename": filename}
+
 
 @app.post("/v1/reconstruct", response_model=ReconstructionResponse)
 @app.post("/api/v1/reconstruct", response_model=ReconstructionResponse)
@@ -94,6 +136,7 @@ def reconstruct_3d_head(request: ReconstructionRequest):
         preserve_skin_texture=request.preserve_skin_texture if request.preserve_skin_texture is not None else True
     )
 
+
 @app.post("/api/v1/heads", status_code=202)
 def submit_head_reconstruction(request: ReconstructionRequest):
     if len(request.photos_urls) < 1:
@@ -103,6 +146,7 @@ def submit_head_reconstruction(request: ReconstructionRequest):
         photos_urls=request.photos_urls,
         client_name=request.client_name or "Client Afrofade"
     )
+
 
 @app.get("/api/v1/heads/{job_id}")
 def get_head_reconstruction_status(job_id: str):
