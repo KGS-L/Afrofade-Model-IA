@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afrofade — Écran clé : Rituel du Miroir (2 états)</title>
+<style>
+/* ==========================================================================
+   ÉCRAN CLÉ 2/3 — Démo interactive « Rituel du Miroir » (section #rituel-studio)
+   Régit : EXPERIENCE.md › State Patterns (idle → drag_over → uploading →
+           analyzing → ready ; erreurs inline ; quota ; skeleton 3D)
+           EXPERIENCE.md › Component Patterns (dropzone, style_card apply,
+           UpsellBanner, drawer CTA « Enregistrer la carte client »)
+           EXPERIENCE.md › Key Flows (Awa, étapes 2-6) · DESIGN.md tokens
+   Contrat : les spines priment sur cette maquette en cas de conflit.
+   ========================================================================== */
+:root{
+  --terracotta:#C7816F; --terracotta-dark:#A9662F;
+  --cream:#FAF6F1; --ink:#1F1B17; --ink-soft:#6B6259; --white:#FFFFFF;
+  --gold:#C99B3F;
+  --card-r:16px; --pill:999px; --img-r:12px;
+  --shadow:0 4px 24px rgba(31,27,23,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2DA;font-family:'Special Gothic','Helvetica Neue',Arial,sans-serif;color:var(--ink);padding:24px}
+.display{font-family:'Special Gothic Expanded One','Arial Black',sans-serif}
+.hand{font-family:'Caveat','Segoe Script',cursive}
+.browser{max-width:1280px;margin:0 auto;background:var(--cream);border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(31,27,23,.15)}
+.chrome{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#EDE7DF;border-bottom:1px solid rgba(31,27,23,.06)}
+.dot{width:10px;height:10px;border-radius:50%;background:#CFC6BB}
+.urlbar{flex:1;margin-left:12px;background:#FFF;border-radius:8px;padding:5px 12px;font-size:12px;color:var(--ink-soft)}
+.state-tag{font-size:12px;letter-spacing:.2em;color:var(--ink-soft);text-transform:uppercase;margin:28px 24px 8px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px 64px}
+.head{text-align:center;margin-bottom:36px}
+.head .hand{font-size:24px;color:var(--terracotta)}
+.head h2{font-size:32px;margin-top:4px}
+.head p{margin-top:10px;color:var(--ink-soft);font-size:15px}
+/* --- État 1 : dropzone idle --- */
+.studio{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.dropzone{border:2px dashed var(--terracotta);border-radius:var(--card-r);background:var(--white);padding:48px 32px;text-align:center}
+.dropzone .icon{width:52px;height:52px;margin:0 auto 16px;border-radius:50%;background:#F6E7DF;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--terracotta)}
+.dropzone h3{font-size:19px}
+.dropzone .formats{margin-top:6px;font-size:12px;letter-spacing:.14em;color:var(--ink-soft)}
+.dropzone .or{margin:18px 0;color:var(--ink-soft);font-size:13px}
+.btn{border:none;border-radius:var(--pill);padding:13px 26px;font-size:15px;font-family:inherit;cursor:pointer}
+.btn-primary{background:var(--terracotta);color:#fff}
+.hint{margin-top:16px;font-size:13px;color:var(--ink-soft)}
+.side-card{background:var(--white);border-radius:var(--card-r);padding:24px;box-shadow:var(--shadow)}
+.side-card h4{font-size:14px;letter-spacing:.12em;color:var(--ink-soft)}
+.side-card ul{list-style:none;margin-top:14px;display:grid;gap:12px}
+.side-card li{display:flex;gap:10px;font-size:14px;color:var(--ink);align-items:flex-start}
+.side-card li b{color:var(--terracotta)}
+/* --- État 2 : analyzing → ready --- */
+.analyzing{display:flex;align-items:center;gap:12px;background:var(--white);border-radius:var(--pill);padding:12px 22px;box-shadow:var(--shadow);width:max-content;margin:0 auto 24px;font-size:14px}
+.spinner{width:16px;height:16px;border-radius:50%;border:2.5px solid #EAD9CF;border-top-color:var(--terracotta)}
+.viewer{background:var(--white);border-radius:var(--card-r);box-shadow:var(--shadow);overflow:hidden}
+.viewport{aspect-ratio:16/10;background:radial-gradient(120% 120% at 30% 20%,#EFE0D6 0%,#DDBFAE 60%,#C7816F 140%);position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#fff}
+.viewport small{font-size:11px;letter-spacing:.22em;opacity:.85}
+.orbit-hint{position:absolute;bottom:14px;left:14px;background:rgba(255,255,255,.9);color:var(--ink);font-size:11px;border-radius:var(--pill);padding:6px 12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:16px 18px}
+.chip{border:1px solid rgba(31,27,23,.14);background:var(--cream);border-radius:var(--pill);padding:7px 14px;font-size:13px;color:var(--ink-soft)}
+.chip.on{background:var(--terracotta);border-color:var(--terracotta);color:#fff}
+.viewer-foot{display:flex;align-items:center;gap:12px;padding:0 18px 18px}
+.upsell{display:flex;align-items:center;gap:14px;background:var(--white);border-radius:var(--card-r);box-shadow:var(--shadow);padding:16px 18px;margin-top:24px;border-left:4px solid var(--gold)}
+.upsell .badge{background:var(--gold);color:#fff;font-size:11px;letter-spacing:.1em;border-radius:var(--pill);padding:5px 12px;white-space:nowrap}
+.upsell p{flex:1;font-size:14px;color:var(--ink-soft)}
+.upsell b{color:var(--ink)}
+.quota{margin-top:14px;text-align:center;font-size:13px;color:var(--ink-soft)}
+.quota b{color:var(--terracotta)}
+@media(max-width:900px){.studio{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="browser">
+  <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="urlbar">afrofade.app/#rituel-studio — Rituel du Miroir</span></div>
+
+  <p class="state-tag">État canonique — prêt à recevoir les photos</p>
+  <section class="wrap">
+    <div class="head">
+      <div class="hand">à vous de jouer</div>
+      <h2 class="display">Le Rituel du Miroir</h2>
+      <p>Déposez les photos de votre client et laissez la magie opérer.</p>
+    </div>
+    <div class="studio">
+      <div class="dropzone">
+        <div class="icon">⬆</div>
+        <h3>Glissez vos photos ici</h3>
+        <div class="formats">JPG · PNG · HEIC</div>
+        <div class="or">— ou —</div>
+        <button class="btn btn-primary">Prendre les photos à la tablette</button>
+        <p class="hint">3 à 4 angles · visage dégagé · lumière naturelle de préférence</p>
+      </div>
+      <div class="side-card">
+        <h4>CONSEILS DE PRISE DE VUE</h4>
+        <ul>
+          <li><b>01</b> Face, regard droit vers l'objectif</li>
+          <li><b>02</b> Profil gauche puis profil droit</li>
+          <li><b>03</b> Trois-quarts optionnel pour affiner les volumes</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <p class="state-tag">État alternatif porteur — analyse puis résultat prêt</p>
+  <section class="wrap">
+    <div class="head">
+      <div class="hand">la magie opère…</div>
+      <h2 class="display">Analyse IA en cours</h2>
+    </div>
+    <div class="analyzing"><span class="spinner"></span> Reconstruction du modèle 3D — quelques secondes…</div>
+    <div class="viewer">
+      <div class="viewport">
+        <small>RENDU 3D — TÊTE RECONSTRUITE · FADE MID APPLIQUÉ</small>
+        <div class="frame-tag-placeholder"></div>
+        <span class="orbit-hint">↻ Tournez le modèle du doigt</span>
+      </div>
+      <div class="chips">
+        <span class="chip">Fade classique</span>
+        <span class="chip on">Fade mid + line-up</span>
+        <span class="chip">Locks courtes</span>
+        <span class="chip">Tresses collées</span>
+        <span class="chip">Afro sculpté</span>
+      </div>
+      <div class="viewer-foot">
+        <button class="btn btn-primary">Enregistrer la carte client</button>
+        <button class="btn" style="background:transparent;border:1.5px solid rgba(31,27,23,.2)">Refaire les photos</button>
+      </div>
+    </div>
+    <div class="upsell">
+      <span class="badge">OPTION PREMIUM</span>
+      <p><b>Barbe sculptée</b> — montrez le résultat en 1 tap et augmentez votre panier moyen.</p>
+      <button class="btn btn-primary" style="background:var(--gold)">Essayer</button>
+    </div>
+    <p class="quota">Plan Pro · <b>14 / 20 têtes</b> utilisées ce mois — remise à zéro le 1er du mois.</p>
+  </section>
+</div>
+</body>
+</html>

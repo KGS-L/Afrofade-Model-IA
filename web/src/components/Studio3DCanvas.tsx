@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, ContactShadows } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
-import { RotateCw, Sun, Maximize2, Download, Sliders, Sparkles } from 'lucide-react';
+import { RotateCw, Sun, Download, Sliders, Sparkles } from 'lucide-react';
 
 interface Studio3DCanvasProps {
   hasModel: boolean;
@@ -59,7 +59,7 @@ function HeadModel({
         <coneGeometry args={[0.15, 0.4, 32]} />
         <meshStandardMaterial color="#351e11" roughness={0.5} />
       </mesh>
-      
+
       {/* Eyes */}
       <mesh position={[-0.32, 1.05, 0.78]}>
         <sphereGeometry args={[0.08, 16, 16]} />
@@ -136,13 +136,13 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
   const [lightPreset, setLightPreset] = useState<'salon' | 'studio' | 'warm'>('salon');
 
   return (
-    <div className="relative w-full h-[520px] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col justify-between">
+    <div className="relative w-full h-[520px] bg-card border border-ink/10 rounded-card overflow-hidden shadow-soft flex flex-col justify-between">
       {/* Top Floating Header */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-        <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl pointer-events-auto flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="text-xs font-bold text-slate-200">
-            {hasModel ? 'Rendu 3D Miroir Actif' : 'En attente des photos...'}
+      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between gap-2 pointer-events-none">
+        <div className="bg-card/90 backdrop-blur-sm border border-ink/10 px-3 py-1.5 rounded-pill pointer-events-auto flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${hasModel ? 'bg-terracotta' : 'bg-ink/30'} ${hasModel ? 'animate-pulse' : ''}`} />
+          <span className="text-xs font-bold text-ink">
+            {hasModel ? 'Rendu 3D miroir actif' : 'En attente des photos…'}
           </span>
         </div>
 
@@ -150,12 +150,13 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
         <div className="flex items-center gap-2 pointer-events-auto">
           <button
             onClick={() => setIsAutoRotate(!isAutoRotate)}
-            className={`p-2 rounded-xl border backdrop-blur-md transition-all ${
+            aria-pressed={isAutoRotate}
+            className={`w-11 h-11 rounded-pill border backdrop-blur-sm transition-all flex items-center justify-center ${
               isAutoRotate
-                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20'
-                : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:bg-slate-800'
+                ? 'bg-terracotta text-white border-terracotta shadow-soft'
+                : 'bg-card/90 text-ink border-ink/10 hover:bg-cream'
             }`}
-            title="Rotation 360° Automatique"
+            title="Rotation 360° automatique"
           >
             <RotateCw className={`w-4 h-4 ${isAutoRotate ? 'animate-spin' : ''}`} />
           </button>
@@ -166,16 +167,16 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
                 prev === 'salon' ? 'studio' : prev === 'studio' ? 'warm' : 'salon'
               )
             }
-            className="p-2 rounded-xl bg-slate-900/80 text-slate-300 border border-slate-800 hover:bg-slate-800 backdrop-blur-md transition-all"
-            title={`Éclairage: ${lightPreset}`}
+            className="w-11 h-11 rounded-pill bg-card/90 text-terracotta border border-ink/10 hover:bg-cream backdrop-blur-sm transition-all flex items-center justify-center"
+            title={`Éclairage : ${lightPreset}`}
           >
-            <Sun className="w-4 h-4 text-amber-400" />
+            <Sun className="w-4 h-4" />
           </button>
 
           {hasModel && (
             <button
               onClick={onSaveRender}
-              className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-3 py-2 rounded-xl backdrop-blur-md transition-all shadow-md shadow-emerald-500/20"
+              className="min-h-[44px] inline-flex items-center gap-1.5 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-xs px-4 rounded-pill backdrop-blur-sm transition-colors shadow-soft"
             >
               <Download className="w-4 h-4" />
               <span>Enregistrer 3D</span>
@@ -184,20 +185,20 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
         </div>
       </div>
 
-      {/* 3D Canvas R3F */}
-      <div className="w-full h-full">
+      {/* 3D Canvas R3F — fond chaud lumineux */}
+      <div className="w-full h-full bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)]">
         {hasModel ? (
           <Canvas>
             <PerspectiveCamera makeDefault position={[0, 1, 3.2]} fov={45} />
-            
-            {/* Lighting Studio */}
+
+            {/* Lighting Studio — lumière de remplissage chaude */}
             <ambientLight intensity={lightPreset === 'warm' ? 1.2 : 0.8} />
             <directionalLight
               position={[5, 5, 5]}
               intensity={lightPreset === 'studio' ? 1.8 : 1.2}
               color={lightPreset === 'warm' ? '#ffedd5' : '#ffffff'}
             />
-            <directionalLight position={[-5, 3, -5]} intensity={0.4} color="#60a5fa" />
+            <directionalLight position={[-5, 3, -5]} intensity={0.4} color="#F3D9C8" />
 
             <HeadModel
               hairstyleColor={selectedHairstyle?.color || '#1c1917'}
@@ -215,13 +216,14 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
             />
           </Canvas>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-            <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-amber-500 animate-pulse">
+          <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 space-y-3 bg-card">
+            <div className="w-16 h-16 rounded-full bg-terracotta-wash border border-terracotta/30 flex items-center justify-center text-terracotta animate-pulse">
               <Sparkles className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white">Le Rituel du Miroir 3D</h3>
-            <p className="text-xs text-slate-400 max-w-sm">
-              Ajoutez les 3 photos du client à gauche pour générer la tête 3D interactive et tester les contours et coiffures afro.
+            <h3 className="font-display text-lg">Le Rituel du Miroir 3D</h3>
+            <p className="text-xs text-ink-soft max-w-sm">
+              Ajoutez les 3 photos du client à gauche pour générer la tête 3D
+              interactive et tester les contours et coiffures afro.
             </p>
           </div>
         )}
@@ -229,26 +231,28 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
 
       {/* Bottom Floating Control Bar (Hairline Fine-Tuning Slider) */}
       {hasModel && (
-        <div className="absolute bottom-4 left-4 right-4 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl flex items-center justify-between gap-4 shadow-xl">
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-400">
+        <div className="absolute bottom-4 left-4 right-4 z-20 bg-card/95 backdrop-blur-sm border border-ink/10 p-3 rounded-card flex items-center justify-between gap-4 shadow-soft">
+          <div className="flex items-center gap-2 text-xs font-bold text-terracotta-dark whitespace-nowrap">
             <Sliders className="w-4 h-4" />
-            <span>Ajustement des Contours (Line-up Art):</span>
+            <span className="hidden sm:inline">Ajustement des contours (line-up) :</span>
+            <span className="sm:hidden">Line-up :</span>
           </div>
 
           <div className="flex-1 flex items-center gap-3">
-            <span className="text-[10px] text-slate-400">Bas</span>
+            <span className="text-[10px] text-ink-soft">Bas</span>
             <input
               type="range"
               min="0"
               max="100"
               value={lineUpCutoff}
               onChange={(e) => onLineUpChange(Number(e.target.value))}
-              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              aria-label="Ajustement de la ligne de contours"
+              className="w-full h-1.5 bg-ink/10 rounded-lg appearance-none cursor-pointer accent-terracotta"
             />
-            <span className="text-[10px] text-slate-400">Haut</span>
+            <span className="text-[10px] text-ink-soft">Haut</span>
           </div>
 
-          <span className="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-1 rounded border border-slate-700">
+          <span className="text-xs font-mono font-bold text-ink bg-cream px-2 py-1 rounded-md border border-ink/10">
             {lineUpCutoff}%
           </span>
         </div>

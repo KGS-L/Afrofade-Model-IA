@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Check, Crown, ArrowUpRight } from 'lucide-react';
+import { Crown, Check } from 'lucide-react';
 
 export interface HairstyleItem {
   id: string;
@@ -74,6 +74,20 @@ const HAIRSTYLES_DATA: HairstyleItem[] = [
   },
 ];
 
+/** Badge plan affiché sur chaque style_card (PRO / VIP / PREMIUM or) */
+const PLAN_BY_ID: { [id: string]: 'PRO' | 'VIP' } = {
+  fade_taper_low: 'PRO',
+  afro_sponge_twists: 'PRO',
+  fade_burst_mohawk: 'VIP',
+};
+
+const planBadgeClass = (item: HairstyleItem) =>
+  item.isPremium
+    ? 'bg-premium text-white'
+    : PLAN_BY_ID[item.id] === 'VIP'
+      ? 'bg-terracotta-dark text-white'
+      : 'bg-ink-soft text-white';
+
 interface HairstyleCatalogProps {
   selectedId: string | null;
   onSelect: (item: HairstyleItem) => void;
@@ -101,31 +115,38 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
   ];
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-6 shadow-2xl backdrop-blur-md">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+    <div className="bg-card rounded-card p-6 space-y-6 shadow-soft">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink/10 pb-4">
         <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-terracotta bg-terracotta-wash px-2.5 py-1 rounded-pill">
             Étape 2 sur 3
           </span>
-          <h2 className="text-xl font-black text-white mt-1 flex items-center gap-2">
-            6 Styles Signés pour Vos Clients
+          <h2 className="font-display text-xl mt-2">
+            6 styles signés pour vos clients
           </h2>
-          <p className="text-xs text-slate-400">
-            Sélectionnez une coupe pour la projeter instantanément sur le modèle 3D du client.
+          <p className="text-xs text-ink-soft mt-1">
+            Touchez une coupe pour la projeter instantanément sur le modèle 3D
+            du client.
           </p>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div
+        role="tablist"
+        aria-label="Familles de coiffures"
+        className="flex items-center gap-2 overflow-x-auto pb-1"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            className={`min-h-[44px] px-4 rounded-pill text-xs font-bold whitespace-nowrap transition-all ${
               activeTab === tab.id
-                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20 scale-[1.02]'
-                : 'bg-slate-950/80 text-slate-400 border border-slate-800 hover:text-white hover:border-slate-700'
+                ? 'bg-terracotta text-white shadow-soft'
+                : 'bg-cream text-ink-soft border border-ink/10 hover:text-ink hover:border-ink/25'
             }`}
           >
             {tab.label}
@@ -133,8 +154,8 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
         ))}
       </div>
 
-      {/* Grid of Signed Afro Styles (Inspired by Thelma.pet Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Grille de style_card — cartes blanches, badge plan, CTA Personnaliser */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredItems.map((item) => {
           const isSelected = selectedId === item.id;
           return (
@@ -146,50 +167,53 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
                   onTriggerUpsell(item);
                 }
               }}
-              className={`group relative rounded-3xl border bg-slate-950 overflow-hidden cursor-pointer transition-all duration-300 ${
+              className={`group relative rounded-card bg-card overflow-hidden cursor-pointer transition-all duration-300 border ${
                 isSelected
-                  ? 'border-amber-400 shadow-xl shadow-amber-500/20 ring-2 ring-amber-500/40 scale-[1.02]'
-                  : 'border-slate-800/80 hover:border-slate-700 hover:scale-[1.01]'
+                  ? 'border-terracotta shadow-soft ring-2 ring-terracotta/40'
+                  : 'border-ink/10 hover:border-terracotta/50 shadow-soft'
               }`}
             >
               {/* Photo Portrait Container */}
-              <div className="relative h-64 w-full overflow-hidden bg-slate-900">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-terracotta-wash">
                 <img
                   src={item.thumbnail}
-                  alt={item.title}
+                  alt={`Rendu 3D — ${item.title}`}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
 
-                {/* Badge Premium / Upsell */}
-                {item.isPremium ? (
-                  <div className="absolute top-3 right-3 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                    <Crown className="w-3.5 h-3.5 fill-slate-950" />
-                    <span>{item.priceTag || 'PREMIUM'}</span>
-                  </div>
-                ) : (
-                  <div className="absolute top-3 right-3 bg-slate-900/90 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-full border border-slate-800 backdrop-blur-md">
-                    Inclus
-                  </div>
-                )}
+                {/* Badge plan : PRO / VIP / PREMIUM (or) */}
+                <span
+                  className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full flex items-center gap-1 shadow-soft ${planBadgeClass(item)}`}
+                >
+                  {item.isPremium && <Crown className="w-3 h-3" />}
+                  <span>
+                    {item.isPremium
+                      ? `Premium · ${item.priceTag || '+2 000 FCFA'}`
+                      : PLAN_BY_ID[item.id]}
+                  </span>
+                </span>
 
                 {/* Selected Checkmark */}
                 {isSelected && (
-                  <div className="absolute top-3 left-3 bg-amber-500 text-slate-950 rounded-full p-1.5 shadow-xl">
+                  <div className="absolute top-3 left-3 bg-terracotta text-white rounded-full p-1.5 shadow-soft">
                     <Check className="w-4 h-4 stroke-[3]" />
                   </div>
                 )}
+              </div>
 
-                {/* Bottom Overlay Info inside portrait */}
-                <div className="absolute bottom-3 left-3 right-3 space-y-1">
-                  <h4 className="text-base font-extrabold text-white group-hover:text-amber-400 transition-colors flex items-center justify-between">
-                    <span>{item.title}</span>
-                    <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-amber-400" />
+              {/* Corps de la style_card */}
+              <div className="p-4 space-y-3">
+                <div>
+                  <h4 className="font-bold text-[15px] text-ink">
+                    {item.title}
                   </h4>
-                  <p className="text-xs text-slate-300 line-clamp-2">
+                  <p className="text-xs text-ink-soft leading-relaxed mt-1 line-clamp-2">
                     {item.subtitle}
                   </p>
                 </div>
+                <span className="inline-flex min-h-[40px] items-center text-[13px] font-bold px-4 rounded-pill bg-terracotta text-white group-hover:bg-terracotta-dark transition-colors pointer-events-none select-none">
+                  Personnaliser
+                </span>
               </div>
             </div>
           );

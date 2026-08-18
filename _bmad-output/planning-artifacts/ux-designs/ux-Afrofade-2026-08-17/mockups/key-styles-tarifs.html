@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afrofade — Écran clé : Styles · Tarifs · FAQ · Footer</title>
+<style>
+/* ==========================================================================
+   ÉCRAN CLÉ 3/3 — Bas de la route / : #styles, #tarifs, #faq, footer
+   Régit : EXPERIENCE.md › Information Architecture (§6-9)
+           EXPERIENCE.md › Component Patterns (style_card, PricingModal entry,
+           faq_accordion, drawer) · State Patterns (quota → upsell plan)
+           DESIGN.md › Components (style_card, faq_accordion, night_footer, gold)
+   Contrat : les spines priment sur cette maquette en cas de conflit.
+   ========================================================================== */
+:root{
+  --terracotta:#C7816F; --terracotta-dark:#A9662F;
+  --cream:#FAF6F1; --ink:#1F1B17; --ink-soft:#6B6259; --white:#FFFFFF;
+  --night:#1F1B17; --gold:#C99B3F;
+  --card-r:16px; --pill:999px; --img-r:12px;
+  --shadow:0 4px 24px rgba(31,27,23,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#E8E2DA;font-family:'Special Gothic','Helvetica Neue',Arial,sans-serif;color:var(--ink);padding:24px}
+.display{font-family:'Special Gothic Expanded One','Arial Black',sans-serif}
+.hand{font-family:'Caveat','Segoe Script',cursive}
+.browser{max-width:1280px;margin:0 auto;background:var(--cream);border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(31,27,23,.15)}
+.chrome{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#EDE7DF;border-bottom:1px solid rgba(31,27,23,.06)}
+.dot{width:10px;height:10px;border-radius:50%;background:#CFC6BB}
+.urlbar{flex:1;margin-left:12px;background:#FFF;border-radius:8px;padding:5px 12px;font-size:12px;color:var(--ink-soft)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+section{padding:72px 0}
+.head{text-align:center;margin-bottom:40px}
+.head .hand{font-size:24px;color:var(--terracotta)}
+.head h2{font-size:32px;margin-top:4px}
+.head p{margin-top:10px;color:var(--ink-soft);font-size:15px}
+.btn{border:none;border-radius:var(--pill);padding:13px 26px;font-size:15px;font-family:inherit;cursor:pointer}
+.btn-primary{background:var(--terracotta);color:#fff}
+/* --- Styles --- */
+.styles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.style-card{background:var(--white);border-radius:var(--card-r);overflow:hidden;box-shadow:var(--shadow)}
+.style-visual{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;letter-spacing:.22em}
+.plan{font-size:10px;letter-spacing:.12em;border-radius:var(--pill);padding:4px 10px;color:#fff}
+.style-body{padding:18px 20px 20px;display:flex;align-items:center;gap:12px}
+.style-body h3{font-size:16px;flex:1}
+.style-body .plan{margin-left:auto}
+.g1{background:linear-gradient(150deg,#E4C9B8,#C7816F)}
+.g2{background:linear-gradient(150deg,#D8B79A,#A9662F)}
+.g3{background:linear-gradient(150deg,#CBB39B,#8A6A4B)}
+.g4{background:linear-gradient(150deg,#E9D3C4,#C7816F)}
+.g5{background:linear-gradient(150deg,#D9C6A8,#C99B3F)}
+.p-pro{background:var(--ink-soft)}
+.p-vip{background:var(--terracotta-dark)}
+.p-gold{background:var(--gold)}
+/* --- Tarifs --- */
+#tarifs{background:var(--white)}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.plan-card{border:1.5px solid rgba(31,27,23,.08);border-radius:var(--card-r);padding:28px;background:var(--cream);display:flex;flex-direction:column}
+.plan-card.star{border:2px solid var(--terracotta);position:relative;background:var(--white);box-shadow:var(--shadow)}
+.plan-card.star .ribbon{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--terracotta);color:#fff;font-size:11px;letter-spacing:.12em;border-radius:var(--pill);padding:5px 14px;white-space:nowrap}
+.plan-card h3{font-size:15px;letter-spacing:.14em;color:var(--ink-soft)}
+.price{margin:14px 0 4px;font-size:38px}
+.price small{font-size:14px;color:var(--ink-soft);font-family:'Special Gothic','Helvetica Neue',Arial,sans-serif}
+.plan-card ul{list-style:none;margin:18px 0 24px;display:grid;gap:10px;font-size:14px;color:var(--ink-soft)}
+.plan-card li::before{content:"✓ ";color:var(--terracotta);font-weight:700}
+.plan-card .btn{margin-top:auto;width:100%}
+.btn-outline{background:transparent;border:1.5px solid rgba(31,27,23,.2);color:var(--ink)}
+/* --- FAQ --- */
+.faq{max-width:760px;margin:0 auto;display:grid;gap:12px}
+details{background:var(--white);border-radius:var(--card-r);box-shadow:var(--shadow);padding:0 22px}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:18px 0;font-size:16px;font-weight:600}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:22px;color:var(--terracotta);transition:.2s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{padding:0 0 18px;font-size:14px;line-height:1.65;color:var(--ink-soft)}
+/* --- Footer --- */
+footer{background:var(--night);color:#fff;padding:56px 24px 40px}
+.foot{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px}
+.foot .logo{font-size:26px}
+.foot .logo span{color:var(--terracotta)}
+.foot .tagline{margin-top:12px;font-size:14px;color:rgba(255,255,255,.65);line-height:1.6;max-width:34ch}
+.foot h5{font-size:12px;letter-spacing:.18em;color:rgba(255,255,255,.5);margin-bottom:14px}
+.foot ul{list-style:none;display:grid;gap:10px;font-size:14px;color:rgba(255,255,255,.8)}
+.payments{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.payments span{border:1px solid rgba(255,255,255,.25);border-radius:var(--pill);padding:5px 12px;font-size:12px;color:rgba(255,255,255,.75)}
+.legal{max-width:1200px;margin:36px auto 0;padding-top:20px;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.45)}
+@media(max-width:900px){.styles-grid,.plans,.foot{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="browser">
+  <div class="chrome"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="urlbar">afrofade.app/#styles — Catalogue & tarifs</span></div>
+
+  <section class="wrap" id="styles">
+    <div class="head">
+      <div class="hand">trouvez le style qui parle</div>
+      <h2 class="display">Nos styles</h2>
+      <p>Essayez-les sur la tête 3D de votre client, directement depuis le Rituel.</p>
+    </div>
+    <div class="styles-grid">
+      <div class="style-card">
+        <div class="style-visual g1">VISUEL 3D — FADE</div>
+        <div class="style-body"><h3>Fade classique</h3><span class="plan p-pro">PRO</span><button class="btn btn-primary" style="padding:9px 18px;font-size:13px">Personnaliser</button></div>
+      </div>
+      <div class="style-card">
+        <div class="style-visual g2">VISUEL 3D — LINE-UP</div>
+        <div class="style-body"><h3>Fade mid + line-up</h3><span class="plan p-pro">PRO</span><button class="btn btn-primary" style="padding:9px 18px;font-size:13px">Personnaliser</button></div>
+      </div>
+      <div class="style-card">
+        <div class="style-visual g3">VISUEL 3D — LOCKS</div>
+        <div class="style-body"><h3>Locks courtes</h3><span class="plan p-vip">VIP</span><button class="btn btn-primary" style="padding:9px 18px;font-size:13px">Personnaliser</button></div>
+      </div>
+      <div class="style-card">
+        <div class="style-visual g4">VISUEL 3D — TRESSES</div>
+        <div class="style-body"><h3>Tresses collées</h3><span class="plan p-vip">VIP</span><button class="btn btn-primary" style="padding:9px 18px;font-size:13px">Personnaliser</button></div>
+      </div>
+      <div class="style-card">
+        <div class="style-visual g5">VISUEL 3D — AFRO</div>
+        <div class="style-body"><h3>Afro sculpté</h3><span class="plan p-pro">PRO</span><button class="btn btn-primary" style="padding:9px 18px;font-size:13px">Personnaliser</button></div>
+      </div>
+      <div class="style-card">
+        <div class="style-visual g2">VISUEL 3D — BARBE</div>
+        <div class="style-body"><h3>Barbe sculptée</h3><span class="plan p-gold">PREMIUM</span><button class="btn btn-primary" style="padding:9px 18px;font-size:13px;background:var(--gold)">Personnaliser</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tarifs">
+    <div class="wrap">
+      <div class="head">
+        <div class="hand">sans engagement</div>
+        <h2 class="display">Des tarifs pensés pour votre salon</h2>
+        <p>Paiement par Mobile Money · facturation mensuelle en FCFA · résiliable à tout moment.</p>
+      </div>
+      <div class="plans">
+        <div class="plan-card">
+          <h3>PRO</h3>
+          <div class="price display">2 200 <small>FCFA/mois</small></div>
+          <ul>
+            <li>20 à 30 têtes par mois</li>
+            <li>Rituel du Miroir complet</li>
+            <li>Catalogue fades, tresses, afro</li>
+          </ul>
+          <button class="btn btn-outline">Choisir Pro</button>
+        </div>
+        <div class="plan-card star">
+          <span class="ribbon">LE PLUS CHOISI</span>
+          <h3>VIP</h3>
+          <div class="price display">4 900 <small>FCFA/mois</small></div>
+          <ul>
+            <li>100 têtes par mois</li>
+            <li>1 Go de cartes clients cloud</li>
+            <li>Téléchargement des rendus</li>
+            <li>Styles premium à la carte</li>
+          </ul>
+          <button class="btn btn-primary">Choisir VIP</button>
+        </div>
+        <div class="plan-card">
+          <h3>EXTRA</h3>
+          <div class="price display">7 500 <small>FCFA/mois</small></div>
+          <ul>
+            <li>Têtes illimitées</li>
+            <li>Toutes les fonctions, sans exception</li>
+            <li>Support prioritaire salon</li>
+          </ul>
+          <button class="btn btn-outline">Choisir Extra</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" id="faq">
+    <div class="head">
+      <div class="hand">on vous dit tout</div>
+      <h2 class="display">Tout ce que vous voulez savoir</h2>
+    </div>
+    <div class="faq">
+      <details open>
+        <summary>Combien de photos faut-il pour la reconstruction 3D ?</summary>
+        <p>Trois photos suffisent (face, profil gauche, profil droit), une quatrième en trois-quarts améliore la précision des volumes. Visage dégagé et lumière naturelle donnent les meilleurs résultats.</p>
+      </details>
+      <details>
+        <summary>Les photos de mes clients sont-elles confidentielles ?</summary>
+        <p>Oui. Chaque salon dispose d'un espace isolé et verrouillé : vos données ne sont visibles que par vous. Les cartes clients VIP et Extra sont stockées dans un espace cloud dédié de 1 Go.</p>
+      </details>
+      <details>
+        <summary>Que se passe-t-il si j'atteins mon quota mensuel ?</summary>
+        <p>Le Rituel vous propose simplement de passer au plan supérieur — aucune coupure en pleine journée de salon. Votre quota est remis à zéro le 1er de chaque mois de facturation.</p>
+      </details>
+      <details>
+        <summary>Puis-je essayer avant de m'abonner ?</summary>
+        <p>Bien sûr : la démo du Rituel du Miroir sur cette page est gratuite et ne demande aucune carte. Abonnez-vous uniquement quand le miroir vous a convaincu.</p>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot">
+      <div>
+        <div class="logo display">Afro<span>fade</span></div>
+        <p class="tagline">Le miroir du futur pour les salons qui font de chaque coupe une œuvre.</p>
+        <div class="payments"><span>Wave</span><span>Orange Money</span><span>MTN</span><span>Moov</span></div>
+      </div>
+      <div>
+        <h5>PRODUIT</h5>
+        <ul><li>Le Rituel</li><li>Nos styles</li><li>Tarifs</li><li>FAQ</li></ul>
+      </div>
+      <div>
+        <h5>LÉGAL</h5>
+        <ul><li>Mentions légales</li><li>Confidentialité</li><li>CGV</li></ul>
+      </div>
+    </div>
+    <div class="legal"><span>© 2026 Afrofade — Tous droits réservés</span><span>Fabriqué avec ♥ pour les barbiers d'Afrique</span></div>
+  </footer>
+</div>
+</body>
+</html>
