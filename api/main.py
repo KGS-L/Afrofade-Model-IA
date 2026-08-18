@@ -2,15 +2,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-import time
+
+from routers.quality_check import router as quality_router
+from services.reconstructor import ReconstructionPipelineService
 
 app = FastAPI(
     title="Afrofade 3D AI Engine",
-    description="Microservice de reconstruction 3D et fitting de coiffures afro",
+    description="Microservice de reconstruction 3D tête-au-cou et fitting de coiffures afro",
     version="1.0.0"
 )
 
-# Enable CORS for Next.js frontend
+# Enable CORS for Next.js web application
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,20 +21,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(quality_router)
+
 class ReconstructionRequest(BaseModel):
     salon_id: str
-    client_name: Optional[str] = "Anonyme"
+    client_name: Optional[str] = "Client Afrofade"
     photos_urls: List[str]
+    preserve_skin_texture: Optional[bool] = True
 
 class ReconstructionResponse(BaseModel):
     status: str
     mesh_3d_url: str
     processing_time_ms: int
+    vertices_count: int
+    texture_resolution: str
+    identity_preserved: bool
     message: str
 
 @app.get("/")
 def read_root():
-    return {"message": "Bienvenue sur l'API Afrofade 3D Engine", "status": "online"}
+    return {
+        "message": "Bienvenue sur l'API Afrofade 3D Engine",
+        "status": "online",
+        "features": ["3D Head Reconstruction", "Real-Time Quality Gatekeeper", "UV Texture Blending"]
+    }
 
 @app.get("/health")
 def health_check():
@@ -50,15 +62,10 @@ def reconstruct_3d_head(request: ReconstructionRequest):
             detail="Au moins 3 photos sous des angles différents (face, profil gauche, profil droit) sont requises."
         )
     
-    start_time = time.time()
-    
-    # Stub representation of 3D Morphable Model (DECA/FLAME) processing
-    # In production, this runs the PyTorch DECA pipeline on GPU/CPU
-    processing_time = int((time.time() - start_time) * 1000) + 850
-    
-    return ReconstructionResponse(
-        status="success",
-        mesh_3d_url="https://storage.googleapis.com/afrofade-assets/sample_head_mesh.glb",
-        processing_time_ms=processing_time,
-        message=f"Modèle 3D reconstruit avec succès pour {request.client_name}."
+    result = ReconstructionPipelineService.process_3d_head_reconstruction(
+        photos_urls=request.photos_urls,
+        client_name=request.client_name or "Client Afrofade",
+        preserve_skin_texture=request.preserve_skin_texture if request.preserve_skin_texture is not None else True
     )
+    
+    return result
