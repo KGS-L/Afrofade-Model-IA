@@ -4,57 +4,145 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Scissors,
-  LogOut,
-  Sparkles,
-  MapPin,
-  Phone,
-  Store,
-  Check,
-  RefreshCw,
   BadgePercent,
+  Check,
+  CreditCard,
   Gauge,
   Images,
+  LogOut,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Scissors,
+  Sparkles,
+  Store,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import {
-  PLANS,
-  PlanName,
-  TERMS,
-  TermId,
-  formatFcfa,
-  isProfileComplete,
-  monthlyPrice,
-  profileCompletion,
-} from '@/lib/plans';
+import { PLANS, TERMS, TermId, formatFcfa, monthlyPrice } from '@/lib/plans';
 
-/**
- * Espace salon — complétion du profil (nom, pays, numéro) débloquant les
- * remises premier abonnement : −10 % (3 mois), −25 % (6 mois), −40 % (annuel).
- */
-
-const FIELD_META = [
-  { key: 'salonName' as const, label: 'Nom du salon', icon: Store, placeholder: 'Barber Shop Abidjan' },
-  { key: 'country' as const, label: 'Pays', icon: MapPin, placeholder: 'Côte d’Ivoire' },
-  { key: 'phone' as const, label: 'Numéro du salon', icon: Phone, placeholder: '+225 07 00 00 00 00' },
-];
+type SalonDashboard = {
+  salon: {
+    id: string;
+    name: string;
+    phone: string;
+    country: string;
+    plan: 'PRO' | 'VIP' | 'EXTRA';
+    quotaLimit: number;
+    quotaUsed: number;
+    quotaRemaining: number;
+    storageUsedBytes: number;
+    profileCompletion: number;
+    discountEligible: boolean;
+  };
+  headsCount: number;
+  recentHeads: Array<{
+    id: string;
+    client_name: string;
+    mesh_3d_url: string | null;
+    saved_hairstyle_id: string | null;
+    is_saved_permanently: boolean;
+    created_at: string;
+    expires_at: string;
+  }>;
+  subscription: {
+    id: string;
+    provider: string;
+    amount_fcfa: number;
+    status: string;
+    expires_at: string;
+    created_at: string;
+  } | null;
+  payments: Array<{
+    id: string;
+    provider: string;
+    product_id: string;
+    term_id: string | null;
+    amount_fcfa: number;
+    status: string;
+    created_at: string;
+    paid_at: string | null;
+  }>;
+};
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, hydrated, logout, updateProfile, subscribe } = useAuth();
-  const [form, setForm] = useState({ salonName: '', country: '', phone: '' });
-  const [saved, setSaved] = useState(false);
+  const { user, hydrated, logout } = useAuth();
+  const [data, setData] = useState<SalonDashboard | null>(null);
+  const [form, setForm] = useState({ name: '', country: '', phone: '' });
   const [term, setTerm] = useState<TermId>('3mois');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [paying, setPaying] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/salon/dashboard', { cache: 'no-store' });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Impossible de charger le tableau de bord.');
+      setData(payload);
+      setForm({ name: payload.salon.name, country: payload.salon.country, phone: payload.salon.phone });
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Impossible de charger le tableau de bord.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (hydrated && !user) router.replace('/connexion?next=/dashboard');
-  }, [hydrated, user, router]);
+    if (!hydrated) return;
+    if (!user) {
+      router.replace('/connexion?next=/dashboard');
+      return;
+    }
+    if (user.role === 'salon') void load();
+  }, [hydrated, user, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (user) setForm(user.profile);
-  }, [user?.profile.salonName, user?.profile.country, user?.profile.phone]); // eslint-disable-line react-hooks/exhaustive-deps
+  const saveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setSaved(false);
+    setError(null);
+    try {
+      const response = await fetch('/api/salon/dashboard', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Enregistrement impossible.');
+      await load();
+      setSaved(true);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Enregistrement impossible.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  if (!hydrated || !user) {
+  const subscribe = async (planName: string) => {
+    setPaying(planName);
+    setError(null);
+    try {
+      const response = await fetch('/api/v1/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'money_fusion', purpose: 'subscription', planName, termId: term }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Paiement indisponible.');
+      if (!payload.url) throw new Error('Aucun lien de paiement retourné.');
+      window.location.assign(payload.url);
+    } catch (paymentError) {
+      setError(paymentError instanceof Error ? paymentError.message : 'Paiement indisponible.');
+      setPaying(null);
+    }
+  };
+
+  if (!hydrated || !user || user.role !== 'salon' || loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <RefreshCw className="w-6 h-6 animate-spin text-terracotta" />
@@ -62,253 +150,91 @@ export default function DashboardPage() {
     );
   }
 
-  const completion = profileCompletion(form);
-  const complete = isProfileComplete(form);
-  const eligible = complete && !user.everSubscribed;
-  const activeTerm = TERMS.find((t) => t.id === term) ?? TERMS[1];
-
-  const save = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile(form);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2000);
-  };
+  const activeTerm = TERMS.find((item) => item.id === term) ?? TERMS[1];
+  const eligible = data?.salon.discountEligible ?? false;
 
   return (
-    <div className="min-h-screen bg-cream text-ink flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur-md border-b border-ink/10">
+    <div className="min-h-screen bg-cream text-ink">
+      <header className="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-ink/10">
         <div className="max-w-container mx-auto px-6 py-3 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="Afrofade — accueil">
-            <div className="w-9 h-9 rounded-card bg-terracotta flex items-center justify-center">
-              <Scissors className="w-4 h-4 text-white stroke-[2.5]" />
-            </div>
-            <span className="font-display text-lg tracking-tight">
-              Afro<span className="text-terracotta">fade</span>
-            </span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-card bg-terracotta flex items-center justify-center"><Scissors className="w-4 h-4 text-white" /></div>
+            <span className="font-display text-lg">Afro<span className="text-terracotta">fade</span></span>
           </Link>
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-terracotta bg-terracotta-wash px-3 py-1.5 rounded-pill">
-            <Gauge className="w-3.5 h-3.5" />
-            Espace salon
-          </span>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden md:inline text-xs text-ink-soft">{user.email}</span>
-            <Link
-              href="/rituel"
-              className="min-h-[44px] inline-flex items-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-4 rounded-pill transition-colors"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Tester le rituel</span>
-            </Link>
-            <button
-              onClick={logout}
-              aria-label="Se déconnecter"
-              className="w-11 h-11 rounded-pill bg-card border border-ink/15 text-ink-soft hover:text-terracotta flex items-center justify-center transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-terracotta bg-terracotta-wash px-3 py-1.5 rounded-pill"><Gauge className="w-3.5 h-3.5" /> Espace salon</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/rituel" className="min-h-[44px] inline-flex items-center gap-2 bg-terracotta text-white font-bold text-sm px-4 rounded-pill"><Sparkles className="w-4 h-4" /> Rituel</Link>
+            <button onClick={logout} aria-label="Se déconnecter" className="w-11 h-11 rounded-pill bg-card border border-ink/15 flex items-center justify-center"><LogOut className="w-4 h-4" /></button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-container mx-auto w-full px-6 py-10 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-          <div>
-            <p className="font-hand text-2xl text-terracotta">bon retour</p>
-            <h1 className="font-display text-2xl sm:text-3xl">Bonjour {user.name}</h1>
-          </div>
+      <main className="max-w-container mx-auto px-6 py-10 space-y-8">
+        <div>
+          <p className="font-hand text-2xl text-terracotta">bon retour</p>
+          <h1 className="font-display text-3xl">{data?.salon.name || user.name}</h1>
+          <p className="text-sm text-ink-soft mt-1">Toutes les statistiques ci-dessous viennent de Supabase.</p>
         </div>
 
-        {/* Stats mock */}
+        {error && <div className="rounded-input border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Têtes ce mois', value: user.subscription ? '12 / ' + (user.subscription.plan === 'PRO' ? 30 : 100) : '—', icon: Images },
-            { label: 'Rendus enregistrés', value: '8', icon: Images },
-            { label: 'Profil complété', value: completion + ' %', icon: Store },
-            { label: 'Abonnement', value: user.subscription ? user.subscription.plan : 'Aucun', icon: BadgePercent },
-          ].map((s) => (
-            <div key={s.label} className="bg-card rounded-card border border-ink/10 shadow-soft p-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink-soft">
-                <s.icon className="w-3.5 h-3.5 text-terracotta" />
-                {s.label}
-              </div>
-              <p className="font-display text-xl mt-2">{s.value}</p>
+            { label: 'Têtes enregistrées', value: String(data?.headsCount ?? 0), icon: Images },
+            { label: 'Quota utilisé', value: `${data?.salon.quotaUsed ?? 0} / ${data?.salon.quotaLimit ?? 0}`, icon: Gauge },
+            { label: 'Profil complété', value: `${data?.salon.profileCompletion ?? 0} %`, icon: Store },
+            { label: 'Abonnement', value: data?.subscription ? data.salon.plan : 'Aucun', icon: BadgePercent },
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card rounded-card border border-ink/10 p-5 shadow-soft">
+              <div className="text-[10px] uppercase tracking-[0.12em] font-bold text-ink-soft flex items-center gap-2"><stat.icon className="w-3.5 h-3.5 text-terracotta" /> {stat.label}</div>
+              <p className="font-display text-2xl mt-2">{stat.value}</p>
             </div>
           ))}
         </div>
 
-        {/* Profil salon */}
-        <section aria-label="Profil du salon" className="bg-card rounded-card border border-ink/10 shadow-soft p-6 sm:p-8 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="font-display text-xl">Profil du salon</h2>
-              <p className="text-xs text-ink-soft mt-1">
-                Nom, pays et numéro — 3 champs pour débloquer vos remises de
-                premier abonnement.
-              </p>
-            </div>
-            <span
-              className={`inline-flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-pill ${
-                complete ? 'bg-terracotta text-white' : 'bg-terracotta-wash text-terracotta-dark'
-              }`}
-            >
-              {complete ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : null}
-              {completion} % complété
-            </span>
+        <section className="bg-card rounded-card border border-ink/10 p-6 sm:p-8 shadow-soft space-y-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div><h2 className="font-display text-xl">Profil du salon</h2><p className="text-xs text-ink-soft mt-1">Ces informations sont persistées dans <code>public.salons</code>.</p></div>
+            <span className={`text-xs font-bold px-3 py-1.5 rounded-pill ${(data?.salon.profileCompletion ?? 0) === 100 ? 'bg-terracotta text-white' : 'bg-terracotta-wash text-terracotta-dark'}`}>{data?.salon.profileCompletion ?? 0} % complété</span>
           </div>
-
-          {/* Barre de progression */}
-          <div className="h-2.5 bg-ink/10 rounded-pill overflow-hidden" role="progressbar" aria-valuenow={completion} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full bg-terracotta rounded-pill transition-all duration-500" style={{ width: `${completion}%` }} />
-          </div>
-
-          <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {FIELD_META.map((f) => (
-              <div key={f.key}>
-                <label htmlFor={f.key} className="flex items-center gap-1.5 text-xs font-bold mb-1.5">
-                  <f.icon className="w-3.5 h-3.5 text-terracotta" />
-                  {f.label}
-                </label>
-                <input
-                  id={f.key}
-                  type={f.key === 'phone' ? 'tel' : 'text'}
-                  value={form[f.key]}
-                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                  placeholder={f.placeholder}
-                  className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 text-sm focus:outline-none focus:border-terracotta"
-                />
-              </div>
-            ))}
-            <div className="sm:col-span-3 flex items-center gap-3">
-              <button
-                type="submit"
-                className="min-h-[48px] px-6 rounded-pill bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm shadow-soft transition-colors"
-              >
-                Enregistrer mon profil
-              </button>
-              {saved && (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-terracotta-dark">
-                  <Check className="w-4 h-4 stroke-[3]" /> Profil mis à jour
-                </span>
-              )}
-            </div>
+          <form onSubmit={saveProfile} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label className="text-xs font-bold"><span className="flex items-center gap-1.5 mb-1.5"><Store className="w-3.5 h-3.5 text-terracotta" />Nom</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 font-normal" /></label>
+            <label className="text-xs font-bold"><span className="flex items-center gap-1.5 mb-1.5"><MapPin className="w-3.5 h-3.5 text-terracotta" />Pays</span><input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 font-normal" /></label>
+            <label className="text-xs font-bold"><span className="flex items-center gap-1.5 mb-1.5"><Phone className="w-3.5 h-3.5 text-terracotta" />Téléphone</span><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 font-normal" /></label>
+            <div className="sm:col-span-3 flex items-center gap-3"><button disabled={saving} className="min-h-[46px] px-6 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>{saved && <span className="text-xs font-bold text-terracotta-dark flex items-center gap-1"><Check className="w-4 h-4" /> Enregistré dans Supabase</span>}</div>
           </form>
         </section>
 
-        {/* Abonnement / remises */}
-        {user.subscription ? (
-          <section aria-label="Abonnement actif" className="bg-card rounded-card border border-terracotta/40 shadow-soft p-6 sm:p-8 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="font-display text-xl">Abonnement actif</h2>
-              {user.subscription.isFirstWithDiscount && (
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-white bg-terracotta px-3 py-1.5 rounded-pill">
-                  <BadgePercent className="w-3.5 h-3.5" />
-                  Remise premier abonnement appliquée
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-ink-soft">
-              Plan <strong className="text-ink">{user.subscription.plan}</strong> ·{' '}
-              {TERMS.find((t) => t.id === user.subscription?.term)?.label} ·{' '}
-              <strong className="text-ink">{formatFcfa(user.subscription.monthlyFcfa)} FCFA/mois</strong>
-            </p>
-            <p className="text-xs text-ink-soft">
-              Actif depuis le {new Date(user.subscription.startedAt).toLocaleDateString('fr-FR')} ·
-              paiement Mobile Money (Wave, Orange Money, MTN, Moov).
-            </p>
+        {data?.subscription ? (
+          <section className="bg-card rounded-card border border-terracotta/40 p-6 shadow-soft">
+            <h2 className="font-display text-xl">Abonnement actif</h2>
+            <p className="text-sm text-ink-soft mt-2">Plan <strong className="text-ink">{data.salon.plan}</strong> · {data.subscription.provider} · expire le <strong className="text-ink">{new Date(data.subscription.expires_at).toLocaleDateString('fr-FR')}</strong></p>
           </section>
         ) : (
-          <section aria-label="Premier abonnement" className="bg-card rounded-card border border-ink/10 shadow-soft p-6 sm:p-8 space-y-6">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h2 className="font-display text-xl">Premier abonnement</h2>
-                <p className="text-xs text-ink-soft mt-1 max-w-lg">
-                  {eligible
-                    ? 'Profil 100 % ✓ : vos remises de lancement sont débloquées sur votre premier abonnement.'
-                    : 'Complétez votre profil à 100 % pour débloquer les remises de lancement : −10 % (3 mois), −25 % (6 mois), −40 % (annuel).'}
-                </p>
-              </div>
-              <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] px-3 py-1.5 rounded-pill ${eligible ? 'text-white bg-terracotta' : 'text-ink-soft bg-ink/5'}`}>
-                <BadgePercent className="w-3.5 h-3.5" />
-                {eligible ? 'Remises actives' : 'Remises verrouillées'}
-              </span>
+          <section className="bg-card rounded-card border border-ink/10 p-6 sm:p-8 shadow-soft space-y-6">
+            <div className="flex items-start justify-between gap-3 flex-wrap"><div><h2 className="font-display text-xl">Choisir un abonnement</h2><p className="text-xs text-ink-soft mt-1">Les remises sont recalculées et validées côté serveur.</p></div><span className={`text-xs font-bold px-3 py-1.5 rounded-pill ${eligible ? 'bg-terracotta text-white' : 'bg-ink/5 text-ink-soft'}`}>{eligible ? 'Remises premier abonnement actives' : 'Remises verrouillées'}</span></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {TERMS.map((item) => <button key={item.id} type="button" onClick={() => setTerm(item.id)} className={`rounded-card border p-4 text-left ${term === item.id ? 'border-terracotta bg-terracotta-wash' : 'border-ink/10'}`}><span className="block font-bold text-sm">{item.label}</span><span className="block text-xs text-ink-soft mt-1">{eligible ? item.hint : item.id === 'mensuel' ? item.hint : 'Profil complet + premier abonnement requis'}</span></button>)}
             </div>
-
-            {/* Choix de l'engagement */}
-            <div role="radiogroup" aria-label="Durée d'engagement" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {TERMS.map((t) => {
-                const locked = t.discount > 0 && !eligible;
-                const active = t.id === term;
-                return (
-                  <button
-                    type="button"
-                    key={t.id}
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setTerm(t.id)}
-                    className={`text-left rounded-card border p-4 transition-all ${
-                      active
-                        ? 'border-terracotta bg-terracotta-wash ring-2 ring-terracotta/30'
-                        : 'border-ink/10 bg-cream hover:border-terracotta/50'
-                    } ${locked ? 'opacity-50' : ''}`}
-                  >
-                    <span className="block text-sm font-bold">{t.label}</span>
-                    <span className={`block text-xs mt-1 font-bold ${t.discount > 0 && eligible ? 'text-terracotta' : 'text-ink-soft'}`}>
-                      {t.discount > 0 ? t.hint : t.hint}
-                    </span>
-                    {locked && <span className="block text-[10px] text-ink-soft mt-1">Profil 100 % requis</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Plans au prix remisé */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {PLANS.map((plan) => {
                 const price = monthlyPrice(plan.amount, eligible ? activeTerm.discount : 0);
-                const discounted = eligible && activeTerm.discount > 0;
-                return (
-                  <div
-                    key={plan.name}
-                    className={`rounded-card border p-5 flex flex-col ${
-                      plan.popular ? 'border-terracotta bg-terracotta-wash/50 ring-1 ring-terracotta/30' : 'border-ink/10 bg-cream'
-                    }`}
-                  >
-                    <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-ink-soft">{plan.name}</h3>
-                    <p className="mt-2">
-                      <span className="font-display text-2xl">{formatFcfa(price)}</span>
-                      <span className="text-xs text-ink-soft"> FCFA/mois</span>
-                    </p>
-                    {discounted && (
-                      <p className="text-[11px] text-ink-soft mt-0.5">
-                        au lieu de <s>{formatFcfa(plan.amount)}</s>
-                      </p>
-                    )}
-                    <ul className="mt-3 mb-4 space-y-1.5 text-xs text-ink-soft">
-                      {plan.features.slice(0, 3).map((f) => (
-                        <li key={f} className="flex gap-1.5">
-                          <span className="text-terracotta font-bold" aria-hidden>✓</span>
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      type="button"
-                      onClick={() => subscribe(plan.name as PlanName, plan.amount, activeTerm.id)}
-                      className={`mt-auto min-h-[46px] rounded-pill font-bold text-sm transition-colors ${
-                        plan.popular
-                          ? 'bg-terracotta hover:bg-terracotta-dark text-white'
-                          : 'bg-transparent border-[1.5px] border-ink/20 hover:border-terracotta/50'
-                      }`}
-                    >
-                      {discounted ? `Profiter de −${Math.round(activeTerm.discount * 100)} %` : `Choisir ${plan.name.charAt(0)}${plan.name.slice(1).toLowerCase()}`}
-                    </button>
-                  </div>
-                );
+                return <div key={plan.name} className={`rounded-card border p-5 flex flex-col ${plan.popular ? 'border-terracotta bg-terracotta-wash/40' : 'border-ink/10'}`}><p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-soft">{plan.name}</p><p className="font-display text-2xl mt-2">{formatFcfa(price)} <span className="text-xs font-sans text-ink-soft">FCFA/mois</span></p><p className="text-xs text-ink-soft mt-2">{activeTerm.label} · total calculé côté serveur</p><ul className="text-xs text-ink-soft mt-4 space-y-1.5 mb-4">{plan.features.slice(0, 3).map((feature) => <li key={feature}>✓ {feature}</li>)}</ul><button onClick={() => void subscribe(plan.name)} disabled={Boolean(paying)} className="mt-auto min-h-[46px] rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{paying === plan.name ? 'Ouverture du paiement…' : `Choisir ${plan.name}`}</button></div>;
               })}
             </div>
           </section>
         )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
+            <h2 className="font-display text-lg flex items-center gap-2"><Images className="w-4 h-4 text-terracotta" /> Dernières têtes</h2>
+            <div className="divide-y divide-ink/10 mt-4">{(data?.recentHeads || []).length === 0 ? <p className="py-4 text-sm text-ink-soft">Aucune tête enregistrée.</p> : data?.recentHeads.map((head) => <div key={head.id} className="py-3 flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{head.client_name}</p><p className="text-xs text-ink-soft">{new Date(head.created_at).toLocaleDateString('fr-FR')}</p></div><span className="text-xs text-ink-soft">{head.mesh_3d_url ? '3D prête' : 'En traitement'}</span></div>)}</div>
+          </section>
+          <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
+            <h2 className="font-display text-lg flex items-center gap-2"><CreditCard className="w-4 h-4 text-terracotta" /> Historique des paiements</h2>
+            <div className="divide-y divide-ink/10 mt-4">{(data?.payments || []).length === 0 ? <p className="py-4 text-sm text-ink-soft">Aucun paiement.</p> : data?.payments.map((payment) => <div key={payment.id} className="py-3 flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{payment.product_id}</p><p className="text-xs text-ink-soft">{payment.provider} · {payment.status}</p></div><span className="text-sm font-bold">{formatFcfa(payment.amount_fcfa)} FCFA</span></div>)}</div>
+          </section>
+        </div>
       </main>
     </div>
   );
