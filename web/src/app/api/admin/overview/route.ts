@@ -37,17 +37,19 @@ export async function GET(req: NextRequest) {
       if (result.error) throw new Error(result.error.message);
     }
 
-    const planDistribution = { PRO: 0, VIP: 0, EXTRA: 0 };
+    const planDistribution: Record<'PRO' | 'VIP' | 'EXTRA', number> = { PRO: 0, VIP: 0, EXTRA: 0 };
     for (const salon of salonsResult.data || []) {
-      if (salon.plan === 'PRO' || salon.plan === 'VIP' || salon.plan === 'EXTRA') {
-        planDistribution[salon.plan] += 1;
+      const plan = salon.plan as 'PRO' | 'VIP' | 'EXTRA' | null;
+      if (plan === 'PRO' || plan === 'VIP' || plan === 'EXTRA') {
+        planDistribution[plan] += 1;
       }
     }
 
-    const roleDistribution = { customer: 0, salon: 0, admin: 0 };
+    const roleDistribution: Record<'customer' | 'salon' | 'admin', number> = { customer: 0, salon: 0, admin: 0 };
     for (const profile of rolesResult.data || []) {
-      if (profile.role === 'customer' || profile.role === 'salon' || profile.role === 'admin') {
-        roleDistribution[profile.role] += 1;
+      const role = profile.role as 'customer' | 'salon' | 'admin' | null;
+      if (role === 'customer' || role === 'salon' || role === 'admin') {
+        roleDistribution[role] += 1;
       }
     }
 
