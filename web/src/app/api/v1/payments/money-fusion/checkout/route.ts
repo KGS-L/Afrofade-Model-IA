@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro';
+
     const session = await createMoneyFusionPaymentSession({
       totalPrice: Number(amountFcfa),
       article: [
@@ -26,8 +28,8 @@ export async function POST(req: NextRequest) {
           client_name: salonName || 'Salon Afrofade',
         },
       ],
-      return_url: 'https://afrofade.com.kgslab.com/dashboard?payment=success&provider=money_fusion',
-      cancel_url: 'https://afrofade.com.kgslab.com/dashboard?payment=cancelled',
+      return_url: `${appUrl}/dashboard?payment=success&provider=money_fusion`,
+      cancel_url: `${appUrl}/dashboard?payment=cancelled`,
       custom_metadata: {
         planName,
         termId: termId || '3mois',

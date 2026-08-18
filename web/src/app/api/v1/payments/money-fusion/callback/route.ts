@@ -23,10 +23,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const token = url.searchParams.get('token');
-  const status = url.searchParams.get('status');
-
-  // Redirection d'apprentissage après paiement Mobile Money
-  return NextResponse.redirect('https://afrofade.com.kgslab.com/dashboard?payment=success');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro';
+  return NextResponse.redirect(`${appUrl}/dashboard?payment=success`);
 }

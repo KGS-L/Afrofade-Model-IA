@@ -25,12 +25,10 @@ export interface MoneyFusionCheckoutResponse {
   message?: string;
 }
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro';
 const MONEY_FUSION_URL = process.env.MONEY_FUSION_URL || 'https://www.moneyfusion.net/api/v1/pay';
 const MONEY_FUSION_API_KEY = process.env.MONEY_FUSION_API_KEY || 'afrofade_mf_live_key_2026';
 
-/**
- * Génère une session de paiement Money Fusion pour une souscription Afrofade.
- */
 export async function createMoneyFusionPaymentSession(
   payload: MoneyFusionCheckoutPayload
 ): Promise<MoneyFusionCheckoutResponse> {
@@ -38,8 +36,8 @@ export async function createMoneyFusionPaymentSession(
     totalPrice: payload.totalPrice,
     article: payload.article,
     personal_info: payload.personal_info || [],
-    return_url: payload.return_url || 'https://afrofade.com.kgslab.com/dashboard?payment=success&provider=money_fusion',
-    cancel_url: payload.cancel_url || 'https://afrofade.com.kgslab.com/dashboard?payment=cancelled',
+    return_url: payload.return_url || `${APP_URL}/dashboard?payment=success&provider=money_fusion`,
+    cancel_url: payload.cancel_url || `${APP_URL}/dashboard?payment=cancelled`,
     custom_metadata: payload.custom_metadata || {},
   };
 
