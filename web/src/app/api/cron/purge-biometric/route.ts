@@ -12,74 +12,58 @@ export async function POST(request: NextRequest) {
 
 async function handlePurge(request: NextRequest) {
   try {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret) {
+      console.error('[Biometric Purge] CRON_SECRET is not configured.');
+      return NextResponse.json({ error: 'Cron not configured.' }, { status: 503 });
+    }
+
     const authHeader = request.headers.get('authorization');
-    const cronSecretParam = request.nextUrl.searchParams.get('secret');
-    const expectedSecret = process.env.CRON_SECRET || 'afrofade_biometric_purge_secret_key';
-
-    const isAuthorized =
-      authHeader === `Bearer ${expectedSecret}` || cronSecretParam === expectedSecret;
-
-    if (!isAuthorized && process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'Non autorisé. Clé CRON_SECRET requise.' },
-        { status: 401 }
-      );
+    if (authHeader !== `Bearer ${expectedSecret}`) {
+      return NextResponse.json({ error: 'Non autorisé.' }, { status: 401 });
     }
 
     const supabaseAdmin = getServiceSupabase();
-
-    // 1. Fetch unsaved client heads where expires_at < NOW()
     const { data: expiredHeads, error: queryError } = await supabaseAdmin
       .from('clients_heads')
-      .select('id, photo_urls, mesh_glb_url, expires_at')
+      .select('id, photos_urls, mesh_3d_url, expires_at')
       .eq('is_saved_permanently', false)
       .lt('expires_at', new Date().toISOString());
 
-    if (queryError) {
-      console.warn('Erreur lors de la recherche des têtes 3D expirées:', queryError.message);
-    }
+    if (queryError) throw new Error(queryError.message);
 
     const headsToPurge = expiredHeads || [];
     let freedStorageFilesCount = 0;
 
-    // 2. Remove files from Supabase Storage bucket 'client-photos'
     for (const head of headsToPurge) {
-      if (Array.isArray(head.photo_urls)) {
-        for (const photoUrl of head.photo_urls) {
-          if (typeof photoUrl === 'string' && photoUrl.includes('client-photos/')) {
-            const path = photoUrl.split('client-photos/')[1];
-            if (path) {
-              await supabaseAdmin.storage.from('client-photos').remove([path]);
-              freedStorageFilesCount++;
-            }
-          }
-        }
+      if (!Array.isArray(head.photos_urls)) continue;
+      for (const photoUrl of head.photos_urls) {
+        if (typeof photoUrl !== 'string' || !photoUrl.includes('client-photos/')) continue;
+        const path = photoUrl.split('client-photos/')[1]?.split('?')[0];
+        if (!path) continue;
+
+        const { error: storageError } = await supabaseAdmin.storage.from('client-photos').remove([path]);
+        if (!storageError) freedStorageFilesCount += 1;
       }
     }
 
-    // 3. Delete expired database records
     let deletedCount = 0;
     if (headsToPurge.length > 0) {
-      const idsToDelete = headsToPurge.map((h) => h.id);
-      const { error: deleteError } = await supabaseAdmin
-        .from('clients_heads')
-        .delete()
-        .in('id', idsToDelete);
-
-      if (!deleteError) {
-        deletedCount = idsToDelete.length;
-      }
+      const idsToDelete = headsToPurge.map((head) => head.id);
+      const { error: deleteError } = await supabaseAdmin.from('clients_heads').delete().in('id', idsToDelete);
+      if (deleteError) throw new Error(deleteError.message);
+      deletedCount = idsToDelete.length;
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Purge biométrique 30 jours (CEDEAO) exécutée avec succès.',
       purgedCount: deletedCount,
       freedStorageFiles: freedStorageFilesCount,
       timestamp: new Date().toISOString(),
     });
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la purge biométrique';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Erreur lors de la purge biométrique';
+    console.error('[Biometric Purge]', message);
+    return NextResponse.json({ error: 'Erreur lors de la purge biométrique.' }, { status: 500 });
   }
 }

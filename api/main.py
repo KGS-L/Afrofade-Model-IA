@@ -1,10 +1,13 @@
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 
 from routers.quality_check import router as quality_router
 from services.reconstructor import ReconstructionPipelineService
+from services.jobs.queue_manager import AsyncJobQueueManager
 
 app = FastAPI(
     title="Afrofade 3D AI Engine",
@@ -12,14 +15,36 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for Next.js web application
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("API_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization", "X-Internal-API-Key"],
 )
+
+PUBLIC_PATHS = {"/", "/health"}
+
+@app.middleware("http")
+async def require_internal_api_key(request: Request, call_next):
+    if request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    expected_secret = os.getenv("API_INTERNAL_SECRET")
+    if not expected_secret:
+        return JSONResponse(status_code=503, content={"detail": "API internal authentication is not configured."})
+
+    supplied_secret = request.headers.get("X-Internal-API-Key")
+    if supplied_secret != expected_secret:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized."})
+
+    return await call_next(request)
 
 app.include_router(quality_router)
 
@@ -54,35 +79,30 @@ def health_check():
         "version": "1.0.0"
     }
 
-from services.jobs.queue_manager import AsyncJobQueueManager
-
 @app.post("/v1/reconstruct", response_model=ReconstructionResponse)
 @app.post("/api/v1/reconstruct", response_model=ReconstructionResponse)
 def reconstruct_3d_head(request: ReconstructionRequest):
     if len(request.photos_urls) < 3:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Au moins 3 photos sous des angles différents (face, profil gauche, profil droit) sont requises."
         )
-    
-    result = ReconstructionPipelineService.process_3d_head_reconstruction(
+
+    return ReconstructionPipelineService.process_3d_head_reconstruction(
         photos_urls=request.photos_urls,
         client_name=request.client_name or "Client Afrofade",
         preserve_skin_texture=request.preserve_skin_texture if request.preserve_skin_texture is not None else True
     )
-    
-    return result
 
 @app.post("/api/v1/heads", status_code=202)
 def submit_head_reconstruction(request: ReconstructionRequest):
     if len(request.photos_urls) < 1:
         raise HTTPException(status_code=400, detail="Au moins une photo est requise.")
-    
-    job_info = AsyncJobQueueManager.submit_reconstruction_job(
+
+    return AsyncJobQueueManager.submit_reconstruction_job(
         photos_urls=request.photos_urls,
         client_name=request.client_name or "Client Afrofade"
     )
-    return job_info
 
 @app.get("/api/v1/heads/{job_id}")
 def get_head_reconstruction_status(job_id: str):
@@ -90,4 +110,3 @@ def get_head_reconstruction_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} introuvable.")
     return job
-

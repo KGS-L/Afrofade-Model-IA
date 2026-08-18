@@ -9,20 +9,14 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from '@/lib/supabase';
-import {
-  PlanName,
-  SalonProfileFields,
-  TermId,
-  TERMS,
-  isProfileComplete,
-  monthlyPrice,
-} from '@/lib/plans';
+import type { PaymentProvider } from '@/lib/payment-providers';
+import { PlanName, SalonProfileFields, TermId } from '@/lib/plans';
 
 export interface AuthUser {
   id?: string;
   email: string;
   name: string;
-  role: 'salon' | 'admin';
+  role: 'customer' | 'salon' | 'admin';
   profile: SalonProfileFields;
   subscription: {
     plan: PlanName;
@@ -40,75 +34,137 @@ interface AuthContextValue {
   loginWithEmail: (email: string) => Promise<boolean>;
   verifyEmailOtp: (email: string, token: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
-  loginAsAdmin: () => void;
   logout: () => Promise<void>;
   updateProfile: (patch: Partial<SalonProfileFields>) => void;
-  subscribe: (plan: PlanName, amount: number, term: TermId) => void;
+  subscribe: (plan: PlanName, amount: number, term: TermId, provider?: PaymentProvider) => Promise<void>;
 }
 
 const STORAGE_KEY = 'afrofade_auth_v1';
-const COOKIE_NAME = 'afrofade_session';
-
-function setSessionCookie(token: string) {
-  document.cookie = `${COOKIE_NAME}=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-}
-
-function removeSessionCookie() {
-  document.cookie = `${COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
-}
-
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+interface ServerSessionUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'customer' | 'salon' | 'admin';
+  salonId: string | null;
+  subscription: AuthUser['subscription'];
+  everSubscribed: boolean;
+}
+
+function mergeServerUser(serverUser: ServerSessionUser, cached: AuthUser | null): AuthUser {
+  return {
+    id: serverUser.id,
+    email: serverUser.email,
+    name: serverUser.name,
+    role: serverUser.role,
+    profile: cached?.profile || { salonName: '', country: '', phone: '' },
+    subscription: serverUser.subscription,
+    everSubscribed: serverUser.everSubscribed,
+  };
+}
+
+async function fetchServerSession(): Promise<ServerSessionUser | null> {
+  const response = await fetch('/api/auth/session', { cache: 'no-store' });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return (data.user ?? null) as ServerSessionUser | null;
+}
+
+async function establishServerSession(accessToken: string): Promise<ServerSessionUser | null> {
+  const response = await fetch('/api/auth/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken }),
+  });
+
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.user ?? null;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw) as AuthUser);
-    } catch {
-      /* storage unavailable */
-    }
-    setHydrated(true);
-
-    // Listen to Supabase Auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          setSessionCookie(session.access_token);
-          setUser((prev) => ({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Salon',
-            role: session.user.email?.endsWith('@afrofade.app') ? 'admin' : 'salon',
-            profile: prev?.profile || { salonName: '', country: '', phone: '' },
-            subscription: prev?.subscription || null,
-            everSubscribed: prev?.everSubscribed || false,
-          }));
-        }
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
   const persist = useCallback((next: AuthUser | null) => {
     setUser(next);
     try {
-      if (next) {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        setSessionCookie(next.id || 'active-session');
-      } else {
-        window.localStorage.removeItem(STORAGE_KEY);
-        removeSessionCookie();
-      }
+      if (next) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      else window.localStorage.removeItem(STORAGE_KEY);
     } catch {
-      /* ignore */
+      /* storage unavailable */
     }
   }, []);
+
+  useEffect(() => {
+    let cached: AuthUser | null = null;
+    let paymentPollTimer: number | null = null;
+    let paymentPollStopTimer: number | null = null;
+
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      cached = raw ? (JSON.parse(raw) as AuthUser) : null;
+    } catch {
+      cached = null;
+    }
+
+    fetchServerSession()
+      .then((serverUser) => {
+        if (serverUser) persist(mergeServerUser(serverUser, cached));
+        else persist(null);
+      })
+      .catch(() => persist(null))
+      .finally(() => setHydrated(true));
+
+    // The provider redirect can arrive a few seconds before its webhook. When
+    // returning with payment=pending, re-read server billing state briefly so
+    // a verified subscription unlocks the UI without any client-side trust.
+    const paymentPending = new URLSearchParams(window.location.search).get('payment') === 'pending';
+    if (paymentPending) {
+      paymentPollTimer = window.setInterval(async () => {
+        try {
+          const serverUser = await fetchServerSession();
+          if (!serverUser) return;
+          setUser((previous) => {
+            const next = mergeServerUser(serverUser, previous);
+            try {
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            } catch {
+              /* ignore */
+            }
+            return next;
+          });
+          if (serverUser.subscription && paymentPollTimer !== null) {
+            window.clearInterval(paymentPollTimer);
+            paymentPollTimer = null;
+          }
+        } catch {
+          /* transient provider/webhook lag; next poll will retry */
+        }
+      }, 2000);
+
+      paymentPollStopTimer = window.setTimeout(() => {
+        if (paymentPollTimer !== null) {
+          window.clearInterval(paymentPollTimer);
+          paymentPollTimer = null;
+        }
+      }, 30000);
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session?.access_token) return;
+      const serverUser = await establishServerSession(session.access_token);
+      if (!serverUser) return;
+      setUser((previous) => mergeServerUser(serverUser, previous));
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      if (paymentPollTimer !== null) window.clearInterval(paymentPollTimer);
+      if (paymentPollStopTimer !== null) window.clearTimeout(paymentPollStopTimer);
+    };
+  }, [persist]);
 
   const loginWithEmail = useCallback(async (email: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithOtp({
@@ -118,143 +174,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
 
-    if (error) {
-      console.warn('Supabase OTP fallback to demo mode:', error.message);
-    }
+    if (error) console.warn('[Auth] Unable to send OTP:', error.message);
     return !error;
   }, []);
 
   const verifyEmailOtp = useCallback(
     async (email: string, token: string): Promise<boolean> => {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      });
+      const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+      if (error || !data.session) return false;
 
-      if (!error && data.session) {
-        persist({
-          id: data.session.user.id,
-          email,
-          name: email.split('@')[0] || 'Salon',
-          role: email.endsWith('@afrofade.app') ? 'admin' : 'salon',
-          profile: { salonName: '', country: '', phone: '' },
-          subscription: null,
-          everSubscribed: false,
-        });
-        return true;
-      }
+      const serverUser = await establishServerSession(data.session.access_token);
+      if (!serverUser) return false;
 
-      // Demo fallback if token is 123456
-      if (token === '123456') {
-        persist({
-          email,
-          name: email.split('@')[0] || 'Salon',
-          role: 'salon',
-          profile: { salonName: '', country: '', phone: '' },
-          subscription: null,
-          everSubscribed: false,
-        });
-        return true;
-      }
-
-      return false;
+      persist(mergeServerUser(serverUser, user));
+      return true;
     },
-    [persist]
+    [persist, user]
   );
 
   const loginWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
-      },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     });
-
-    if (error) {
-      console.warn('Supabase Google OAuth fallback to demo mode:', error.message);
-      persist({
-        email: 'salon.google@gmail.com',
-        name: 'Salon Google',
-        role: 'salon',
-        profile: { salonName: '', country: '', phone: '' },
-        subscription: null,
-        everSubscribed: false,
-      });
-    }
-  }, [persist]);
-
-  const loginAsAdmin = useCallback(() => {
-    persist({
-      email: 'admin@afrofade.app',
-      name: 'Admin Afrofade',
-      role: 'admin',
-      profile: { salonName: 'Afrofade HQ', country: 'Côte d’Ivoire', phone: '+225 00 00 00 00' },
-      subscription: null,
-      everSubscribed: false,
-    });
-  }, [persist]);
+    if (error) throw error;
+  }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    await Promise.allSettled([
+      supabase.auth.signOut(),
+      fetch('/api/auth/session', { method: 'DELETE' }),
+    ]);
     persist(null);
   }, [persist]);
 
-  const updateProfile = useCallback(
-    (patch: Partial<SalonProfileFields>) => {
-      setUser((prev) => {
-        if (!prev) return prev;
-        const next = { ...prev, profile: { ...prev.profile, ...patch } };
-        try {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        } catch {
-          /* ignore */
-        }
-        return next;
-      });
-    },
-    []
-  );
-
-  const subscribe = useCallback(async (plan: PlanName, amount: number, term: TermId) => {
-    if (!user) return;
-    const eligible = isProfileComplete(user.profile) && !user.everSubscribed;
-    const discount = eligible ? TERMS.find((t) => t.id === term)?.discount ?? 0 : 0;
-    const finalPrice = monthlyPrice(amount, discount);
-
-    try {
-      const res = await fetch('/api/v1/payments/money-fusion/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planName: plan,
-          amountFcfa: finalPrice,
-          termId: term,
-          salonName: user.profile.salonName || user.name,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err) {
-      console.warn('[Money Fusion Checkout Error]:', err);
-    }
-
+  const updateProfile = useCallback((patch: Partial<SalonProfileFields>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const next: AuthUser = {
-        ...prev,
-        everSubscribed: true,
-        subscription: {
-          plan,
-          term,
-          monthlyFcfa: finalPrice,
-          startedAt: new Date().toISOString(),
-          isFirstWithDiscount: discount > 0,
-        },
-      };
+      const next = { ...prev, profile: { ...prev.profile, ...patch } };
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch {
@@ -262,7 +219,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
-  }, [user]);
+  }, []);
+
+  const subscribe = useCallback(
+    async (plan: PlanName, _amount: number, term: TermId, provider: PaymentProvider = 'money_fusion') => {
+      const response = await fetch('/api/v1/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          purpose: 'subscription',
+          planName: plan,
+          termId: term,
+          customerName: user?.profile.salonName || user?.name,
+          customerPhone: user?.profile.phone,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Échec de la création du paiement.');
+      if (!data.url) throw new Error('Le prestataire de paiement n’a pas retourné de lien de paiement.');
+
+      window.location.assign(data.url);
+    },
+    [user?.name, user?.profile.phone, user?.profile.salonName]
+  );
 
   const value = useMemo(
     () => ({
@@ -271,12 +252,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithEmail,
       verifyEmailOtp,
       loginWithGoogle,
-      loginAsAdmin,
       logout,
       updateProfile,
       subscribe,
     }),
-    [user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, loginAsAdmin, logout, updateProfile, subscribe]
+    [user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, logout, updateProfile, subscribe]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
