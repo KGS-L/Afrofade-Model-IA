@@ -1,0 +1,63 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: '2026-08-18'
+last_updated: '2026-08-18'
+project: Afrofade
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-migration-du-schéma-postgresql-stratégie-rls-supabase: backlog
+  1-2-authentification-salon-google-oauth-e-mail-code-otp: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-ingestion-des-photos-via-supabase-presigned-urls: backlog
+  2-2-endpoint-fastapi-v1-reconstruct-export-draco-glb: backlog
+  2-3-résilience-réseau-purge-biométrique-à-30-jours: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-viewer-3d-react-three-fiber-r3f-contrôles-tactiles: backlog
+  3-2-application-dynamique-des-coiffures-afro-500-ms: backlog
+  3-3-glissière-d-ajustement-line-up-art-suggestion-upsell: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-wizard-rituel-4-étapes-avatar-3d-flouté-freemium: backlog
+  4-2-dashboard-salon-jauge-de-profil-100-calcul-des-remises: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-webhook-geniuspay-money-fusion-gestion-des-quotas: backlog
+  5-2-dashboard-administrateur-kpis-saas-mrr-fcfa: backlog
+  epic-5-retrospective: optional
