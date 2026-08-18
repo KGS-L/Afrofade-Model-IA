@@ -11,12 +11,13 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { B2C_CREDIT_PACKS } from '@/lib/credits';
 import { PLANS, TERMS, monthlyPrice, type PlanName, type TermId } from '@/lib/plans';
 
-function getSubscriptionProduct(planName: unknown, termId: unknown) {
+function getSubscriptionProduct(planName: unknown, termId: unknown, discountEligible: boolean) {
   const plan = PLANS.find((item) => item.name === planName);
   const term = TERMS.find((item) => item.id === termId);
   if (!plan || !term) return null;
 
-  const discountedMonthly = monthlyPrice(plan.amount, term.discount);
+  const appliedDiscount = discountEligible ? term.discount : 0;
+  const discountedMonthly = monthlyPrice(plan.amount, appliedDiscount);
   const totalAmount = discountedMonthly * term.months;
 
   return {
@@ -30,6 +31,7 @@ function getSubscriptionProduct(planName: unknown, termId: unknown) {
       termId: term.id,
       months: String(term.months),
       monthlyFcfa: String(discountedMonthly),
+      discountApplied: String(appliedDiscount),
     },
   };
 }
@@ -92,32 +94,70 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Prestataire de paiement indisponible.' }, { status: 503 });
     }
 
-    const purpose = body?.purpose === 'credits' ? 'credits' : 'subscription';
-    if (purpose === 'subscription' && (!principal.salonId || principal.role === 'customer')) {
+    if (body?.purpose !== 'credits' && body?.purpose !== 'subscription') {
+      return NextResponse.json({ error: 'Type de paiement invalide.' }, { status: 400 });
+    }
+    const purpose = body.purpose as 'credits' | 'subscription';
+
+    if (purpose === 'subscription' && (principal.role !== 'salon' || !principal.salonId)) {
       return NextResponse.json({ error: 'Un profil salon vérifié est requis pour souscrire.' }, { status: 403 });
+    }
+    if (purpose === 'credits' && principal.role !== 'customer') {
+      return NextResponse.json({ error: 'Les packs de crédits sont réservés aux particuliers.' }, { status: 403 });
+    }
+
+    let salon: { name?: string | null; phone?: string | null; country?: string | null } | null = null;
+    let customerProfile: { display_name?: string | null; phone?: string | null } | null = null;
+    let discountEligible = false;
+
+    if (principal.salonId) {
+      const { data, error } = await supabaseAdmin
+        .from('salons')
+        .select('name, phone, country')
+        .eq('id', principal.salonId)
+        .maybeSingle();
+      if (error) throw new Error(`Unable to load salon contact: ${error.message}`);
+      salon = data;
+
+      if (purpose === 'subscription') {
+        const { data: previousPayment, error: previousPaymentError } = await supabaseAdmin
+          .from('payment_transactions')
+          .select('id')
+          .eq('salon_id', principal.salonId)
+          .eq('purpose', 'subscription')
+          .eq('status', 'paid')
+          .limit(1)
+          .maybeSingle();
+        if (previousPaymentError) throw new Error(previousPaymentError.message);
+
+        discountEligible = Boolean(
+          normalizeOptionalString(salon?.name) &&
+            normalizeOptionalString(salon?.country) &&
+            normalizePhone(salon?.phone) &&
+            !previousPayment
+        );
+      }
+    } else if (purpose === 'credits') {
+      const { data, error } = await supabaseAdmin
+        .from('customer_profiles')
+        .select('display_name, phone')
+        .eq('user_id', principal.user.id)
+        .maybeSingle();
+      if (error) throw new Error(`Unable to load customer profile: ${error.message}`);
+      customerProfile = data;
     }
 
     const product =
       purpose === 'credits'
         ? getCreditProduct(body?.packId)
-        : getSubscriptionProduct(body?.planName as PlanName, body?.termId as TermId);
+        : getSubscriptionProduct(body?.planName as PlanName, body?.termId as TermId, discountEligible);
 
     if (!product) return NextResponse.json({ error: 'Produit ou durée invalide.' }, { status: 400 });
-
-    let salon: { name?: string | null; phone?: string | null } | null = null;
-    if (principal.salonId) {
-      const { data, error } = await supabaseAdmin
-        .from('salons')
-        .select('name, phone')
-        .eq('id', principal.salonId)
-        .maybeSingle();
-      if (error) throw new Error(`Unable to load salon contact: ${error.message}`);
-      salon = data;
-    }
 
     const metadata = principal.user.user_metadata || {};
     const customerName =
       normalizeOptionalString(salon?.name) ||
+      normalizeOptionalString(customerProfile?.display_name) ||
       normalizeOptionalString(metadata.full_name) ||
       normalizeOptionalString(metadata.name) ||
       normalizeOptionalString(body?.customerName) ||
@@ -125,12 +165,13 @@ export async function POST(req: NextRequest) {
       'Client Afrofade';
     const customerPhone =
       normalizePhone(salon?.phone) ||
+      normalizePhone(customerProfile?.phone) ||
       normalizePhone(metadata.phone) ||
       normalizePhone(body?.customerPhone);
 
     if (provider === 'money_fusion' && !customerPhone) {
       return NextResponse.json(
-        { error: 'Un numéro de téléphone valide est requis pour Money Fusion.' },
+        { error: 'Ajoutez un numéro de téléphone valide dans votre profil avant de payer avec Money Fusion.' },
         { status: 400 }
       );
     }
@@ -155,7 +196,7 @@ export async function POST(req: NextRequest) {
     paymentId = payment.id;
 
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro').replace(/\/$/, '');
-    const returnBase = `${appUrl}/dashboard`;
+    const returnBase = `${appUrl}${purpose === 'credits' ? '/account' : '/dashboard'}`;
     const commonProviderMetadata = {
       paymentId: payment.id,
       userId: principal.user.id,
@@ -209,6 +250,7 @@ export async function POST(req: NextRequest) {
       url: checkoutUrl,
       paymentId: payment.id,
       provider,
+      discountEligible: purpose === 'subscription' ? discountEligible : undefined,
     });
   } catch (error) {
     console.error('[Payment Checkout Route Error]:', error);
