@@ -136,6 +136,22 @@ def run_all_e2e_tests():
     else:
         log_fail(f"Statut HTTP inattendu {status} — Reponse: {body[:100]}")
 
+    # Test 7 : API Asynchrone SaaS (POST /api/v1/heads & GET /api/v1/heads/{job_id})
+    total_count += 1
+    log_test("7. Job Queue Asynchrone SaaS (POST /api/v1/heads & Polling /heads/{job_id})")
+    status, body = http_post(f"{API_URL}/api/v1/heads", payload_reconstruct)
+    if status == 202 and "job_id" in body:
+        job_data = json.loads(body)
+        job_id = job_data["job_id"]
+        status_get, body_get = http_get(f"{API_URL}/api/v1/heads/{job_id}")
+        if status_get == 200 and "completed" in body_get:
+            log_pass(f"Job asynchrone créé (HTTP 202) et récupéré ({job_id})")
+            passed_count += 1
+        else:
+            log_fail(f"Polling job {job_id} a échoué (HTTP {status_get})")
+    else:
+        log_fail(f"Soumission job asynchrone a échoué (HTTP {status}) — Reponse: {body[:100]}")
+
     # Test 6 : Disponibilité des Pages Légales & Contact
     legal_pages = [
         ("/legal/mentions-legales", "Mentions Légales"),

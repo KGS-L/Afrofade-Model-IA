@@ -3,6 +3,7 @@
 import React, { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { FlameHairstyleAnchorSystem } from '@/lib/anchors/flame_anchors';
 
 /**
  * Tête 3D procédurale partagée : viewport du studio ET aperçus de la
@@ -131,6 +132,14 @@ export function HeadModel({
     return rows;
   }, []);
 
+  const anchorTransform = useMemo(() => {
+    return FlameHairstyleAnchorSystem.calculateHairstyleTransform(
+      { headWidth: 1.0, headDepth: 1.0, skullHeight: 1.0 },
+      lineUpCutoff,
+      hairstyleId
+    );
+  }, [lineUpCutoff, hairstyleId]);
+
   return (
     <group ref={headGroupRef} position={[0, -0.55, 0]}>
       {/* Cou */}
@@ -205,9 +214,9 @@ export function HeadModel({
         <meshStandardMaterial color="#4a2b20" roughness={0.35} />
       </mesh>
 
-      {/* Coiffures */}
+      {/* Coiffures ancrées canoniquement */}
       {!isBald && (
-        <group scale={[1, hairVolume, 1]}>
+        <group position={anchorTransform.position} scale={anchorTransform.scale} rotation={anchorTransform.rotation}>
           {hairstyleId.includes('locks') ? (
             <>
               {locks.map((lock, i) => (

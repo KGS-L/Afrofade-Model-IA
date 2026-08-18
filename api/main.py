@@ -54,6 +54,8 @@ def health_check():
         "version": "1.0.0"
     }
 
+from services.jobs.queue_manager import AsyncJobQueueManager
+
 @app.post("/v1/reconstruct", response_model=ReconstructionResponse)
 @app.post("/api/v1/reconstruct", response_model=ReconstructionResponse)
 def reconstruct_3d_head(request: ReconstructionRequest):
@@ -70,3 +72,22 @@ def reconstruct_3d_head(request: ReconstructionRequest):
     )
     
     return result
+
+@app.post("/api/v1/heads", status_code=202)
+def submit_head_reconstruction(request: ReconstructionRequest):
+    if len(request.photos_urls) < 1:
+        raise HTTPException(status_code=400, detail="Au moins une photo est requise.")
+    
+    job_info = AsyncJobQueueManager.submit_reconstruction_job(
+        photos_urls=request.photos_urls,
+        client_name=request.client_name or "Client Afrofade"
+    )
+    return job_info
+
+@app.get("/api/v1/heads/{job_id}")
+def get_head_reconstruction_status(job_id: str):
+    job = AsyncJobQueueManager.get_job_status(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} introuvable.")
+    return job
+
