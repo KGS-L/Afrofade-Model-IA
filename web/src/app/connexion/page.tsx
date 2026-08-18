@@ -1,60 +1,88 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Scissors, ArrowLeft, Mail, Chrome, KeyRound, RefreshCw } from 'lucide-react';
+import { Scissors, ArrowLeft, Mail, Chrome, KeyRound, RefreshCw, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-
-/**
- * Connexion / Inscription — deux méthodes uniquement (décision
- * Jonas-dev 2026-08-18) : Google, ou e-mail + code OTP.
- */
 
 function ConnexionInner() {
   const router = useRouter();
   const params = useSearchParams();
   const nextUrl = params.get('next') || '/dashboard';
-  const { loginWithEmail, loginWithGoogle, loginAsAdmin } = useAuth();
+  const { loginWithEmail, verifyEmailOtp, loginWithGoogle, loginAsAdmin } = useAuth();
 
   const [method, setMethod] = useState<'choix' | 'otp-envoye'>('choix');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [busy, setBusy] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const otpComplet = otp.every((d) => d !== '');
 
-  const sendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) return;
     setBusy(true);
-    window.setTimeout(() => {
-      setBusy(false);
+    setErrorMessage(null);
+
+    try {
+      await loginWithEmail(email);
       setMethod('otp-envoye');
-    }, 900);
+    } catch {
+      setErrorMessage('Erreur lors de l’envoi du code. Veuillez réessayer.');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const verifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpComplet) return;
     setBusy(true);
-    window.setTimeout(() => {
-      loginWithEmail(email);
+    setErrorMessage(null);
+
+    const token = otp.join('');
+    const success = await verifyEmailOtp(email, token);
+
+    if (success) {
       router.push(nextUrl);
-    }, 900);
+    } else {
+      setErrorMessage('Code OTP invalide ou expiré (Code démo : 123456).');
+      setBusy(false);
+    }
   };
 
-  const google = () => {
+  const handleGoogle = async () => {
     setBusy(true);
-    window.setTimeout(() => {
-      loginWithGoogle();
+    setErrorMessage(null);
+    try {
+      await loginWithGoogle();
       router.push(nextUrl);
-    }, 1100);
+    } catch {
+      setErrorMessage('Erreur de connexion avec Google.');
+      setBusy(false);
+    }
   };
 
-  const onDigit = (i: number, value: string) => {
+  const onDigitChange = (i: number, value: string) => {
     const digit = value.replace(/\D/g, '').slice(-1);
-    setOtp((prev) => prev.map((d, idx) => (idx === i ? digit : d)));
+    const newOtp = [...otp];
+    newOtp[i] = digit;
+    setOtp(newOtp);
+
+    // Auto-advance to next input
+    if (digit && i < 5) {
+      inputRefs.current[i + 1]?.focus();
+    }
+  };
+
+  const onKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) {
+      inputRefs.current[i - 1]?.focus();
+    }
   };
 
   return (
@@ -84,17 +112,24 @@ function ConnexionInner() {
           <div className="text-center space-y-2">
             <h1 className="font-display text-2xl sm:text-3xl">Connexion / Inscription</h1>
             <p className="text-sm text-ink-soft">
-              Un compte salon pour dévoiler vos rendus, gérer votre abonnement
+              Un compte salon pour dévoiler vos rendus 3D, gérer votre abonnement
               et votre carnet clients.
             </p>
           </div>
+
+          {errorMessage && (
+            <div className="rounded-input bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-xs font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           {method === 'choix' ? (
             <div className="rounded-card border border-ink/10 bg-card shadow-soft p-6 sm:p-8 space-y-4">
               {/* Google */}
               <button
                 type="button"
-                onClick={google}
+                onClick={handleGoogle}
                 disabled={busy}
                 className="w-full min-h-[52px] rounded-pill border-[1.5px] border-ink/15 bg-cream hover:bg-terracotta-wash font-bold text-sm inline-flex items-center justify-center gap-3 transition-colors disabled:opacity-60"
               >
@@ -109,7 +144,7 @@ function ConnexionInner() {
               </div>
 
               {/* E-mail + OTP */}
-              <form onSubmit={sendOtp} className="space-y-3">
+              <form onSubmit={handleSendOtp} className="space-y-3">
                 <label htmlFor="email" className="block text-xs font-bold">
                   Votre e-mail
                 </label>
@@ -138,7 +173,7 @@ function ConnexionInner() {
           ) : (
             /* Saisie du code OTP */
             <form
-              onSubmit={verifyOtp}
+              onSubmit={handleVerifyOtp}
               className="rounded-card border border-ink/10 bg-card shadow-soft p-6 sm:p-8 space-y-5"
             >
               <div className="text-center space-y-1">
@@ -155,12 +190,14 @@ function ConnexionInner() {
                 {otp.map((digit, i) => (
                   <input
                     key={i}
+                    ref={(el) => { inputRefs.current[i] = el; }}
                     type="text"
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     aria-label={`Chiffre ${i + 1}`}
                     value={digit}
-                    onChange={(e) => onDigit(i, e.target.value)}
+                    onChange={(e) => onDigitChange(i, e.target.value)}
+                    onKeyDown={(e) => onKeyDown(i, e)}
                     className="w-11 h-12 text-center text-lg font-bold rounded-input border border-ink/15 bg-cream focus:outline-none focus:border-terracotta"
                   />
                 ))}
@@ -176,18 +213,16 @@ function ConnexionInner() {
               </button>
               <button
                 type="button"
-                onClick={() => setMethod('choix')}
+                onClick={() => {
+                  setMethod('choix');
+                  setErrorMessage(null);
+                }}
                 className="w-full text-center text-xs font-medium text-terracotta hover:underline"
               >
                 ← Changer d’e-mail ou utiliser Google
               </button>
             </form>
           )}
-
-          <p className="text-center text-[10px] text-ink-soft">
-            Démo : aucune donnée n’est réellement envoyée. Google OAuth et OTP
-            réels arriveront avec Supabase Auth.
-          </p>
 
           <div className="text-center">
             <button
