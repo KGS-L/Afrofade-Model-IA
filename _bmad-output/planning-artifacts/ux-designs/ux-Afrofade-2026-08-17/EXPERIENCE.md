@@ -28,8 +28,8 @@ Landing single-page (confirmée Jonas-dev 2026-08-17) + page de test `/rituel` a
 8. `#faq` — `faq_accordion`.
 9. `footer` — `night_footer`, logo blanc, tagline, réseaux, moyens de paiement Mobile Money (Wave, Orange Money, MTN, Moov).
 
-**Route `/rituel` (test du Rituel — grammaire thelma.pet/create adaptée)**
-Header minimal (logo + retour) ; titre de mission unique « Tester le Rituel du Miroir » ; grande dropzone centrée (glisser/toucher, JPG · PNG · HEIC) ; 3 exigences photo en pills (tête entière visible · photo nette, lumière naturelle · visage dégagé) ; note de confidentialité (stockage isolé par salon, suppression après génération) ; flux mock idle → « Analyse IA » → prêt + CTA « Explorer les styles » vers `/#rituel-studio`.
+**Route `/rituel` (test du Rituel — wizard 4 étapes, grammaire thelma.pet/create adaptée)**
+CTA navbar « Tester le rituel 1mn ». Header minimal (logo + pill « Étape X sur 4 » + retour) et stepper numéroté 1-4. Parcours : **1) Photos** — dépôt des 4 angles (face, profils G/D, arrière), exigences photo en pills, note de confidentialité ; **2) Avatar 3D** — analyse IA (~2 s) puis aperçu de l'avatar réaliste ; **3) Coiffure** — radiogroupe de styles appliqués instantanément à l'avatar ; **4) Finition** — rendu final figé, non modifiable, téléchargeable (PNG via canvas). **Gating freemium** (décision Jonas-dev 2026-08-18) : visiteur sans compte ni abonnement actif → rendu flouté dès l'étape 2 avec mention « Avatar verrouillé » ; à la fin de l'étape 4, mur de connexion — création de compte (salon, e-mail, mot de passe) puis choix d'abonnement (plans FCFA) — qui dévoile le rendu HD et active le téléchargement.
 
 ## Voice and Tone
 - Français, vouvoiement — validé Jonas-dev 2026-08-17.

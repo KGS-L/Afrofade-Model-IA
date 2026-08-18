@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { Scissors, Sparkles, Menu, X } from 'lucide-react';
+import React, { useState } from "react";
+import Link from "next/link";
+import { Scissors, Sparkles, Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
-  { href: '#rituel-studio', label: 'Le Rituel' },
-  { href: '#styles', label: 'Styles' },
-  { href: '#tarifs', label: 'Tarifs' },
-  { href: '#faq', label: 'FAQ' },
+  { href: "#rituel-studio", label: "Le Rituel" },
+  { href: "#styles", label: "Styles" },
+  { href: "#tarifs", label: "Tarifs" },
+  { href: "#faq", label: "FAQ" },
 ];
 
 export const Navbar: React.FC = () => {
@@ -55,8 +55,8 @@ export const Navbar: React.FC = () => {
             className="min-h-[44px] inline-flex items-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Tester le Rituel</span>
-            <span className="sm:hidden">Tester</span>
+            <span className="hidden sm:inline">Tester le rituel 1mn</span>
+            <span className="sm:hidden">Tester 1mn</span>
           </Link>
 
           {/* Hamburger mobile (< lg) */}
@@ -64,10 +64,14 @@ export const Navbar: React.FC = () => {
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-expanded={menuOpen}
             aria-controls="navbar-mobile-menu"
-            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
             className="lg:hidden w-11 h-11 rounded-pill bg-card border border-ink/15 text-ink flex items-center justify-center"
           >
-            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {menuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>
@@ -94,8 +98,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setMenuOpen(false)}
             className="w-full min-h-[48px] mt-2 inline-flex items-center justify-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
           >
-            <Sparkles className="w-4 h-4" />
-            Tester le Rituel
+            Tester le rituel 1mn
           </Link>
         </nav>
       )}
