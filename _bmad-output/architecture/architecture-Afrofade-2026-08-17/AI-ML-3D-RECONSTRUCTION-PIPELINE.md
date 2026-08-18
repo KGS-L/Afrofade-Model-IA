@@ -1,6 +1,6 @@
 # 🧠 Spécification Technique du Pipeline IA/ML Afrofade : Reconstruction 3D Tête-au-Cou
 
-> **Objectif Produit** : Reconstruire en **< 2 secondes** un modèle 3D géométriquement exact et ultra-réaliste (de la tête jusqu'au bas du cou, 360°) préservant **100 % de l'identité du client** (forme du visage/crâne, vraie carnation de peau, traits faciaux et barbe) à partir de **4 photos capturées**.
+> **Objectif Produit** : Reconstruire en **< 2 secondes** un modèle 3D géométriquement exact et ultra-réaliste (de la tête jusqu'au bas du cou, 360°) préservant **100 % de l'identité du client** (forme du visage/crâne, vraie carnation de peau, traits faciaux et barbe) via le **Mode Scan Vidéo Guidé Temps Réel (FaceID Scanner)**.
 
 ---
 
