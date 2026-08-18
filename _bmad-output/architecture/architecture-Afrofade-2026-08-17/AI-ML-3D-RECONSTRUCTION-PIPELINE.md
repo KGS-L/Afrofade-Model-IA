@@ -91,3 +91,16 @@ Pour préserver **100 % de l'identité du client** (vraie peau, grain du visage,
 * Les 4 photos téléversées sont détruites du stockage temporaire dès que le fichier `.glb` 3D anonymisé est généré.
 * Le modèle 3D `.glb` résultant ne contient aucun vecteur facial réutilisable pour la reconnaissance faciale ou le biovidéo.
 * Purge automatique sous 30 jours via la tâche Cron `/api/cron/purge-biometric`.
+
+---
+
+## 📹 8. Mode Scan Vidéo Temps Réel (Guided FaceID Video Scanner)
+
+Pour une expérience client spectaculaire et une précision inégalée, Afrofade intègre le mode **"Scan Vidéo Guidé Temps Réel"** en direct du navigateur web :
+
+### 🔄 Déroulement Interactif du Scan (Style FaceID Apple) :
+1. **Étape 1 : Face ($0^\circ$)** -> "Regardez la caméra" -> Cercle ovale vert -> Capture auto dès que la netteté et la pose sont à 100%.
+2. **Étape 2 : Profil Droit ($+90^\circ$)** -> "Tournez doucement la tête vers la droite" -> Détection de l'oreille droite -> Auto-capture !
+3. **Étape 3 : Profil Gauche ($-90^\circ$)** -> "Tournez la tête vers la gauche" -> Détection de l'oreille gauche -> Auto-capture !
+4. **Étape 4 : Nuque ($180^\circ$)** -> "Présentez la nuque / arrière de la tête" -> Auto-capture finale -> Lancement instantané de la reconstruction 3D !
+
