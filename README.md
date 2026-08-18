@@ -1,14 +1,26 @@
 # ✂️ Afrofade 3D Studio — Plateforme IA de Reconstruction 3D & Essayage Virtuel de Coiffures Afro
 
+<p align="center">
+  <img src="web/public/logo-preview.png" alt="Afrofade Logo" width="180" />
+</p>
+
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/sokevinjonas/Afrofade)
 [![Production URL](https://img.shields.io/badge/website-afrofade.pro-8A2BE2.svg)](https://afrofade.pro)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> **Afrofade** est la première plateforme SaaS d'Intelligence Artificielle et de reconstruction 3D réaliste "Tête-au-Cou" dédiée aux salons de coiffure africains, barbershops et clients finaux. Elle permet d'essayer virtuellement en 3D temps réel des coupes afro (Taper Fade, Cornrows, Locks, Barbe sculptée) tout en préservant 100 % de l'identité du visage et de la carnation du client.
+> **Afrofade** est la première plateforme SaaS d'Intelligence Artificielle et de reconstruction 3D réaliste "Tête-au-Cou" dédiée aux salons de coiffure africains, barbershops et clients finaux. Elle permet d'essayer virtuellement en 3D temps réel des coupes afro (*Taper Fade, Cornrows, Locks, Barbe sculptée*) tout en préservant 100 % de l'identité du visage et de la carnation du client.
 
 🌐 **Site Web en Production** : [https://afrofade.pro](https://afrofade.pro)
+
+---
+
+## 📸 Aperçu de la Plateforme (Landing Page & Studio 3D)
+
+<p align="center">
+  <img src="web/public/landing-preview.png" alt="Afrofade Landing Page & Visualisateur 3D" width="900" style="border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
+</p>
 
 ---
 
@@ -110,8 +122,19 @@ docker compose up -d --build
 
 ---
 
-## 📜 Licence & Propriété Intellectuelle
+## 👨‍💻 Auteur & Concepteur
 
-Ce projet est sous licence **MIT**. 
+Ce projet Open Source est créé et maintenu par :
 
-Copyright © 2026 **Afrofade Studio / KGB IA Solutions**. Tous droits réservés.
+* **Auteur** : **SO Kevin Jonas**
+* **E-mail** : [sokevin7@gmail.com](mailto:sokevin7@gmail.com)
+* **LinkedIn** : [https://www.linkedin.com/in/sojonas](https://www.linkedin.com/in/sojonas)
+* **GitHub** : [@sokevinjonas](https://github.com/sokevinjonas)
+
+---
+
+## 📜 Licence Open Source
+
+Ce projet est distribué sous licence **MIT Open Source**. Libre d'utilisation, de modification et de distribution. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+Copyright © 2026 **SO Kevin Jonas / Afrofade Studio**.
