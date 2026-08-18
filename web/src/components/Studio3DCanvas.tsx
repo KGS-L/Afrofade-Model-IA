@@ -1,22 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
-import { RotateCw, Sun, Download, Sliders, Sparkles } from 'lucide-react';
+import { RotateCw, Sun, Download, Sliders, Sparkles, Check, ChevronRight } from 'lucide-react';
 import { HeadModel } from './HeadModel3D';
+import { HAIRSTYLES_DATA, HairstyleItem } from './HairstyleCatalog';
 
 interface Studio3DCanvasProps {
   hasModel: boolean;
-  selectedHairstyle: {
-    id: string;
-    title: string;
-    color: string;
-    isPremium: boolean;
-  } | null;
+  selectedHairstyle: HairstyleItem | null;
   lineUpCutoff: number; // 0 to 100 for hairline adjustment
   onLineUpChange: (val: number) => void;
+  onSelectHairstyle?: (item: HairstyleItem) => void;
   onSaveRender: () => void;
 }
 
@@ -25,13 +23,14 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
   selectedHairstyle,
   lineUpCutoff,
   onLineUpChange,
+  onSelectHairstyle,
   onSaveRender,
 }) => {
   const [isAutoRotate, setIsAutoRotate] = useState(false);
   const [lightPreset, setLightPreset] = useState<'salon' | 'studio' | 'warm'>('salon');
 
   return (
-    <div className="relative w-full h-[520px] bg-card border border-ink/10 rounded-card overflow-hidden shadow-soft flex flex-col justify-between select-none">
+    <div className="relative w-full bg-card border border-ink/10 rounded-card overflow-hidden shadow-soft flex flex-col justify-between select-none">
       {/* Top Floating Header */}
       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between gap-2 pointer-events-none">
         <div className="bg-card/90 backdrop-blur-sm border border-ink/10 px-3 py-1.5 rounded-pill pointer-events-auto flex items-center gap-2">
@@ -80,8 +79,8 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
         </div>
       </div>
 
-      {/* 3D Canvas R3F — fond chaud lumineux, tone mapping cinéma */}
-      <div className="w-full h-full bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)] touch-none">
+      {/* 3D Canvas R3F — viewport principal de personnalisation d'avatar */}
+      <div className="w-full h-[460px] bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)] touch-none">
         {hasModel ? (
           <Canvas
             dpr={[1, 2]}
@@ -93,7 +92,6 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
           >
             <PerspectiveCamera makeDefault position={[0, 1, 3.4]} fov={42} />
 
-            {/* Éclairage 3 points : key chaude, fill douce, rim détachant le profil */}
             <ambientLight intensity={lightPreset === 'warm' ? 0.85 : 0.6} />
             <directionalLight
               position={[4, 6, 4]}
@@ -137,32 +135,86 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
         )}
       </div>
 
-      {/* Bottom Floating Control Bar (Hairline Fine-Tuning Slider) */}
+      {/* Dock / Carrousel de Customisation style Jeu Vidéo */}
       {hasModel && (
-        <div className="absolute bottom-4 left-4 right-4 z-20 bg-card/95 backdrop-blur-sm border border-ink/10 p-3 rounded-card flex items-center justify-between gap-4 shadow-soft">
-          <div className="flex items-center gap-2 text-xs font-bold text-terracotta-dark whitespace-nowrap">
-            <Sliders className="w-4 h-4" />
-            <span className="hidden sm:inline">Ajustement des contours (line-up) :</span>
-            <span className="sm:hidden">Line-up :</span>
+        <div className="p-3 bg-card border-t border-ink/10 space-y-3">
+          {/* Hairline Fine-Tuning Slider */}
+          <div className="flex items-center justify-between gap-4 bg-cream/70 border border-ink/10 px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-2 text-xs font-bold text-terracotta-dark whitespace-nowrap">
+              <Sliders className="w-4 h-4" />
+              <span>Contour (Line-up) :</span>
+            </div>
+
+            <div className="flex-1 flex items-center gap-3">
+              <span className="text-[10px] text-ink-soft">Bas</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={lineUpCutoff}
+                onChange={(e) => onLineUpChange(Number(e.target.value))}
+                aria-label="Ajustement de la ligne de contours"
+                className="w-full h-1.5 bg-ink/10 rounded-lg appearance-none cursor-pointer accent-terracotta"
+              />
+              <span className="text-[10px] text-ink-soft">Haut</span>
+            </div>
+
+            <span className="text-xs font-mono font-bold text-ink bg-card px-2 py-0.5 rounded border border-ink/10">
+              {lineUpCutoff}%
+            </span>
           </div>
 
-          <div className="flex-1 flex items-center gap-3">
-            <span className="text-[10px] text-ink-soft">Bas</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={lineUpCutoff}
-              onChange={(e) => onLineUpChange(Number(e.target.value))}
-              aria-label="Ajustement de la ligne de contours"
-              className="w-full h-1.5 bg-ink/10 rounded-lg appearance-none cursor-pointer accent-terracotta"
-            />
-            <span className="text-[10px] text-ink-soft">Haut</span>
-          </div>
+          {/* Video-Game Character Style Hairstyle Selector Carousel Dock */}
+          <div>
+            <div className="flex items-center justify-between text-[11px] font-bold text-ink-soft mb-2 px-1">
+              <span className="uppercase tracking-wider">Choix de la Coiffure (Dock 3D)</span>
+              <span className="flex items-center text-terracotta">
+                Glisser pour voir tout <ChevronRight className="w-3 h-3 ml-0.5" />
+              </span>
+            </div>
 
-          <span className="text-xs font-mono font-bold text-ink bg-cream px-2 py-1 rounded-md border border-ink/10">
-            {lineUpCutoff}%
-          </span>
+            <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
+              {HAIRSTYLES_DATA.map((item) => {
+                const isSelected = selectedHairstyle?.id === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelectHairstyle && onSelectHairstyle(item)}
+                    className={`relative shrink-0 w-28 rounded-card overflow-hidden border text-left transition-all duration-200 ${
+                      isSelected
+                        ? 'border-terracotta bg-terracotta-wash ring-2 ring-terracotta/40 shadow-soft scale-105'
+                        : 'border-ink/10 bg-card hover:border-terracotta/50 opacity-80 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="relative aspect-[4/3] w-full bg-cream">
+                      <Image
+                        src={item.thumbnail}
+                        alt={item.title}
+                        fill
+                        sizes="112px"
+                        className="object-cover"
+                      />
+                      {isSelected && (
+                        <div className="absolute top-1 left-1 bg-terracotta text-white rounded-full p-1 shadow-soft">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </div>
+                      )}
+                      {item.isPremium && (
+                        <span className="absolute top-1 right-1 text-[8px] font-bold uppercase bg-ink text-white px-1.5 py-0.5 rounded">
+                          VIP
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-[11px] font-bold text-ink truncate leading-tight">
+                        {item.title}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>

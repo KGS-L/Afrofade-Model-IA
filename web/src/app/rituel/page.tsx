@@ -488,6 +488,11 @@ export default function RituelPage() {
                       <span className="flex items-center gap-2 text-[13px] font-bold">
                         {active && <Check className="w-4 h-4 text-terracotta stroke-[3]" />}
                         {item.title}
+                        {item.isPremium && (
+                          <span className="text-[9px] bg-terracotta text-white font-bold px-1.5 py-0.5 rounded">
+                            VIP
+                          </span>
+                        )}
                       </span>
                       <span className="block text-[10px] text-ink-soft mt-1 leading-tight">
                         {item.subtitle}
@@ -496,6 +501,18 @@ export default function RituelPage() {
                   );
                 })}
               </div>
+
+              {selectedStyle.isPremium && (
+                <div className="rounded-card border border-terracotta/30 bg-terracotta-wash p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-terracotta-dark">
+                    <Sparkles className="w-4 h-4" />
+                    <span>Option VIP Sélectionnée : Contours Rasoir & Soin Huile (+2 500 FCFA)</span>
+                  </div>
+                  <p className="text-xs text-ink-soft">
+                    Cette prestation comprend un traçage haute précision à la lame et un massage hydratant du cuir chevelu.
+                  </p>
+                </div>
+              )}
 
               <button
                 type="button"
