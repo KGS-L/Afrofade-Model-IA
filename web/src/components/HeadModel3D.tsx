@@ -38,7 +38,7 @@ export function HeadModel({
   isAutoRotate = false,
   modelUrl,
   isClayMode = false,
-  strictModel = false,
+  strictModel = true,
 }: HeadModelProps) {
   const headGroupRef = useRef<THREE.Group>(null);
   const [loadedScene, setLoadedScene] = useState<THREE.Group | null>(null);
