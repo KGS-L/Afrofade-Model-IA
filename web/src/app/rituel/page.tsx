@@ -129,7 +129,6 @@ export default function RituelPage() {
   });
   const [processing, setProcessing] = useState(false);
   const [styleId, setStyleId] = useState<string>(HAIRSTYLES_DATA[0].id);
-  const [finalizing, setFinalizing] = useState(false);
   const [finalReady, setFinalReady] = useState(false);
 
   // Mock d'authentification : visiteur par défaut (ni compte, ni abonnement)
@@ -155,7 +154,6 @@ export default function RituelPage() {
   const goStep4 = () => {
     setStep(4);
     setFinalReady(false);
-    setFinalizing(true);
     window.setTimeout(() => setFinalReady(true), 1800);
   };
 
@@ -163,7 +161,6 @@ export default function RituelPage() {
     setStep(1);
     setPhotos({ face: false, profil_gauche: false, profil_droit: false, arriere: false });
     setProcessing(false);
-    setFinalizing(false);
     setFinalReady(false);
     setShowPlans(false);
   };
@@ -474,7 +471,7 @@ export default function RituelPage() {
                 </p>
               </div>
 
-              {finalizing ? (
+              {!finalReady ? (
                 <div
                   aria-live="polite"
                   className="w-full min-h-[340px] rounded-card border border-ink/10 bg-card shadow-soft flex flex-col items-center justify-center gap-4 p-8 text-center"
