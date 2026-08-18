@@ -31,7 +31,7 @@ def main() -> int:
     checks = [
         require("No demo OTP bypass", "token === '123456'" not in auth and 'token === "123456"' not in auth, "hard-coded OTP bypass absent"),
         require("No client demo admin login", "loginAsAdmin" not in auth, "admin cannot be minted in client AuthProvider"),
-        require("Middleware verifies session", "verifyAccessToken" in middleware, "protected routes do not trust cookie presence alone"),
+        require("Middleware verifies session", "getVerifiedPrincipal" in middleware and "principal.role !== 'admin'" in middleware, "protected routes validate the Supabase-backed principal and admin role"),
         require("Checkout requires verified user", "getVerifiedPrincipal" in checkout, "checkout is authenticated server-side"),
         require("Checkout does not trust client amount", "body?.amountFcfa" not in checkout and "body.amountFcfa" not in checkout, "price comes from server catalog"),
         require("Payment is persisted pending", "payment_transactions" in checkout and "status: 'pending'" in checkout, "provider session is linked to a pending DB transaction"),
@@ -43,9 +43,9 @@ def main() -> int:
         require("Money Fusion has no demo success", "mf_demo_token" not in money_fusion and "mode démo" not in money_fusion.lower(), "provider failures fail closed"),
         require("Reconstruction requires user auth", "getVerifiedPrincipal" in reconstruct, "Next proxy authenticates caller"),
         require("Reconstruction has no fake success", "fallback.gltf" not in reconstruct and "identity_preserved: true" not in reconstruct, "engine failure is surfaced"),
-        require("Internal API secret is forwarded", "x-afrofade-internal-secret" in reconstruct.lower(), "Next-to-FastAPI calls are authenticated"),
+        require("Internal API secret is forwarded", "x-internal-api-key" in reconstruct.lower() and "API_INTERNAL_SECRET" in reconstruct, "Next-to-FastAPI calls are authenticated"),
         require("FastAPI is not wildcard CORS", 'allow_origins=["*"]' not in api_main and "API_ALLOWED_ORIGINS" in api_main, "origins come from explicit configuration"),
-        require("FastAPI business routes are protected", "API_INTERNAL_SECRET" in api_main and "verify_internal_request" in api_main, "inference endpoints require internal credential"),
+        require("FastAPI business routes are protected", "API_INTERNAL_SECRET" in api_main and "require_internal_api_key" in api_main and "X-Internal-API-Key" in api_main, "inference endpoints require internal credential"),
     ]
 
     passed = sum(checks)
