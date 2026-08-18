@@ -1,3 +1,5 @@
+import { fetchWithRetry } from './resilience';
+
 export interface UploadResponse {
   publicUrl: string;
   path: string;
@@ -9,8 +11,8 @@ export async function uploadClientPhoto(
   salonId = 'demo-salon'
 ): Promise<UploadResponse> {
   try {
-    // 1. Get presigned upload URL from Next.js API
-    const res = await fetch('/api/upload/presigned-url', {
+    // 1. Get presigned upload URL from Next.js API with resilience retry
+    const res = await fetchWithRetry('/api/upload/presigned-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -19,6 +21,7 @@ export async function uploadClientPhoto(
         fileSize: file.size,
         salonId,
       }),
+      maxRetries: 3,
     });
 
     if (!res.ok) {

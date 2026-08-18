@@ -1,3 +1,5 @@
+import { fetchWithRetry } from './resilience';
+
 export interface ReconstructionResult {
   meshGlbUrl: string;
   processingTimeMs: number;
@@ -10,10 +12,11 @@ export async function trigger3DReconstruction(
   photos: string[]
 ): Promise<ReconstructionResult> {
   try {
-    const response = await fetch('/api/v1/reconstruct', {
+    const response = await fetchWithRetry('/api/v1/reconstruct', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ photos }),
+      maxRetries: 3,
     });
 
     if (!response.ok) {
