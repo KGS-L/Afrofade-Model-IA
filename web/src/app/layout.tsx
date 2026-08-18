@@ -27,7 +27,7 @@ const bodyFont = localFont({
 const handFont = localFont({
   src: './fonts/Caveat.woff2',
   variable: '--font-hand',
-  weight: '400 700',
+  weight: '400',
   display: 'swap',
 });
 
@@ -48,6 +48,10 @@ export default function RootLayout({
       className={`${displayFont.variable} ${bodyFont.variable} ${handFont.variable}`}
     >
       <body className="font-body">
+        {/* Fallback no-JS : les révélations au scroll (.fade-safe) restent visibles */}
+        <noscript>
+          <style>{`.fade-safe{opacity:1 !important}`}</style>
+        </noscript>
         <main className="min-h-screen bg-cream text-ink">{children}</main>
       </body>
     </html>

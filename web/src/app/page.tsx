@@ -1,12 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Navbar } from '@/components/Navbar';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { Studio3DCanvas } from '@/components/Studio3DCanvas';
-import { HairstyleCatalog, HairstyleItem } from '@/components/HairstyleCatalog';
+import {
+  HairstyleCatalog,
+  HairstyleItem,
+  HAIRSTYLES_DATA,
+} from '@/components/HairstyleCatalog';
 import { UpsellBanner } from '@/components/UpsellBanner';
 import { PricingModal } from '@/components/PricingModal';
+import { PLANS, formatFcfa, stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
 import {
   CheckCircle2,
   ChevronLeft,
@@ -17,6 +23,158 @@ import {
   Lock,
   Plus,
 } from 'lucide-react';
+
+/* ------------------------------------------------------------------ */
+/* Données de section — scope module                                   */
+/* ------------------------------------------------------------------ */
+
+/** Carrousel hero (§2) : visuels de démonstration des rendus 3D */
+const HERO_SLIDES = [
+  {
+    src: '/models/afro_taper_fade.png',
+    title: 'Taper fade & line-up',
+    note: 'rendu 3D · rotation du doigt',
+  },
+  {
+    src: '/models/afro_dreadlocks.png',
+    title: 'Locks sculptées',
+    note: 'volumes fidèles, textures crépues',
+  },
+  {
+    src: '/models/afro_cornrows.png',
+    title: 'Cornrows géométriques',
+    note: 'motifs lisibles sous tous les angles',
+  },
+  {
+    src: '/models/afro_beard_sculpted.png',
+    title: 'Barbe sculptée',
+    note: 'option premium, essayage en 1 tap',
+  },
+];
+
+/** Étapes 01-04 (§3) */
+const STEPS = [
+  {
+    num: '01',
+    title: 'Prenez 3–4 photos',
+    text: 'Smartphone ou tablette, sous trois ou quatre angles, visage dégagé. Aucun matériel professionnel requis.',
+  },
+  {
+    num: '02',
+    title: 'La reconstruction 3D s’opère',
+    text: 'En moins de deux secondes, la tête de votre client apparaît en 3D, prête pour l’essayage.',
+  },
+  {
+    num: '03',
+    title: 'Explorez les coiffures',
+    text: 'Fades, locks, tresses, afro, barbe : essayez, comparez, ajustez les contours du bout du doigt.',
+  },
+  {
+    num: '04',
+    title: 'Validez ensemble',
+    text: 'Votre client tourne son propre visage sous tous les angles et dit « on y va » — avant la tondeuse.',
+  },
+];
+
+/** Savoir-faire (§5) : PRÉCISION · RENDU · FLUIDITÉ · CONFIDENTIALITÉ */
+const QUALITY_CARDS = [
+  {
+    icon: Crosshair,
+    label: 'PRÉCISION',
+    text: 'Chaque ligne d’implantation et chaque contour est reproduit au plus près : votre client voit la coupe exacte qu’il quittera le salon.',
+  },
+  {
+    icon: Layers,
+    label: 'RENDU',
+    text: 'Textures crépues et frisées rendues avec soin — fades à blanc, locks, tresses et barbes restent lisibles sous tous les angles.',
+  },
+  {
+    icon: Gauge,
+    label: 'FLUIDITÉ',
+    text: 'La tête 3D répond au doigt, sans saccade, même en plein samedi sur la tablette du salon.',
+  },
+  {
+    icon: Lock,
+    label: 'CONFIDENTIALITÉ',
+    text: 'Les photos de vos clients restent dans l’espace isolé de votre salon. Rien n’est partagé, rien n’est revendu.',
+  },
+];
+
+/** Grille #styles (§6) — chaque carte porte l'id de son style du catalogue ;
+ *  sans photo dédiée, placeholder dégradé terracotta/encre (grammaire maquettes). */
+const STYLE_VISUAL_GRADIENTS = {
+  lineUp: 'bg-[linear-gradient(150deg,#D8B79A,#A9662F)]',
+  afro: 'bg-[linear-gradient(150deg,#D9C6A8,#C99B3F)]',
+};
+
+const STYLE_CARDS: {
+  id: string;
+  title: string;
+  img?: string;
+  visualLabel: string;
+  placeholderClass?: string;
+}[] = [
+  {
+    id: 'fade_taper_low',
+    title: 'Fade classique',
+    img: '/models/afro_taper_fade.png',
+    visualLabel: 'FADE',
+  },
+  {
+    id: 'fade_burst_mohawk',
+    title: 'Fade mid + line-up',
+    visualLabel: 'LINE-UP',
+    placeholderClass: STYLE_VISUAL_GRADIENTS.lineUp,
+  },
+  {
+    id: 'locks_short_high_top',
+    title: 'Locks courtes',
+    img: '/models/afro_dreadlocks.png',
+    visualLabel: 'LOCKS',
+  },
+  {
+    id: 'tresses_cornrows_lines',
+    title: 'Tresses collées',
+    img: '/models/afro_cornrows.png',
+    visualLabel: 'TRESSES',
+  },
+  {
+    id: 'afro_sponge_twists',
+    title: 'Afro sculpté',
+    visualLabel: 'AFRO',
+    placeholderClass: STYLE_VISUAL_GRADIENTS.afro,
+  },
+  {
+    id: 'barbe_sculpted_contour',
+    title: 'Barbe sculptée',
+    img: '/models/afro_beard_sculpted.png',
+    visualLabel: 'BARBE',
+  },
+];
+
+/** FAQ (§8) */
+const FAQ_ITEMS = [
+  {
+    q: 'Combien de photos faut-il pour la reconstruction 3D ?',
+    a: 'Trois photos suffisent (face, profil gauche, profil droit) ; une quatrième en trois-quarts affine encore les volumes. Un visage dégagé et une lumière naturelle donnent les meilleurs résultats.',
+  },
+  {
+    q: 'Les photos de mes clients sont-elles confidentielles ?',
+    a: 'Oui. Chaque salon dispose d’un espace isolé et verrouillé : vos données ne sont visibles que par vous. Le plan VIP inclut un espace cloud dédié de 1 Go pour les cartes clients (stockage illimité avec le plan Extra).',
+  },
+  {
+    q: 'Que se passe-t-il si j’atteins mon quota mensuel ?',
+    a: 'Le Rituel vous propose simplement de passer au plan supérieur — aucune coupure en pleine journée de salon. Votre quota est remis à zéro le 1er de chaque mois de facturation.',
+  },
+  {
+    q: 'Puis-je essayer avant de m’abonner ?',
+    a: 'Bien sûr : la démo du Rituel du Miroir sur cette page est gratuite et ne demande aucune carte. Abonnez-vous uniquement quand le miroir vous a convaincu.',
+  },
+  {
+    q: 'Quels moyens de paiement acceptez-vous ?',
+    a: 'Wave, Orange Money, MTN et Moov : vous réglez directement depuis votre téléphone, en FCFA, sans engagement de durée.',
+  },
+];
 
 export default function StudioPage() {
   const [hasModel, setHasModel] = useState<boolean>(false);
@@ -31,6 +189,18 @@ export default function StudioPage() {
   const [quotaLimit, setQuotaLimit] = useState<number>(100);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Recherche navbar → filtre le catalogue du Rituel
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Carrousel hero : slide active + slides déjà chargées (lazy)
+  const [heroSlide, setHeroSlide] = useState<number>(0);
+  const [loadedSlides, setLoadedSlides] = useState<boolean[]>(() =>
+    HERO_SLIDES.map((_, i) => i === 0)
+  );
+
+  // FAQ accordéon : un seul panneau ouvert à la fois
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -85,147 +255,42 @@ export default function StudioPage() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // --- Hero carousel (§2) : visuels avant/après salon ---
-  const heroSlides = [
-    {
-      src: '/models/afro_taper_fade.png',
-      title: 'Taper fade & line-up',
-      note: 'rendu 3D · rotation du doigt',
-    },
-    {
-      src: '/models/afro_dreadlocks.png',
-      title: 'Locks sculptées',
-      note: 'volumes fidèles, textures crépues',
-    },
-    {
-      src: '/models/afro_cornrows.png',
-      title: 'Cornrows géométriques',
-      note: 'motifs lisibles sous tous les angles',
-    },
-    {
-      src: '/models/afro_beard_sculpted.png',
-      title: 'Barbe sculptée',
-      note: 'option premium, essayage en 1 tap',
-    },
-  ];
-  const [heroSlide, setHeroSlide] = useState<number>(0);
-  const heroPrev = () =>
-    setHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  const heroNext = () => setHeroSlide((prev) => (prev + 1) % heroSlides.length);
+  const scrollToStyles = () => {
+    const el = document.getElementById('styles');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  // --- FAQ accordéon (§8) : un seul panneau ouvert, fermeture Échap ---
-  const faqItems = [
-    {
-      q: 'Combien de photos faut-il pour la reconstruction 3D ?',
-      a: "Trois photos suffisent (face, profil gauche, profil droit) ; une quatrième en trois-quarts affine encore les volumes. Un visage dégagé et une lumière naturelle donnent les meilleurs résultats.",
-    },
-    {
-      q: 'Les photos de mes clients sont-elles confidentielles ?',
-      a: "Oui. Chaque salon dispose d'un espace isolé et verrouillé : vos données ne sont visibles que par vous. Les cartes clients VIP et Extra sont conservées dans un espace cloud dédié de 1 Go.",
-    },
-    {
-      q: 'Que se passe-t-il si j’atteins mon quota mensuel ?',
-      a: "Le Rituel vous propose simplement de passer au plan supérieur — aucune coupure en pleine journée de salon. Votre quota est remis à zéro le 1er de chaque mois de facturation.",
-    },
-    {
-      q: 'Puis-je essayer avant de m’abonner ?',
-      a: "Bien sûr : la démo du Rituel du Miroir sur cette page est gratuite et ne demande aucune carte. Abonnez-vous uniquement quand le miroir vous a convaincu.",
-    },
-    {
-      q: 'Quels moyens de paiement acceptez-vous ?',
-      a: "Wave, Orange Money, MTN Moov et Mobile Money : vous réglez directement depuis votre téléphone, en FCFA, sans engagement de durée.",
-    },
-  ];
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  /** Bouton « Personnaliser » de la grille #styles : applique le style
+   *  (upsell si premium) puis ramène au studio. */
+  const personalizeStyle = (item: HairstyleItem) => {
+    handleSelectStyle(item);
+    if (item.isPremium) handleTriggerUpsell(item);
+    scrollToStudio();
+  };
 
+  // Carrousel hero : navigation + chargement différé des slides non actives
+  const goToSlide = (index: number) => {
+    const safe = (index + HERO_SLIDES.length) % HERO_SLIDES.length;
+    setHeroSlide(safe);
+    setLoadedSlides((prev) =>
+      prev[safe] ? prev : prev.map((v, k) => (k === safe ? true : v))
+    );
+  };
+  const heroPrev = () => goToSlide(heroSlide - 1);
+  const heroNext = () => goToSlide(heroSlide + 1);
+  const touchStartX = useRef<number | null>(null);
+
+  // FAQ : Échap ferme la FAQ uniquement si un panneau est ouvert
+  // et que la modale pricing est fermée (pas de double fermeture).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpenFaq(null);
+      if (e.key === 'Escape' && openFaq !== null && !isPricingOpen) {
+        setOpenFaq(null);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  // --- Grille #styles (§6) : style_card + badge plan ---
-  const styleCards = [
-    { title: 'Fade classique', plan: 'PRO', img: '/models/afro_taper_fade.png' },
-    { title: 'Fade mid + line-up', plan: 'PRO', img: '/models/afro_taper_fade.png' },
-    { title: 'Locks courtes', plan: 'VIP', img: '/models/afro_dreadlocks.png' },
-    { title: 'Tresses collées', plan: 'VIP', img: '/models/afro_cornrows.png' },
-    { title: 'Afro sculpté', plan: 'PRO', img: '/models/afro_dreadlocks.png' },
-    { title: 'Barbe sculptée', plan: 'PREMIUM', img: '/models/afro_beard_sculpted.png' },
-  ];
-
-  const planBadgeClass: Record<string, string> = {
-    PRO: 'bg-ink-soft text-white',
-    VIP: 'bg-terracotta-dark text-white',
-    PREMIUM: 'bg-premium text-white',
-  };
-
-  // --- #tarifs (§7) : plans FCFA ---
-  const pricingPlans = [
-    {
-      name: 'PRO',
-      price: '2 200',
-      amount: 2200,
-      star: false,
-      features: [
-        '20 à 30 têtes par mois',
-        'Rituel du Miroir complet',
-        'Catalogue fades, tresses, afro',
-        'Support technique WhatsApp',
-      ],
-    },
-    {
-      name: 'VIP',
-      price: '4 900',
-      amount: 4900,
-      star: true,
-      features: [
-        '100 têtes par mois',
-        '1 Go de cartes clients cloud',
-        'Téléchargement HD des rendus',
-        'Styles premium à la carte',
-        'Support prioritaire 7j/7',
-      ],
-    },
-    {
-      name: 'EXTRA',
-      price: '7 500',
-      amount: 7500,
-      star: false,
-      features: [
-        'Têtes 3D illimitées',
-        'Toutes les fonctions, sans exception',
-        'Multi-postes tablette & smartphone',
-        'Accès anticipé aux nouveaux styles',
-      ],
-    },
-  ];
-
-  // --- #qualite (§5) : 4 cartes savoir-faire ---
-  const qualityCards = [
-    {
-      icon: Crosshair,
-      label: 'PRÉCISION',
-      text: "Chaque ligne d'implantation et chaque contour est reproduit au plus près : votre client voit la coupe exacte qu'il quittera le salon.",
-    },
-    {
-      icon: Layers,
-      label: 'RENDU',
-      text: "Textures crépues et frisées rendues avec soin — fades à blanc, locks, tresses et barbes restent lisibles sous tous les angles.",
-    },
-    {
-      icon: Gauge,
-      label: 'FLUIDITÉ',
-      text: "La tête 3D répond au doigt, sans saccade, même en plein samedi sur la tablette du salon.",
-    },
-    {
-      icon: Lock,
-      label: 'CONFIDENTIALITÉ',
-      text: "Les photos de vos clients restent dans l'espace isolé de votre salon. Rien n'est partagé, rien n'est revendu.",
-    },
-  ];
+  }, [openFaq, isPricingOpen]);
 
   return (
     <div className="min-h-screen bg-cream text-ink font-body flex flex-col selection:bg-terracotta selection:text-white">
@@ -240,6 +305,9 @@ export default function StudioPage() {
       {/* 1. Navbar — ancres Le Rituel · Styles · Tarifs · FAQ */}
       <Navbar
         onOpenPricing={() => setIsPricingOpen(true)}
+        onTryRituel={scrollToStudio}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         quotaUsed={quotaUsed}
         quotaLimit={quotaLimit}
         currentPlan={currentPlan}
@@ -270,7 +338,7 @@ export default function StudioPage() {
                 Essayer le Rituel
               </button>
               <button
-                onClick={scrollToStudio}
+                onClick={scrollToStyles}
                 className="min-h-[48px] inline-flex items-center justify-center gap-2 bg-transparent hover:bg-ink/5 text-ink font-bold text-sm md:text-base px-8 rounded-pill border-[1.5px] border-ink/20 transition-colors"
               >
                 Voir la démo
@@ -278,10 +346,39 @@ export default function StudioPage() {
             </div>
           </div>
 
-          {/* Carrousel hero : flèches + points, navigation clavier */}
-          <div className="relative">
-            <div className="relative aspect-[4/4.4] rounded-frame overflow-hidden shadow-soft bg-terracotta-wash">
-              {heroSlides.map((slide, i) => (
+          {/* Carrousel hero : région ARIA, flèches clavier, swipe tactile */}
+          <div
+            role="region"
+            aria-roledescription="carrousel"
+            aria-label="Rendus 3D de démonstration Afrofade"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                heroPrev();
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                heroNext();
+              }
+            }}
+            className="relative focus:outline-none"
+          >
+            <div
+              className="relative aspect-[4/4.4] rounded-frame overflow-hidden shadow-soft bg-terracotta-wash"
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+              }}
+              onTouchEnd={(e) => {
+                if (touchStartX.current === null) return;
+                const dx = e.changedTouches[0].clientX - touchStartX.current;
+                if (Math.abs(dx) > 40) {
+                  if (dx < 0) heroNext();
+                  else heroPrev();
+                }
+                touchStartX.current = null;
+              }}
+            >
+              {HERO_SLIDES.map((slide, i) => (
                 <div
                   key={slide.src + slide.title}
                   className={`absolute inset-0 transition-opacity duration-500 ${
@@ -289,11 +386,17 @@ export default function StudioPage() {
                   }`}
                   aria-hidden={i !== heroSlide}
                 >
-                  <img
-                    src={slide.src}
-                    alt={`Rendu 3D démo — ${slide.title}`}
-                    className="w-full h-full object-cover"
-                  />
+                  {(loadedSlides[i] || i === heroSlide) && (
+                    <Image
+                      src={slide.src}
+                      alt={`Rendu 3D démo — ${slide.title}`}
+                      fill
+                      priority={i === 0}
+                      loading={i === 0 ? undefined : 'lazy'}
+                      sizes="(max-width: 1024px) 100vw, 480px"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
               ))}
               <div className="absolute top-4 left-4 bg-white/90 text-ink-soft text-[10px] font-bold tracking-[0.22em] uppercase px-3 py-1.5 rounded-pill">
@@ -301,10 +404,10 @@ export default function StudioPage() {
               </div>
               <div className="absolute bottom-16 left-1/2 [transform:translateX(-50%)] w-[86%] bg-card rounded-lg px-5 py-4 text-center shadow-soft">
                 <b className="block text-sm md:text-[15px] font-bold">
-                  {heroSlides[heroSlide].title}
+                  {HERO_SLIDES[heroSlide].title}
                 </b>
                 <i className="not-italic text-xs text-ink-soft">
-                  {heroSlides[heroSlide].note}
+                  {HERO_SLIDES[heroSlide].note}
                 </i>
               </div>
               <button
@@ -323,13 +426,13 @@ export default function StudioPage() {
               </button>
             </div>
             <div className="flex gap-2 justify-center mt-4">
-              {heroSlides.map((s, i) => (
+              {HERO_SLIDES.map((s, i) => (
                 <button
                   key={'dot-' + i}
-                  onClick={() => setHeroSlide(i)}
+                  onClick={() => goToSlide(i)}
                   aria-label={`Aller au visuel ${i + 1} : ${s.title}`}
                   aria-current={i === heroSlide}
-                  className={`w-11 h-6 flex items-center justify-center rounded-pill`}
+                  className="w-11 h-6 flex items-center justify-center rounded-pill"
                 >
                   <span
                     className={`w-2 h-2 rounded-full transition-colors ${
@@ -357,28 +460,7 @@ export default function StudioPage() {
           </h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              num: '01',
-              title: 'Prenez 3–4 photos',
-              text: "Smartphone ou tablette, sous trois ou quatre angles, visage dégagé. Aucun matériel professionnel requis.",
-            },
-            {
-              num: '02',
-              title: 'La reconstruction 3D s’opère',
-              text: "En moins de deux secondes, la tête de votre client apparaît en 3D, prête pour l'essayage.",
-            },
-            {
-              num: '03',
-              title: 'Explorez les coiffures',
-              text: 'Fades, locks, tresses, afro, barbe : essayez, comparez, ajustez les contours du bout du doigt.',
-            },
-            {
-              num: '04',
-              title: 'Validez ensemble',
-              text: "Votre client tourne son propre visage sous tous les angles et dit « on y va » — avant la tondeuse.",
-            },
-          ].map((step) => (
+          {STEPS.map((step) => (
             <FadeIn key={step.num}>
               <div className="h-full bg-card rounded-card p-6 shadow-soft">
                 <div className="font-display text-[44px] leading-none text-terracotta-pale">
@@ -440,6 +522,7 @@ export default function StudioPage() {
               selectedId={selectedStyle?.id || null}
               onSelect={handleSelectStyle}
               onTriggerUpsell={handleTriggerUpsell}
+              query={searchQuery}
             />
           </div>
         </div>
@@ -450,14 +533,14 @@ export default function StudioPage() {
         <div className="max-w-container mx-auto px-6">
           <div className="text-center mb-10 md:mb-12">
             <p className="font-hand text-2xl text-terracotta">
-              le sérieux d'un outil pro
+              le sérieux d’un outil pro
             </p>
             <h2 className="font-display text-3xl md:text-[34px] mt-2">
               Conçu pour le salon, pensé pour vos clients
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {qualityCards.map((card) => (
+            {QUALITY_CARDS.map((card) => (
               <FadeIn key={card.label}>
                 <div className="h-full bg-cream rounded-card p-6 shadow-soft">
                   <div className="w-11 h-11 rounded-pill bg-terracotta-wash text-terracotta flex items-center justify-center">
@@ -491,43 +574,61 @@ export default function StudioPage() {
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {styleCards.map((style) => (
-            <FadeIn key={style.title}>
-              <div className="bg-card rounded-card overflow-hidden shadow-soft flex flex-col h-full">
-                <div className="relative aspect-[4/3] bg-terracotta-wash">
-                  <img
-                    src={style.img}
-                    alt={`Rendu 3D — ${style.title}`}
-                    className="w-full h-full object-cover"
-                  />
-                  <span
-                    className={`absolute top-3 right-3 text-[10px] font-bold tracking-[0.12em] px-2.5 py-1 rounded-pill ${planBadgeClass[style.plan]}`}
-                  >
-                    {style.plan}
-                  </span>
+          {STYLE_CARDS.map((card) => {
+            const item = HAIRSTYLES_DATA.find((h) => h.id === card.id);
+            if (!item) return null;
+            const plan = stylePlan(item);
+            return (
+              <FadeIn key={card.id}>
+                <div className="bg-card rounded-card overflow-hidden shadow-soft flex flex-col h-full">
+                  <div className="relative aspect-[4/3] bg-terracotta-wash">
+                    {card.img ? (
+                      <Image
+                        src={card.img}
+                        alt={`Rendu 3D — ${card.title}`}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div
+                        className={`absolute inset-0 flex items-center justify-center ${card.placeholderClass}`}
+                        aria-hidden="true"
+                      >
+                        <span className="text-[11px] font-bold tracking-[0.22em] text-white/90">
+                          VISUEL 3D — {card.visualLabel}
+                        </span>
+                      </div>
+                    )}
+                    <span
+                      className={`absolute top-3 right-3 text-[10px] font-bold tracking-[0.12em] px-2.5 py-1 rounded-pill ${PLAN_BADGE_CLASS[plan]}`}
+                    >
+                      {plan}
+                    </span>
+                  </div>
+                  <div className="p-5 flex items-center gap-3 flex-wrap">
+                    <h3 className="font-bold text-base flex-1 min-w-[120px]">
+                      {card.title}
+                    </h3>
+                    <button
+                      onClick={() => personalizeStyle(item)}
+                      className={`min-h-[44px] text-[13px] font-bold px-4 rounded-pill text-white transition-colors ${
+                        plan === 'PREMIUM'
+                          ? 'bg-premium hover:bg-premium/90'
+                          : 'bg-terracotta hover:bg-terracotta-dark'
+                      }`}
+                    >
+                      Personnaliser
+                    </button>
+                  </div>
                 </div>
-                <div className="p-5 flex items-center gap-3 flex-wrap">
-                  <h3 className="font-bold text-base flex-1 min-w-[120px]">
-                    {style.title}
-                  </h3>
-                  <button
-                    onClick={scrollToStudio}
-                    className={`min-h-[44px] text-[13px] font-bold px-4 rounded-pill text-white transition-colors ${
-                      style.plan === 'PREMIUM'
-                        ? 'bg-premium hover:bg-premium/90'
-                        : 'bg-terracotta hover:bg-terracotta-dark'
-                    }`}
-                  >
-                    Personnaliser
-                  </button>
-                </div>
-              </div>
-            </FadeIn>
-          ))}
+              </FadeIn>
+            );
+          })}
         </div>
       </section>
 
-      {/* 7. #tarifs — plans FCFA, VIP surligné */}
+      {/* 7. #tarifs — plans FCFA, VIP surligné (source unique lib/plans.ts) */}
       <section id="tarifs" className="bg-card py-16 md:py-24">
         <div className="max-w-container mx-auto px-6">
           <div className="text-center mb-12 md:mb-14">
@@ -541,16 +642,16 @@ export default function StudioPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-            {pricingPlans.map((plan) => (
+            {PLANS.map((plan) => (
               <div
                 key={plan.name}
                 className={`relative flex flex-col rounded-card p-7 ${
-                  plan.star
+                  plan.popular
                     ? 'bg-card border-2 border-terracotta shadow-soft'
                     : 'bg-cream border-[1.5px] border-ink/10'
                 }`}
               >
-                {plan.star && (
+                {plan.popular && (
                   <span className="absolute -top-3.5 left-1/2 [transform:translateX(-50%)] bg-terracotta text-white text-[11px] font-bold tracking-[0.12em] px-3.5 py-1 rounded-pill whitespace-nowrap">
                     LE PLUS CHOISI
                   </span>
@@ -559,7 +660,7 @@ export default function StudioPage() {
                   {plan.name}
                 </h3>
                 <div className="font-display text-[38px] leading-tight mt-3.5">
-                  {plan.price}{' '}
+                  {formatFcfa(plan.amount)}{' '}
                   <small className="font-body text-sm font-normal text-ink-soft">
                     FCFA/mois
                   </small>
@@ -577,7 +678,7 @@ export default function StudioPage() {
                 <button
                   onClick={() => handleSelectPlan(plan.name, plan.amount)}
                   className={`mt-auto min-h-[44px] rounded-pill font-bold text-sm transition-colors ${
-                    plan.star
+                    plan.popular
                       ? 'bg-terracotta hover:bg-terracotta-dark text-white'
                       : 'bg-transparent border-[1.5px] border-ink/20 hover:bg-ink/5 text-ink'
                   }`}
@@ -599,25 +700,34 @@ export default function StudioPage() {
           </h2>
         </div>
         <div className="max-w-[760px] mx-auto grid gap-3">
-          {faqItems.map((item, i) => {
+          {FAQ_ITEMS.map((item, i) => {
             const isOpen = openFaq === i;
             return (
               <div key={item.q} className="bg-card rounded-card shadow-soft px-6">
-                <button
-                  onClick={() => setOpenFaq(isOpen ? null : i)}
-                  aria-expanded={isOpen}
-                  className="w-full min-h-[56px] py-4 flex items-center justify-between gap-4 text-left font-semibold text-[15px] md:text-base"
-                >
-                  <span>{item.q}</span>
-                  <Plus
-                    className={`w-5 h-5 text-terracotta shrink-0 transition-transform duration-200 ${
-                      isOpen ? 'rotate-45' : ''
-                    }`}
-                    aria-hidden
-                  />
-                </button>
+                <h3>
+                  <button
+                    id={`faq-q-${i}`}
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-panel-${i}`}
+                    className="w-full min-h-[56px] py-4 flex items-center justify-between gap-4 text-left font-semibold text-[15px] md:text-base"
+                  >
+                    <span>{item.q}</span>
+                    <Plus
+                      className={`w-5 h-5 text-terracotta shrink-0 transition-transform duration-200 ${
+                        isOpen ? 'rotate-45' : ''
+                      }`}
+                      aria-hidden
+                    />
+                  </button>
+                </h3>
                 {isOpen && (
-                  <p className="pb-5 text-sm leading-relaxed text-ink-soft animate-fade-in">
+                  <p
+                    id={`faq-panel-${i}`}
+                    role="region"
+                    aria-labelledby={`faq-q-${i}`}
+                    className="pb-5 text-sm leading-relaxed text-ink-soft animate-fade-in"
+                  >
                     {item.a}
                   </p>
                 )}
@@ -650,9 +760,9 @@ export default function StudioPage() {
             </div>
           </div>
           <nav aria-label="Produit">
-            <h5 className="text-xs font-bold tracking-[0.18em] text-white/50 mb-4">
+            <h4 className="text-xs font-bold tracking-[0.18em] text-white/50 mb-4">
               PRODUIT
-            </h5>
+            </h4>
             <ul className="space-y-2.5 text-sm text-white/80">
               <li>
                 <a href="#rituel-studio" className="hover:text-terracotta transition-colors">
@@ -677,9 +787,9 @@ export default function StudioPage() {
             </ul>
           </nav>
           <nav aria-label="Légal">
-            <h5 className="text-xs font-bold tracking-[0.18em] text-white/50 mb-4">
+            <h4 className="text-xs font-bold tracking-[0.18em] text-white/50 mb-4">
               LÉGAL
-            </h5>
+            </h4>
             <ul className="space-y-2.5 text-sm text-white/80">
               <li>Mentions légales</li>
               <li>Confidentialité</li>
@@ -688,8 +798,11 @@ export default function StudioPage() {
           </nav>
         </div>
         <div className="max-w-container mx-auto px-6 border-t border-white/10 pt-5 pb-2 flex flex-col sm:flex-row justify-between gap-2 text-xs text-white/45">
-          <span>© 2026 Afrofade — Tous droits réservés</span>
-          <span>Fabriqué avec ♥ pour les barbiers d’Afrique</span>
+          <span>© {new Date().getFullYear()} Afrofade — Tous droits réservés</span>
+          <span>
+            Fabriqué avec <span aria-hidden="true">♥</span> pour les barbiers
+            d’Afrique
+          </span>
         </div>
       </footer>
 
@@ -703,7 +816,8 @@ export default function StudioPage() {
   );
 }
 
-/** Révélation douce au scroll (EXPERIENCE.md › step_card) */
+/** Révélation douce au scroll (EXPERIENCE.md › step_card).
+ *  .fade-safe + <noscript> dans layout.tsx garantit la visibilité sans JS. */
 function FadeIn({
   children,
   className = '',
@@ -717,6 +831,10 @@ function FadeIn({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (!('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -735,7 +853,9 @@ function FadeIn({
   return (
     <div
       ref={ref}
-      className={`${className} ${visible ? 'animate-fade-in' : 'opacity-0'}`}
+      className={`fade-safe ${className} ${
+        visible ? 'animate-fade-in' : 'opacity-0'
+      }`}
     >
       {children}
     </div>

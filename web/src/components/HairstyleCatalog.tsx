@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Crown, Check } from 'lucide-react';
+import { stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
 
 export interface HairstyleItem {
   id: string;
@@ -14,7 +16,7 @@ export interface HairstyleItem {
   priceTag?: string;
 }
 
-const HAIRSTYLES_DATA: HairstyleItem[] = [
+export const HAIRSTYLES_DATA: HairstyleItem[] = [
   {
     id: 'fade_taper_low',
     category: 'fade',
@@ -47,7 +49,7 @@ const HAIRSTYLES_DATA: HairstyleItem[] = [
   {
     id: 'barbe_sculpted_contour',
     category: 'barbe',
-    title: 'Barbe Sculptée & Contours Razoir',
+    title: 'Barbe Sculptée & Contours Rasoir',
     subtitle: 'Taille au millimètre, contours nets & soin huile',
     thumbnail: '/models/afro_beard_sculpted.png',
     color: '#110b07',
@@ -74,35 +76,26 @@ const HAIRSTYLES_DATA: HairstyleItem[] = [
   },
 ];
 
-/** Badge plan affiché sur chaque style_card (PRO / VIP / PREMIUM or) */
-const PLAN_BY_ID: { [id: string]: 'PRO' | 'VIP' } = {
-  fade_taper_low: 'PRO',
-  afro_sponge_twists: 'PRO',
-  fade_burst_mohawk: 'VIP',
-};
-
-const planBadgeClass = (item: HairstyleItem) =>
-  item.isPremium
-    ? 'bg-premium text-white'
-    : PLAN_BY_ID[item.id] === 'VIP'
-      ? 'bg-terracotta-dark text-white'
-      : 'bg-ink-soft text-white';
-
 interface HairstyleCatalogProps {
   selectedId: string | null;
   onSelect: (item: HairstyleItem) => void;
   onTriggerUpsell: (item: HairstyleItem) => void;
+  /** Filtre plein texte sur le titre (recherche navbar), insensible à la casse */
+  query?: string;
 }
 
 export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
   selectedId,
   onSelect,
   onTriggerUpsell,
+  query = '',
 }) => {
   const [activeTab, setActiveTab] = useState<string>('all');
 
-  const filteredItems = HAIRSTYLES_DATA.filter((item) =>
-    activeTab === 'all' ? true : item.category === activeTab
+  const filteredItems = HAIRSTYLES_DATA.filter(
+    (item) =>
+      (activeTab === 'all' ? true : item.category === activeTab) &&
+      item.title.toLowerCase().includes(query.trim().toLowerCase())
   );
 
   const tabs = [
@@ -113,6 +106,17 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
     { id: 'afro', label: 'Afro' },
     { id: 'barbe', label: 'Barbe & Contours' },
   ];
+
+  const PANEL_ID = 'catalog-styles-panel';
+
+  const onTabKeyDown = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const dir = e.key === 'ArrowRight' ? 1 : -1;
+    const next = (idx + dir + tabs.length) % tabs.length;
+    setActiveTab(tabs[next].id);
+    document.getElementById(`catalog-tab-${tabs[next].id}`)?.focus();
+  };
 
   return (
     <div className="bg-card rounded-card p-6 space-y-6 shadow-soft">
@@ -131,33 +135,51 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
         </div>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Filter Tabs — tablist ARIA, navigation flèches gauche/droite */}
       <div
         role="tablist"
         aria-label="Familles de coiffures"
         className="flex items-center gap-2 overflow-x-auto pb-1"
       >
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`min-h-[44px] px-4 rounded-pill text-xs font-bold whitespace-nowrap transition-all ${
-              activeTab === tab.id
-                ? 'bg-terracotta text-white shadow-soft'
-                : 'bg-cream text-ink-soft border border-ink/10 hover:text-ink hover:border-ink/25'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {tabs.map((tab, idx) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              id={`catalog-tab-${tab.id}`}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={PANEL_ID}
+              tabIndex={isActive ? 0 : -1}
+              onKeyDown={(e) => onTabKeyDown(e, idx)}
+              onClick={() => setActiveTab(tab.id)}
+              className={`min-h-[44px] px-4 rounded-pill text-xs font-bold whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-terracotta text-white shadow-soft'
+                  : 'bg-cream text-ink-soft border border-ink/10 hover:text-ink hover:border-ink/25'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Grille de style_card — cartes blanches, badge plan, CTA Personnaliser */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Grille de style_card — panneau piloté par les onglets */}
+      <div
+        role="tabpanel"
+        id={PANEL_ID}
+        aria-labelledby={`catalog-tab-${activeTab}`}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
+        {filteredItems.length === 0 && (
+          <p className="text-sm text-ink-soft" role="status">
+            Aucun style ne correspond à votre recherche.
+          </p>
+        )}
         {filteredItems.map((item) => {
           const isSelected = selectedId === item.id;
+          const plan = stylePlan(item);
           return (
             <div
               key={item.id}
@@ -175,21 +197,23 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
             >
               {/* Photo Portrait Container */}
               <div className="relative aspect-[4/3] w-full overflow-hidden bg-terracotta-wash">
-                <img
+                <Image
                   src={item.thumbnail}
                   alt={`Rendu 3D — ${item.title}`}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
                 />
 
                 {/* Badge plan : PRO / VIP / PREMIUM (or) */}
                 <span
-                  className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full flex items-center gap-1 shadow-soft ${planBadgeClass(item)}`}
+                  className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full flex items-center gap-1 shadow-soft ${PLAN_BADGE_CLASS[plan]}`}
                 >
                   {item.isPremium && <Crown className="w-3 h-3" />}
                   <span>
                     {item.isPremium
                       ? `Premium · ${item.priceTag || '+2 000 FCFA'}`
-                      : PLAN_BY_ID[item.id]}
+                      : plan}
                   </span>
                 </span>
 

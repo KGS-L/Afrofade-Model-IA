@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Check, ShieldCheck, PhoneCall, Zap } from 'lucide-react';
+import { PLANS } from '@/lib/plans';
 
 interface PricingModalProps {
   isOpen: boolean;
@@ -9,77 +10,87 @@ interface PricingModalProps {
   onSelectPlan: (planName: string, priceFcfa: number) => void;
 }
 
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export const PricingModal: React.FC<PricingModalProps> = ({
   isOpen,
   onClose,
   onSelectPlan,
 }) => {
-  // Fermeture par Échap (EXPERIENCE.md › State Patterns)
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // onClose en ref : l'effet ne se réabonne pas à chaque rendu du parent
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Fermeture Échap · piège Tab · focus initial/restauré · verrou scroll body
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    const panel = panelRef.current;
+    const focusables = () =>
+      Array.from(
+        panel?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? []
+      ).filter((el) => !el.hasAttribute('disabled'));
+
+    // Focus initial sur la carte (après paint)
+    const raf = requestAnimationFrame(() => {
+      (
+        panel?.querySelector<HTMLElement>('[data-autofocus]') ?? panel
+      )?.focus();
+    });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const items = focusables();
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const plans = [
-    {
-      name: 'PRO',
-      price: '2 200 FCFA',
-      amount: 2200,
-      desc: 'Pour les barbiers indépendants & petits salons',
-      popular: false,
-      features: [
-        '20 à 30 têtes 3D générées / mois (110 FCFA / tête)',
-        'Consultation pré-coupe en direct salon',
-        'Catalogue complet de 15+ coupes Afro & Barbes',
-        'Support technique WhatsApp',
-      ],
-    },
-    {
-      name: 'VIP',
-      price: '4 900 FCFA',
-      amount: 4900,
-      desc: 'Idéal pour les salons à fort passage (100k+ FCFA/mois)',
-      popular: true,
-      features: [
-        '100 têtes 3D générées / mois (49 FCFA / tête)',
-        'Carnet Client 3D (1 Go de stockage Cloud)',
-        'Téléchargement HD des aperçus pour le client',
-        'Bouton Upsell Prestations Premium intégré',
-        'Support prioritaire 7j/7',
-      ],
-    },
-    {
-      name: 'EXTRA',
-      price: '7 500 FCFA',
-      amount: 7500,
-      desc: 'Pour les grands salons & franchises',
-      popular: false,
-      features: [
-        'Têtes 3D illimitées',
-        'Multi-postes tablette / smartphone',
-        'Carnet Client 3D Illimité',
-        'Branding & Logo du salon personnalisé',
-        'Accès en avant-première aux nouveaux styles 3D',
-      ],
-    },
-  ];
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-night/70 backdrop-blur-md animate-fade-in"
       role="dialog"
       aria-modal="true"
-      aria-label="Abonnements Afrofade"
+      aria-labelledby="pricing-modal-title"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl bg-cream border border-ink/10 rounded-card p-6 sm:p-8 shadow-soft space-y-6 max-h-[90vh] overflow-y-auto"
+        ref={panelRef}
+        data-autofocus
+        tabIndex={-1}
+        className="relative w-full max-w-4xl bg-cream border border-ink/10 rounded-card p-6 sm:p-8 shadow-soft space-y-6 max-h-[90vh] overflow-y-auto focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -94,9 +105,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         {/* Header */}
         <div className="text-center space-y-2 max-w-lg mx-auto pt-2">
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-terracotta bg-terracotta-wash border border-terracotta/20 px-3 py-1 rounded-pill">
-            Abonnements salons & barbershops
+            Abonnements salons &amp; barbershops
           </span>
-          <h2 className="font-display text-2xl sm:text-3xl">
+          <h2 id="pricing-modal-title" className="font-display text-2xl sm:text-3xl">
             Choisissez la formule adaptée à votre salon
           </h2>
           <p className="text-xs text-ink-soft">
@@ -105,9 +116,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           </p>
         </div>
 
-        {/* Plans Grid */}
+        {/* Plans Grid — source unique src/lib/plans.ts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-          {plans.map((plan) => (
+          {PLANS.map((plan) => (
             <div
               key={plan.name}
               className={`relative rounded-card p-6 flex flex-col justify-between transition-all ${

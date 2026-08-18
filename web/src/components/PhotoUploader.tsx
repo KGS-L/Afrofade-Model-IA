@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Camera, Upload, CheckCircle2, RefreshCw, Image as ImageIcon } from 'lucide-react';
 
 interface PhotoUploaderProps {
@@ -57,8 +58,8 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       </div>
 
       <p className="text-xs leading-relaxed text-ink-soft">
-        Prenez 3 photos du client sous l'éclairage du salon pour permettre à
-        l'IA d'analyser la forme du crâne et la ligne d'implantation. JPG · PNG
+        Prenez 3 photos du client sous l’éclairage du salon pour permettre à
+        l’IA d’analyser la forme du crâne et la ligne d’implantation. JPG · PNG
         · HEIC.
       </p>
 
@@ -84,10 +85,12 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             >
               {hasPhoto ? (
                 <>
-                  <img
+                  <Image
                     src={photos[slot.key]}
-                    alt={slot.label}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    alt={`Photo client — ${slot.label}`}
+                    fill
+                    sizes="(max-width: 640px) 33vw, 140px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute top-2 right-2 bg-terracotta text-white rounded-full p-1 shadow-soft">
                     <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />

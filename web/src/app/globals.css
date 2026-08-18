@@ -49,3 +49,25 @@ body {
     animation: fade-in 0.35s ease-out both;
   }
 }
+
+/* Accessibilité : mouvement réduit (EXPERIENCE.md › Accessibility Floor) */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-fade-in {
+    animation: none;
+    opacity: 1;
+  }
+  .fade-safe {
+    opacity: 1;
+  }
+}

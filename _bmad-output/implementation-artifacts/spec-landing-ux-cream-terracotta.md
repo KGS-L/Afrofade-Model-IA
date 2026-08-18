@@ -2,7 +2,7 @@
 title: 'Landing UX crème/terracotta conforme aux spines ux-Afrofade-2026-08-17'
 type: 'feature'
 created: '2026-08-17'
-status: 'in-review'
+status: 'done'
 review_loop_iteration: 0
 baseline_commit: 8e2106a2a4ad9f9d1789433b8b1ce16225da9297
 context:
@@ -83,3 +83,56 @@ Grammaires de section reprises des maquettes : step_card (numéro 01-04 en displ
 **Manual checks (if no CLI):**
 - `npm run dev` puis comparer visuellement chaque section aux 3 maquettes `mockups/*.html` (ordre, espacement, typographies).
 - Vérifier le contraste des textes ink/ink-soft sur crème (≥ 4.5:1).
+
+## Suggested Review Order
+
+**Socle visuel — tokens & polices (point d'entrée)**
+
+- Toute l'identité DESIGN.md en un fichier : couleurs, typos display/body/hand, radius, ombres.
+  [`tailwind.config.ts:12`](../../web/tailwind.config.ts#L12)
+
+- Les 3 Google Fonts OFL chargées via next/font/local (registre Next 14.2 ignorant Special Gothic).
+  [`layout.tsx:15`](../../web/src/app/layout.tsx#L15)
+
+- Caveat figé en poids 400 (fichier statique mono-poids) + fallback noscript.
+  [`layout.tsx:30`](../../web/src/app/layout.tsx#L30)
+
+- Tokens crème/encre globaux, scroll-padding navbar sticky, keyframes fade-in.
+  [`globals.css:14`](../../web/src/app/globals.css#L14)
+
+- Respect prefers-reduced-motion : scroll auto, animations coupées.
+  [`globals.css:54`](../../web/src/app/globals.css#L54)
+
+**Structure 9 sections de l'IA**
+
+- #rituel-studio : cœur interactif préservé (uploader + canvas + catalogue).
+  [`page.tsx:480`](../../web/src/app/page.tsx#L480)
+
+- #qualite puis #styles : cartes FadeIn, placeholders dégradés pour cartes sans photo.
+  [`page.tsx:532`](../../web/src/app/page.tsx#L532)
+
+- #tarifs : plans FCFA consommant la source unique, VIP surligné.
+  [`page.tsx:632`](../../web/src/app/page.tsx#L632)
+
+**Logique mock préservée & câblage style_card**
+
+- Handlers mock intacts (quota, upsell, toast) — contrat de préservation de la spec.
+  [`page.tsx:229`](../../web/src/app/page.tsx#L229)
+
+- « Personnaliser » de #styles : applique le style, déclenche l'upsell premium, scrolle.
+  [`page.tsx:266`](../../web/src/app/page.tsx#L266)
+
+- Source unique des plans (noms exacts attendus par handleSelectPlan, montants, features).
+  [`plans.ts:18`](../../web/src/lib/plans.ts#L18)
+
+**Accessibilité & navigation**
+
+- Dialog a11y complète : role/aria-modal, piège Tab, focus restauré, scroll verrouillé.
+  [`PricingModal.tsx:84`](../../web/src/components/PricingModal.tsx#L84)
+
+- Recherche navbar fonctionnelle filtrant le catalogue (query prop).
+  [`HairstyleCatalog.tsx:98`](../../web/src/components/HairstyleCatalog.tsx#L98)
+
+- Navbar : ancres, CTA « Essayer le Rituel », recherche, badge plan/quota cliquable.
+  [`Navbar.tsx:16`](../../web/src/components/Navbar.tsx#L16)
+

@@ -20,7 +20,7 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({
           PREMIUM
         </span>
         <p className="text-sm text-ink-soft">
-          Le client s'intéresse à{' '}
+          Le client s’intéresse à{' '}
           <strong className="text-ink">{activeStyleTitle}</strong>. Proposez le
           soin contour &amp; barbe assorti !
         </p>
@@ -28,7 +28,7 @@ export const UpsellBanner: React.FC<UpsellBannerProps> = ({
 
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <button
-          onClick={() => onAddUpsell(2000, 'Soin Barbe & Contours Razoir')}
+          onClick={() => onAddUpsell(2000, 'Soin Barbe & Contours Rasoir')}
           className="min-h-[44px] w-full sm:w-auto flex items-center justify-center gap-1.5 bg-premium hover:bg-premium/90 text-white font-bold text-xs px-4 rounded-pill transition-colors shadow-soft"
         >
           <PlusCircle className="w-4 h-4" />
