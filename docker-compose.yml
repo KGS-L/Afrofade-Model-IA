@@ -1,31 +1,25 @@
+version: '3.8'
+
 services:
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
+    container_name: afrofade-web
+    restart: always
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - INTERNAL_API_URL=http://api:8000
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://afrofade.pro}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - MONEY_FUSION_URL=${MONEY_FUSION_URL:-https://www.moneyfusion.net/api/v1/pay}
+      - MONEY_FUSION_API_KEY=${MONEY_FUSION_API_KEY}
     networks:
-      - afrofade-net
-    restart: unless-stopped
-
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - ENVIRONMENT=development
-      - PORT=8000
-    networks:
-      - afrofade-net
-    restart: unless-stopped
+      - afrofade-network
 
 networks:
-  afrofade-net:
+  afrofade-network:
     driver: bridge
