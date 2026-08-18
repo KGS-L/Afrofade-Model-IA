@@ -46,10 +46,10 @@ development_status:
   2-3-résilience-réseau-purge-biométrique-à-30-jours: done
   epic-2-retrospective: optional
 
-  epic-3: in-progress
+  epic-3: done
   3-1-viewer-3d-react-three-fiber-r3f-contrôles-tactiles: done
   3-2-application-dynamique-des-coiffures-afro-500-ms: done
-  3-3-glissière-d-ajustement-line-up-art-suggestion-upsell: backlog
+  3-3-glissière-d-ajustement-line-up-art-suggestion-upsell: done
   epic-3-retrospective: optional
 
   epic-4: backlog
