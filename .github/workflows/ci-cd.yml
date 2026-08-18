@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: write
+
 jobs:
   test-web:
     name: Build & Validate Web Frontend (Next.js 16)
@@ -27,14 +30,6 @@ jobs:
           rm -f package-lock.json
           npm install --package-lock-only --ignore-scripts
           npm ci
-
-      - name: Export normalized lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: p0-normalized-package-lock
-          path: web/package-lock.json
-          if-no-files-found: error
-          retention-days: 1
 
       - name: Audit production dependencies
         run: |
@@ -61,6 +56,25 @@ jobs:
           CRON_SECRET: ci-cron-secret
           MONEY_FUSION_API_KEY: ci-money-fusion-key
           PAYMENT_WEBHOOK_SECRET: ci-payment-webhook-secret
+
+      - name: Persist validated lockfile to PR branch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          cp web/package-lock.json /tmp/afrofade-package-lock.json
+          git fetch origin "$HEAD_REF"
+          git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
+          cp /tmp/afrofade-package-lock.json web/package-lock.json
+          git add web/package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build: refresh web package lock"
+          git push origin "HEAD:$HEAD_REF"
 
   test-api:
     name: Validate Backend 3D AI Engine (FastAPI & OpenCV)
@@ -123,8 +137,7 @@ jobs:
           EOF
 
       - name: Build production containers only
-        run: |
-          docker compose -f docker-compose.yml build
+        run: docker compose -f docker-compose.yml build
 
       - name: Start production stack
         run: |
@@ -140,13 +153,11 @@ jobs:
           exit 1
 
       - name: Run P0 security smoke tests
-        run: |
-          python3 scripts/test_e2e_integration.py
+        run: python3 scripts/test_e2e_integration.py
 
       - name: Stop production stack
         if: always()
-        run: |
-          docker compose -f docker-compose.yml down -v
+        run: docker compose -f docker-compose.yml down -v
 
   deploy-vps:
     name: Deploy Afrofade to VPS (projects/Afrofade)
@@ -167,69 +178,42 @@ jobs:
         run: |
           TARGET_DIR="${VPS_AFROFADE_PATH:-$HOME/projects/Afrofade}"
           echo "Dossier cible sur le VPS : $TARGET_DIR"
-
           mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
-
           cp -a docker-compose.yml "$TARGET_DIR/"
-          if [ -f .env.example ]; then
-            cp -a .env.example "$TARGET_DIR/"
-          fi
+          if [ -f .env.example ]; then cp -a .env.example "$TARGET_DIR/"; fi
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
-
           if [ -d web ]; then
             rsync -a --exclude 'node_modules' --exclude '.next' web/ "$TARGET_DIR/web/" 2>/dev/null || cp -r web "$TARGET_DIR/"
           fi
           if [ -d api ]; then
             rsync -a --exclude '__pycache__' --exclude '.venv' api/ "$TARGET_DIR/api/" 2>/dev/null || cp -r api "$TARGET_DIR/"
           fi
-
           cd "$TARGET_DIR"
 
           if [ -f .env.example ]; then
             if [ ! -f .env ]; then
               cp .env.example .env
-              echo "Fichier .env initialisé depuis .env.example"
             else
-              echo "Mise à jour des ports et clés de .env sans écraser les secrets de production existants..."
               ENV_WEB_PORT=$(grep "^WEB_PORT=" .env.example | cut -d'=' -f2)
               ENV_API_PORT=$(grep "^API_PORT=" .env.example | cut -d'=' -f2)
-
               if [ -n "$ENV_WEB_PORT" ]; then
-                if grep -q "^WEB_PORT=" .env; then
-                  sed -i "s/^WEB_PORT=.*/WEB_PORT=$ENV_WEB_PORT/" .env
-                else
-                  echo "WEB_PORT=$ENV_WEB_PORT" >> .env
-                fi
+                if grep -q "^WEB_PORT=" .env; then sed -i "s/^WEB_PORT=.*/WEB_PORT=$ENV_WEB_PORT/" .env; else echo "WEB_PORT=$ENV_WEB_PORT" >> .env; fi
               fi
-
               if [ -n "$ENV_API_PORT" ]; then
-                if grep -q "^API_PORT=" .env; then
-                  sed -i "s/^API_PORT=.*/API_PORT=$ENV_API_PORT/" .env
-                else
-                  echo "API_PORT=$ENV_API_PORT" >> .env
-                fi
+                if grep -q "^API_PORT=" .env; then sed -i "s/^API_PORT=.*/API_PORT=$ENV_API_PORT/" .env; else echo "API_PORT=$ENV_API_PORT" >> .env; fi
               fi
-
               while IFS='=' read -r key value || [ -n "$key" ]; do
                 [[ "$key" =~ ^#.*$ ]] && continue
                 [[ -z "$key" ]] && continue
                 clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
-                if ! grep -q "^${clean_key}=" .env; then
-                  echo "${key}=${value}" >> .env
-                fi
+                if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
               done < .env.example
             fi
           fi
 
           run_sudo() {
-            if [ "$EUID" -eq 0 ]; then
-              "$@"
-            elif [ -n "$VPS_SUDO_PASSWORD" ]; then
-              echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"
-            else
-              sudo -n "$@"
-            fi
+            if [ "$EUID" -eq 0 ]; then "$@"; elif [ -n "$VPS_SUDO_PASSWORD" ]; then echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"; else sudo -n "$@"; fi
           }
 
           for required_key in API_INTERNAL_SECRET CRON_SECRET PAYMENT_WEBHOOK_SECRET SUPABASE_SERVICE_ROLE_KEY MONEY_FUSION_API_KEY; do
@@ -241,7 +225,6 @@ jobs:
           done
 
           run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
-
           if command -v docker &>/dev/null && docker info &>/dev/null; then
             docker compose -f docker-compose.yml up -d --build
             docker compose -f docker-compose.yml ps
