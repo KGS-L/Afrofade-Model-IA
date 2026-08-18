@@ -2,7 +2,8 @@
 title: 'Story 1.1: Schéma PostgreSQL & Middleware de Sécurité Next.js'
 type: 'feature'
 created: '2026-08-18'
-status: 'draft'
+status: 'done'
+baseline_commit: 800898de9c1c9ba7e13f4785672e8e003a9f0768
 review_loop_iteration: 0
 context:
   - {project-root}/_bmad-output/planning-artifacts/prds/prd-Afrofade-2026-08-18/prd.md
@@ -51,10 +52,10 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `web/supabase/migrations/01_init_schema.sql` -- Créer la migration SQL des tables avec contraintes et index -- Assure la persistance structurée.
-- [ ] `web/src/lib/types/db.ts` -- Définir les types TypeScript `Salon`, `Subscription`, `ClientHead`, `Hairstyle` -- Garantit la sécurité du typage.
-- [ ] `web/src/lib/supabase.ts` -- Configurer le client Supabase avec gestion des variables d'environnement -- Connexion DB sécurisée.
-- [ ] `web/src/middleware.ts` -- Implémenter la vérification de session et redirection sur les routes protégées -- Securité et isolation salons.
+- [x] `web/supabase/migrations/01_init_schema.sql` -- Créer la migration SQL des tables avec contraintes et index -- Assure la persistance structurée.
+- [x] `web/src/lib/types/db.ts` -- Définir les types TypeScript `Salon`, `Subscription`, `ClientHead`, `Hairstyle` -- Garantit la sécurité du typage.
+- [x] `web/src/lib/supabase.ts` -- Configurer le client Supabase avec gestion des variables d'environnement -- Connexion DB sécurisée.
+- [x] `web/src/middleware.ts` -- Implémenter la vérification de session et redirection sur les routes protégées -- Securité et isolation salons.
 
 **Acceptance Criteria:**
 - Given a PostgreSQL database, when running `01_init_schema.sql`, then all 4 core tables and indexes are created without error.
@@ -72,3 +73,23 @@ context:
 
 **Commands:**
 - `npm run build` (dans `web/`) -- expected: Build Next.js réussi sans erreur TypeScript ou de middleware.
+
+## Suggested Review Order
+
+**Sécurité & Middleware Next.js**
+
+- Contrôle d'accès et redirection sur les routes protégées
+  [`middleware.ts:1`](../../web/src/middleware.ts#L1)
+
+**Schéma & Persistance PostgreSQL**
+
+- Script DDL des tables `salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog`
+  [`01_init_schema.sql:1`](../../web/supabase/migrations/01_init_schema.sql#L1)
+
+**Typage & Client Supabase**
+
+- Interfaces TypeScript DB
+  [`db.ts:1`](../../web/src/lib/types/db.ts#L1)
+
+- Helper client Supabase
+  [`supabase.ts:1`](../../web/src/lib/supabase.ts#L1)
