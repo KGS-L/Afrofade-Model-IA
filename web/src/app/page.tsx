@@ -118,6 +118,7 @@ const FAQ_ITEMS = [
 
 export default function StudioPage() {
   const [isPricingOpen, setIsPricingOpen] = useState<boolean>(false);
+  const [pricingTab, setPricingTab] = useState<'b2b' | 'b2c'>('b2b');
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState<boolean>(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -366,67 +367,202 @@ export default function StudioPage() {
         </div>
       </section>
 
-      {/* 7. #tarifs — plans FCFA, VIP surligné (source unique lib/plans.ts) */}
+      {/* 7. #tarifs — plans FCFA B2B / Packs Crédits B2C */}
       <section id="tarifs" className="bg-card py-16 md:py-24">
         <div className="max-w-container mx-auto px-6">
-          <div className="text-center mb-12 md:mb-14">
-            <p className="font-hand text-2xl text-terracotta">sans engagement</p>
+          <div className="text-center mb-10 md:mb-12">
+            <p className="font-hand text-2xl text-terracotta">offres sur-mesure</p>
             <h2 className="font-display text-3xl md:text-[34px] mt-2">
-              Des tarifs pensés pour votre salon
+              Une formule adaptée à chaque besoin
             </h2>
-            <p className="mt-3 text-ink-soft text-sm md:text-[15px]">
-              Paiement par Mobile Money · facturation mensuelle en FCFA ·
-              résiliable à tout moment.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-            {PLANS.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative flex flex-col rounded-card p-7 ${
-                  plan.popular
-                    ? 'bg-card border-2 border-terracotta shadow-soft'
-                    : 'bg-cream border-[1.5px] border-ink/10'
+
+            {/* Toggle B2B / B2C */}
+            <div className="mt-6 inline-flex p-1 bg-cream border border-ink/10 rounded-pill shadow-soft">
+              <button
+                onClick={() => setPricingTab('b2b')}
+                className={`px-6 py-2.5 rounded-pill font-bold text-xs sm:text-sm transition-all ${
+                  pricingTab === 'b2b'
+                    ? 'bg-terracotta text-white shadow-soft'
+                    : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                {plan.popular && (
-                  <span className="absolute -top-3.5 left-1/2 [transform:translateX(-50%)] bg-terracotta text-white text-[11px] font-bold tracking-[0.12em] px-3.5 py-1 rounded-pill whitespace-nowrap">
-                    LE PLUS CHOISI
-                  </span>
-                )}
-                <h3 className="text-sm font-bold tracking-[0.14em] text-ink-soft">
-                  {plan.name}
-                </h3>
-                <div className="font-display text-[38px] leading-tight mt-3.5">
-                  {formatFcfa(plan.amount)}{' '}
-                  <small className="font-body text-sm font-normal text-ink-soft">
-                    FCFA/mois
-                  </small>
-                </div>
-                <ul className="mt-5 mb-6 space-y-2.5 text-sm text-ink-soft">
-                  {plan.features.map((feat) => (
-                    <li key={feat} className="flex gap-2">
-                      <span className="text-terracotta font-bold" aria-hidden>
-                        ✓
-                      </span>
-                      <span>{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => setIsPricingOpen(true)}
-                  aria-label={`Voir le détail et choisir le plan ${plan.name}`}
-                  className={`mt-auto min-h-[44px] rounded-pill font-bold text-sm transition-colors ${
+                Pour les Salons (B2B)
+              </button>
+              <button
+                onClick={() => setPricingTab('b2c')}
+                className={`px-6 py-2.5 rounded-pill font-bold text-xs sm:text-sm transition-all ${
+                  pricingTab === 'b2c'
+                    ? 'bg-terracotta text-white shadow-soft'
+                    : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                Pour Moi (Particuliers B2C)
+              </button>
+            </div>
+          </div>
+
+          {/* ONGLET B2B : SALONS DE COIFFURE */}
+          {pricingTab === 'b2b' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+              {PLANS.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={`relative flex flex-col rounded-card p-7 ${
                     plan.popular
-                      ? 'bg-terracotta hover:bg-terracotta-dark text-white'
-                      : 'bg-transparent border-[1.5px] border-ink/20 hover:bg-ink/5 text-ink'
+                      ? 'bg-card border-2 border-terracotta shadow-soft'
+                      : 'bg-cream border-[1.5px] border-ink/10'
                   }`}
                 >
-                  Choisir {plan.name.charAt(0) + plan.name.slice(1).toLowerCase()}
-                </button>
+                  {plan.popular && (
+                    <span className="absolute -top-3.5 left-1/2 [transform:translateX(-50%)] bg-terracotta text-white text-[11px] font-bold tracking-[0.12em] px-3.5 py-1 rounded-pill whitespace-nowrap">
+                      LE PLUS CHOISI SALON
+                    </span>
+                  )}
+                  <h3 className="text-sm font-bold tracking-[0.14em] text-ink-soft">
+                    {plan.name}
+                  </h3>
+                  <div className="font-display text-[38px] leading-tight mt-3.5">
+                    {formatFcfa(plan.amount)}{' '}
+                    <small className="font-body text-sm font-normal text-ink-soft">
+                      FCFA/mois
+                    </small>
+                  </div>
+                  <p className="text-xs text-ink-soft mt-1 min-h-[32px]">{plan.desc}</p>
+                  <ul className="mt-5 mb-6 space-y-2.5 text-sm text-ink-soft">
+                    {plan.features.map((feat) => (
+                      <li key={feat} className="flex gap-2">
+                        <span className="text-terracotta font-bold" aria-hidden>
+                          ✓
+                        </span>
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => setIsPricingOpen(true)}
+                    aria-label={`Voir le détail et choisir le plan ${plan.name}`}
+                    className={`mt-auto min-h-[44px] rounded-pill font-bold text-sm transition-colors ${
+                      plan.popular
+                        ? 'bg-terracotta hover:bg-terracotta-dark text-white'
+                        : 'bg-transparent border-[1.5px] border-ink/20 hover:bg-ink/5 text-ink'
+                    }`}
+                  >
+                    Choisir {plan.name.charAt(0) + plan.name.slice(1).toLowerCase()}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ONGLET B2C : PARTICULIERS (SANS ABONNEMENT) */}
+          {pricingTab === 'b2c' && (
+            <div className="space-y-12">
+              <div className="text-center max-w-xl mx-auto space-y-2">
+                <p className="font-bold text-terracotta text-sm">
+                  Pas d’abonnement mensuel. Achetez uniquement les crédits dont vous avez besoin.
+                </p>
+                <h3 className="font-display text-2xl">
+                  Visualisez votre prochaine coiffure avant de passer chez le coiffeur
+                </h3>
               </div>
-            ))}
-          </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+                {[
+                  {
+                    name: 'Pack Essai',
+                    price: '500 FCFA',
+                    credits: '5 crédits',
+                    desc: '1 Tête 3D + 3 Téléchargements HD. Idéal pour un premier essai.',
+                    popular: false,
+                  },
+                  {
+                    name: 'Pack Style',
+                    price: '1 000 FCFA',
+                    credits: '12 crédits',
+                    desc: '2 Têtes 3D + 8 Téléchargements HD. Recommandé pour comparer plusieurs styles.',
+                    popular: true,
+                  },
+                  {
+                    name: 'Pack Passion',
+                    price: '2 000 FCFA',
+                    credits: '30 crédits',
+                    desc: '5 Têtes 3D + 20 Téléchargements HD. Pour tester régulièrement de nouveaux looks.',
+                    popular: false,
+                  },
+                ].map((pack) => (
+                  <div
+                    key={pack.name}
+                    className={`relative flex flex-col rounded-card p-7 ${
+                      pack.popular
+                        ? 'bg-card border-2 border-terracotta shadow-soft'
+                        : 'bg-cream border-[1.5px] border-ink/10'
+                    }`}
+                  >
+                    {pack.popular && (
+                      <span className="absolute -top-3.5 left-1/2 [transform:translateX(-50%)] bg-terracotta text-white text-[11px] font-bold tracking-[0.12em] px-3.5 py-1 rounded-pill whitespace-nowrap">
+                        RECOMMANDÉ
+                      </span>
+                    )}
+                    <h3 className="text-sm font-bold tracking-[0.14em] text-ink-soft">
+                      {pack.name}
+                    </h3>
+                    <div className="font-display text-[38px] leading-tight mt-3.5">
+                      {pack.price}{' '}
+                      <small className="font-body text-xs font-bold text-terracotta bg-terracotta-wash px-2.5 py-1 rounded-pill ml-2">
+                        {pack.credits}
+                      </small>
+                    </div>
+                    <p className="text-xs text-ink-soft mt-3">{pack.desc}</p>
+
+                    <div className="mt-6 pt-4 border-t border-ink/10 space-y-2 text-xs text-ink-soft">
+                      <div className="flex items-center gap-2">
+                        <span className="text-terracotta font-bold">✓</span>
+                        <span>Création Tête 3D = 2 crédits</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-600 font-bold">✓</span>
+                        <span>Essayage des coiffures = GRATUIT</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-terracotta font-bold">✓</span>
+                        <span>Téléchargement HD = 1 crédit</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setIsPricingOpen(true)}
+                      className={`mt-6 min-h-[44px] rounded-pill font-bold text-sm transition-colors ${
+                        pack.popular
+                          ? 'bg-terracotta hover:bg-terracotta-dark text-white'
+                          : 'bg-transparent border-[1.5px] border-ink/20 hover:bg-ink/5 text-ink'
+                      }`}
+                    >
+                      Acheter {pack.name}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tunnel Marketing B2C : Photos -> Tête 3D -> Essayages -> Télécharger -> Coiffeur */}
+              <div className="bg-cream border border-ink/10 rounded-card p-8 text-center space-y-6">
+                <h4 className="font-display text-xl">Comment ça marche pour vous ?</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-left">
+                  {[
+                    { step: '01', title: 'Prenez vos photos', desc: 'Face et profils sous bon éclairage.' },
+                    { step: '02', title: 'Créez votre tête 3D', desc: 'Morphologie calculée en quelques secondes.' },
+                    { step: '03', title: 'Essayez les coiffures', desc: 'Testez gratuitement tous les styles Afro.' },
+                    { step: '04', title: 'Montrez à votre coiffeur', desc: 'Téléchargez le rendu HD & partagez sur WhatsApp.' },
+                  ].map((s) => (
+                    <div key={s.step} className="bg-card border border-ink/5 rounded-card p-4 space-y-1">
+                      <span className="font-hand text-terracotta font-bold text-lg">{s.step}</span>
+                      <h5 className="font-bold text-xs text-ink">{s.title}</h5>
+                      <p className="text-[11px] text-ink-soft">{s.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

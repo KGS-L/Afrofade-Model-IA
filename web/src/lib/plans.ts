@@ -1,7 +1,7 @@
 /**
- * Afrofade — source unique des plans d'abonnement et des badges plan.
+ * Afrofade — source unique des plans d'abonnement Salons (B2B) et badges.
  * Consommé par page.tsx (#tarifs) et PricingModal.tsx.
- * Noms exacts attendus par handleSelectPlan : 'PRO' | 'VIP' | 'EXTRA'.
+ * Noms exacts attendus : 'PRO' | 'VIP' | 'EXTRA'.
  */
 
 export type PlanName = 'PRO' | 'VIP' | 'EXTRA';
@@ -23,9 +23,11 @@ export const PLANS: PlanInfo[] = [
     desc: 'Pour les barbiers indépendants & petits salons',
     popular: false,
     features: [
-      '20 à 30 têtes 3D générées / mois (110 FCFA / tête)',
+      '20 nouveaux clients 3D / mois',
+      'Essayages de coiffures illimités sur têtes créées',
+      'Catalogue de coiffures Afro (Fades, Tapers, Cuts)',
       'Consultation pré-coupe en direct salon',
-      'Catalogue complet de 15+ coupes afro & barbes',
+      'Carnet client basique',
       'Support technique WhatsApp',
     ],
   },
@@ -33,13 +35,15 @@ export const PLANS: PlanInfo[] = [
     name: 'VIP',
     price: '4 900 FCFA',
     amount: 4900,
-    desc: 'Idéal pour les salons à fort passage (100k+ FCFA/mois)',
+    desc: 'Idéal pour les salons à fort passage',
     popular: true,
     features: [
-      '100 têtes 3D générées / mois (49 FCFA / tête)',
-      'Carnet Client 3D (1 Go de stockage cloud)',
+      '60 nouveaux clients 3D / mois',
+      'Essayages de coiffures illimités sur têtes créées',
+      'Catalogue complet (Afro, Braids, Locks, Twists)',
+      'Carnet client avec stockage Cloud (1 Go)',
       'Téléchargement HD des aperçus pour le client',
-      'Carte avant/après partageable WhatsApp',
+      'Cartes avant/après partageables WhatsApp',
       'Support prioritaire 7j/7',
     ],
   },
@@ -50,25 +54,24 @@ export const PLANS: PlanInfo[] = [
     desc: 'Pour les grands salons & franchises',
     popular: false,
     features: [
-      'Têtes 3D illimitées',
+      '120 nouveaux clients 3D / mois',
+      'Essayages de coiffures illimités sur têtes créées',
       'Multi-postes tablette / smartphone',
-      'Carnet Client 3D illimité',
+      'Carnet client étendu',
       'Branding & logo du salon personnalisé',
-      'Accès en avant-première aux nouveaux styles 3D',
+      'Accès anticipé aux nouvelles coiffures 3D',
+      'Support prioritaire dédié 7j/7',
     ],
   },
 ];
 
-/** 4900 → « 4 900 » (séparateur espace fine, pas d'espace insécable) */
+/** 4900 → « 4 900 » */
 export function formatFcfa(amount: number): string {
   return String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 export type StylePlanLabel = 'PRO' | 'VIP';
 
-/** Plan de rattachement des styles (id du catalogue HairstyleCatalog).
- *  Les styles autrefois « premium » sont rattachés à VIP (décision 2026-08-18 :
- *  suppression du concept premium de l'interface). */
 const STYLE_PLAN_BY_ID: { [id: string]: 'PRO' | 'VIP' } = {
   fade_taper_low: 'PRO',
   afro_sponge_twists: 'PRO',
@@ -78,20 +81,14 @@ const STYLE_PLAN_BY_ID: { [id: string]: 'PRO' | 'VIP' } = {
   barbe_sculpted_contour: 'VIP',
 };
 
-/** Badge plan d'un style : PRO ou VIP */
 export function stylePlan(item: { id: string }): StylePlanLabel {
   return STYLE_PLAN_BY_ID[item.id] ?? 'PRO';
 }
 
-/** Classes Tailwind du badge plan (grammaire DESIGN.md) */
 export const PLAN_BADGE_CLASS: Record<StylePlanLabel, string> = {
   PRO: 'bg-ink-soft text-white',
   VIP: 'bg-terracotta-dark text-white',
 };
-
-/* ------------------------------------------------------------------ */
-/* Profil salon & remises premier abonnement                           */
-/* ------------------------------------------------------------------ */
 
 export interface SalonProfileFields {
   salonName: string;
@@ -99,7 +96,6 @@ export interface SalonProfileFields {
   phone: string;
 }
 
-/** Complétion du profil en pourcentage (nom, pays, numéro du salon). */
 export function profileCompletion(profile: Partial<SalonProfileFields>): number {
   const fields = [profile.salonName, profile.country, profile.phone];
   const filled = fields.filter((f) => Boolean(f && f.trim())).length;
@@ -112,8 +108,6 @@ export function isProfileComplete(profile: Partial<SalonProfileFields>): boolean
 
 export type TermId = 'mensuel' | '3mois' | '6mois' | 'annuel';
 
-/** Engagements proposés. Remises réservées au premier abonnement,
- *  profil 100 % obligatoire (décision Jonas-dev 2026-08-18). */
 export const TERMS: {
   id: TermId;
   label: string;
@@ -127,7 +121,6 @@ export const TERMS: {
   { id: 'annuel', label: 'Annuel', months: 12, discount: 0.4, hint: '−40 % pendant 1 an' },
 ];
 
-/** Prix mensuel effectif après remise d'engagement. */
 export function monthlyPrice(amountFcfa: number, discount: number): number {
   return Math.round(amountFcfa * (1 - discount));
 }
