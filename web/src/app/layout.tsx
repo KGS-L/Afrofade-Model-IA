@@ -35,7 +35,7 @@ const handFont = localFont({
 export const metadata = {
   title: 'Afrofade — Le Rituel du Miroir : voyez la coupe avant de couper',
   description:
-    'Afrofade reconstruit la tête de votre client en 3D à partir de quelques photos et lui essaye fades, locks, tresses et barbes avant le premier coup de tondeuse. Pensé pour les salons et les textures crépues.',
+    'Afrofade reconstruit la tête de votre client en 3D à partir d’un scan vidéo guidé — capture automatique des angles — puis lui essaye fades, locks, tresses et barbes avant le premier coup de tondeuse. Pensé pour les salons et les textures crépues.',
   icons: {
     icon: '/icon.png',
     shortcut: '/logo.png',

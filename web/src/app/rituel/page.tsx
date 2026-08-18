@@ -2,12 +2,10 @@
 
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import {
   Scissors,
-  Upload,
   RefreshCw,
   ArrowLeft,
   ArrowRight,
@@ -24,13 +22,15 @@ import {
 } from 'lucide-react';
 import { HeadModel } from '@/components/HeadModel3D';
 import { HAIRSTYLES_DATA } from '@/components/HairstyleCatalog';
+import { GuidedScanner, ScanFrame } from '@/components/GuidedScanner';
 import { PLANS, PlanName, formatFcfa, isProfileComplete, monthlyPrice, TERMS, TermId } from '@/lib/plans';
 import { useAuth } from '@/lib/auth';
 
 /* ------------------------------------------------------------------ */
 /* Wizard « Tester le rituel 1mn » — 4 étapes + gating freemium        */
 /*                                                                     */
-/* 1. Dépôt des 4 photos (face, profils G/D, arrière)                  */
+/* 1. Scan vidéo guidé (face, profils G/D, nuque) — capture            */
+/*    automatique temps réel, sans toucher l'écran                     */
 /* 2. Création de l'avatar 3D réaliste — flouté pour les visiteurs     */
 /* 3. Choix de la coiffure appliquée à l'avatar                        */
 /* 4. Finition — rendu final non modifiable : connexion (Google ou     */
@@ -39,33 +39,12 @@ import { useAuth } from '@/lib/auth';
 /* ------------------------------------------------------------------ */
 
 type Step = 1 | 2 | 3 | 4;
-type AngleKey = 'face' | 'profil_gauche' | 'profil_droit' | 'arriere';
-
-const SAMPLE_PHOTOS: Record<AngleKey, { src: string; mirror?: boolean }> = {
-  face: { src: '/models/client-face.jpg' },
-  profil_gauche: { src: '/models/client-profil.jpg', mirror: true },
-  profil_droit: { src: '/models/client-profil.jpg' },
-  arriere: { src: '/models/client-arriere.jpg' },
-};
-
-const SLOTS: { key: AngleKey; label: string; desc: string }[] = [
-  { key: 'face', label: 'Face', desc: 'Regard vers l’objectif' },
-  { key: 'profil_gauche', label: 'Profil gauche', desc: 'Côté gauche du visage' },
-  { key: 'profil_droit', label: 'Profil droit', desc: 'Côté droit du visage' },
-  { key: 'arriere', label: 'Arrière', desc: 'Nuque & ligne arrière' },
-];
 
 const STEPS = [
   { n: 1, label: 'Scan 3D Vidéo' },
   { n: 2, label: 'Avatar 3D' },
   { n: 3, label: 'Coiffure' },
   { n: 4, label: 'Finition' },
-];
-
-const REQUIREMENTS = [
-  'Tête entière visible',
-  'Photo nette, lumière naturelle',
-  'Visage dégagé',
 ];
 
 /** Canvas d'avatar interactif partagé par les étapes 2-4. */
@@ -128,12 +107,7 @@ export default function RituelPage() {
   const { user, loginWithEmail, loginWithGoogle, subscribe } = useAuth();
 
   const [step, setStep] = useState<Step>(1);
-  const [photos, setPhotos] = useState<Record<AngleKey, boolean>>({
-    face: false,
-    profil_gauche: false,
-    profil_droit: false,
-    arriere: false,
-  });
+  const [scan, setScan] = useState<ScanFrame[] | null>(null);
   const [processing, setProcessing] = useState(false);
   const [styleId, setStyleId] = useState<string>(HAIRSTYLES_DATA[0].id);
   const [finalReady, setFinalReady] = useState(false);
@@ -149,22 +123,16 @@ export default function RituelPage() {
 
   const revealed = Boolean(user?.subscription);
 
-  const allPhotos = Object.values(photos).every(Boolean);
   const selectedStyle =
     HAIRSTYLES_DATA.find((h) => h.id === styleId) || HAIRSTYLES_DATA[0];
 
   const goStep2 = async () => {
-    if (!allPhotos) return;
+    if (!scan) return;
     setStep(2);
     setProcessing(true);
     try {
       const { trigger3DReconstruction } = await import('@/lib/inference');
-      await trigger3DReconstruction([
-        SAMPLE_PHOTOS.face.src,
-        SAMPLE_PHOTOS.profil_gauche.src,
-        SAMPLE_PHOTOS.profil_droit.src,
-        SAMPLE_PHOTOS.arriere.src,
-      ]);
+      await trigger3DReconstruction(scan.map((frame) => frame.src));
     } catch {
       /* ignore fallback handled inside trigger3DReconstruction */
     } finally {
@@ -180,7 +148,7 @@ export default function RituelPage() {
 
   const reset = () => {
     setStep(1);
-    setPhotos({ face: false, profil_gauche: false, profil_droit: false, arriere: false });
+    setScan(null);
     setProcessing(false);
     setFinalReady(false);
     setAuthMode('choix');
@@ -310,85 +278,35 @@ export default function RituelPage() {
                   Lancez le Scan Vidéo 3D
                 </h1>
                 <p className="text-sm text-ink-soft max-w-md mx-auto">
-                  Positionnez votre visage devant la caméra. L’application suit vos mouvements et valide automatiquement la Face, les Profils et la Nuque.
+                  Positionnez le visage devant la caméra : l’application suit vos
+                  mouvements et capture automatiquement la Face, les Profils et
+                  la Nuque.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {SLOTS.map((slot) => {
-                  const has = photos[slot.key];
-                  const sample = SAMPLE_PHOTOS[slot.key];
-                  return (
-                    <button
-                      type="button"
-                      key={slot.key}
-                      onClick={() =>
-                        setPhotos((prev) => ({ ...prev, [slot.key]: true }))
-                      }
-                      aria-label={
-                        has
-                          ? `Étape ${slot.label} validée — toucher pour réinitialiser`
-                          : `Lancer le scan ${slot.label}`
-                      }
-                      className={`group relative h-40 rounded-frame border-2 border-dashed flex flex-col items-center justify-center p-2 cursor-pointer transition-all overflow-hidden ${
-                        has
-                          ? 'border-terracotta bg-card shadow-soft'
-                          : 'border-terracotta/60 bg-card hover:bg-terracotta-wash'
-                      }`}
-                    >
-                      {has ? (
-                        <>
-                          <Image
-                            src={sample.src}
-                            alt={`Photo — ${slot.label}`}
-                            fill
-                            sizes="(max-width: 640px) 50vw, 150px"
-                            className={`object-cover ${sample.mirror ? 'scale-x-[-1]' : ''}`}
-                          />
-                          <span className="absolute top-2 right-2 bg-terracotta text-white rounded-full p-1 shadow-soft">
-                            <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
-                          </span>
-                          <span className="absolute bottom-2 left-2 right-2 bg-ink/85 backdrop-blur-sm rounded-lg px-2 py-1 text-[10px] text-center font-bold text-white">
-                            {slot.label} ✓ (Validé)
-                          </span>
-                        </>
-                      ) : (
-                        <div className="text-center space-y-1.5 p-2">
-                          <div className="w-8 h-8 rounded-full bg-terracotta-wash border border-terracotta/30 flex items-center justify-center mx-auto text-terracotta group-hover:bg-terracotta group-hover:text-white transition-colors">
-                            <Sparkles className="w-4 h-4" />
-                          </div>
-                          <span className="text-xs font-bold block">{slot.label}</span>
-                          <span className="text-[9px] text-ink-soft block leading-tight">
-                            {slot.desc}
-                          </span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <GuidedScanner onComplete={setScan} />
 
               <ul className="grid sm:grid-cols-3 gap-3">
                 <li className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
-                  Cadrage automatique ovale vert
+                  <CheckCircle2 className="w-4 h-4 text-scan-success shrink-0" />
+                  Cadrage automatique ovale
                 </li>
                 <li className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
-                  Guidage vocal & indicateur d’angle
+                  <CheckCircle2 className="w-4 h-4 text-scan-success shrink-0" />
+                  Guidage à l’écran, angle par angle
                 </li>
                 <li className="flex items-center gap-2 bg-card border border-ink/10 rounded-pill px-4 py-3 text-xs font-medium">
-                  <CheckCircle2 className="w-4 h-4 text-terracotta shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-scan-success shrink-0" />
                   Capture automatique sans toucher
                 </li>
               </ul>
 
               <button
                 type="button"
-                disabled={!allPhotos}
+                disabled={!scan}
                 onClick={goStep2}
                 className={`w-full min-h-[52px] rounded-pill font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors ${
-                  allPhotos
+                  scan
                     ? 'bg-terracotta hover:bg-terracotta-dark text-white shadow-soft'
                     : 'bg-ink/10 text-ink-soft/70 cursor-not-allowed border border-ink/10'
                 }`}
@@ -398,8 +316,9 @@ export default function RituelPage() {
               </button>
 
               <p className="text-center text-[11px] leading-relaxed text-ink-soft max-w-md mx-auto">
-                En continuant, vos photos sont temporairement stockées dans un
-                espace isolé, puis supprimées une fois l’avatar généré.
+                Les images capturées pendant le scan sont temporairement
+                stockées dans un espace isolé, puis supprimées une fois
+                l’avatar généré.
               </p>
             </section>
           )}
@@ -413,7 +332,7 @@ export default function RituelPage() {
                 </h1>
                 <p className="text-sm text-ink-soft max-w-md mx-auto">
                   Notre IA reconstruit les volumes du crâne et la ligne
-                  d’implantation à partir de vos 4 photos.
+                  d’implantation à partir de votre scan vidéo guidé.
                 </p>
               </div>
 
@@ -425,7 +344,7 @@ export default function RituelPage() {
                   <RefreshCw className="w-10 h-10 animate-spin text-terracotta" />
                   <p className="text-base font-bold">Analyse IA — reconstruction en cours…</p>
                   <p className="text-xs text-ink-soft">
-                    Assemblage des 4 angles, quelques secondes.
+                    Assemblage des 4 angles capturés, quelques secondes.
                   </p>
                 </div>
               ) : (

@@ -2,18 +2,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Navbar } from '@/components/Navbar';
-import { PhotoUploader } from '@/components/PhotoUploader';
-import { Studio3DCanvas } from '@/components/Studio3DCanvas';
 import {
-  HairstyleCatalog,
-  HairstyleItem,
   HAIRSTYLES_DATA,
 } from '@/components/HairstyleCatalog';
 import { PricingModal } from '@/components/PricingModal';
 import { HairstylePreview3D } from '@/components/HeadModel3D';
+import { RituelDemoVideo } from '@/components/RituelDemoVideo';
 import { PLANS, formatFcfa, stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
 import {
+  ArrowRight,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -56,8 +55,8 @@ const HERO_SLIDES = [
 const STEPS = [
   {
     num: '01',
-    title: 'Prenez 3–4 photos',
-    text: 'Smartphone ou tablette, sous trois ou quatre angles, visage dégagé. Aucun matériel professionnel requis.',
+    title: 'Filmez le scan guidé',
+    text: 'Tablette ou smartphone : suivez le guidage, la caméra détecte le bon angle et capture toute seule face, profils et nuque. Rien à régler, rien à retoucher.',
   },
   {
     num: '02',
@@ -96,7 +95,7 @@ const QUALITY_CARDS = [
   {
     icon: Lock,
     label: 'CONFIDENTIALITÉ',
-    text: 'Les photos de vos clients restent dans l’espace isolé de votre salon. Rien n’est partagé, rien n’est revendu.',
+    text: 'Les images du scan restent dans l’espace isolé de votre salon. Rien n’est partagé, rien n’est revendu.',
   },
 ];
 
@@ -114,12 +113,12 @@ const STYLE_CARDS: { id: string; title: string }[] = [
 /** FAQ (§8) */
 const FAQ_ITEMS = [
   {
-    q: 'Combien de photos faut-il pour la reconstruction 3D ?',
-    a: 'Quatre photos suffisent : face, profil gauche, profil droit et arrière de la tête. Un visage dégagé et une lumière naturelle donnent les meilleurs résultats.',
+    q: 'Comment se passe le scan vidéo guidé ?',
+    a: 'Vous lancez le scan, le guidage s’affiche : face, profil droit, profil gauche puis nuque. La caméra suit le mouvement de la tête et capture automatiquement le bon angle — pas de photos à retoucher, pas de matériel professionnel.',
   },
   {
-    q: 'Les photos de mes clients sont-elles confidentielles ?',
-    a: 'Oui. Chaque salon dispose d’un espace isolé et verrouillé : vos données ne sont visibles que par vous. Le plan VIP inclut un espace cloud dédié de 1 Go pour les cartes clients (stockage illimité avec le plan Extra).',
+    q: 'Les données de mes clients sont-elles confidentielles ?',
+    a: 'Oui. Chaque salon dispose d’un espace isolé et verrouillé : vos données ne sont visibles que par vous, et les images du scan sont supprimées une fois l’avatar 3D généré. Le plan VIP inclut un espace cloud dédié de 1 Go pour les cartes clients (stockage illimité avec le plan Extra).',
   },
   {
     q: 'Que se passe-t-il si j’atteins mon quota mensuel ?',
@@ -136,16 +135,7 @@ const FAQ_ITEMS = [
 ];
 
 export default function StudioPage() {
-  const [hasModel, setHasModel] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [selectedStyle, setSelectedStyle] = useState<HairstyleItem | null>(null);
-  const [lineUpCutoff, setLineUpCutoff] = useState<number>(50);
   const [isPricingOpen, setIsPricingOpen] = useState<boolean>(false);
-
-  // Quotas & Plan State
-  const [currentPlan, setCurrentPlan] = useState<string>('VIP');
-  const [quotaUsed, setQuotaUsed] = useState<number>(18);
-  const [quotaLimit, setQuotaLimit] = useState<number>(100);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -163,35 +153,7 @@ export default function StudioPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handlePhotosComplete = async (photos: string[]) => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setHasModel(true);
-      setQuotaUsed((prev) => prev + 1);
-      setSelectedStyle({
-        id: 'fade_taper_low',
-        category: 'fade',
-        title: 'Low Taper Fade & Line-Up',
-        subtitle: 'Dégradé bas progressif avec contours rectilignes nets',
-        thumbnail: '/models/afro_taper_fade.png',
-        color: '#1a110b',
-        isPremium: false,
-      });
-      showToast('✨ Tête 3D reconstituée avec succès !');
-    }, 1600);
-  };
-
-  const handleSelectStyle = (item: HairstyleItem) => {
-    setSelectedStyle(item);
-    showToast(`Style "${item.title}" appliqué sur le modèle 3D.`);
-  };
-
-  const handleSelectPlan = (planName: string, priceFcfa: number) => {
-    setCurrentPlan(planName);
-    if (planName === 'PRO') setQuotaLimit(30);
-    if (planName === 'VIP') setQuotaLimit(100);
-    if (planName === 'EXTRA') setQuotaLimit(9999);
+  const handleSelectPlan = (planName: string, _priceFcfa: number) => {
     setIsPricingOpen(false);
     showToast(`🎉 Abonnement ${planName} activé pour votre salon !`);
   };
@@ -199,18 +161,6 @@ export default function StudioPage() {
   const scrollToStudio = () => {
     const el = document.getElementById('rituel-studio');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const scrollToStyles = () => {
-    const el = document.getElementById('styles');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  /** Bouton « Personnaliser » de la grille #styles : applique le style
-   *  puis ramène au studio. */
-  const personalizeStyle = (item: HairstyleItem) => {
-    handleSelectStyle(item);
-    scrollToStudio();
   };
 
   // Carrousel hero : navigation + chargement différé des slides non actives
@@ -262,20 +212,22 @@ export default function StudioPage() {
               le premier coup de tondeuse.
             </h1>
             <p className="mt-5 text-base md:text-lg leading-relaxed text-ink-soft max-w-[46ch]">
-              Afrofade reconstruit la tête de votre client en 3D à partir de
-              3–4 photos, puis lui essaye fades, locks, tresses et barbes avant
+              Afrofade reconstruit la tête de votre client en 3D à partir d’un
+              scan vidéo guidé — la caméra capture elle-même les meilleurs
+              angles — puis lui essaye fades, locks, tresses et barbes avant
               même le fauteuil. Il choisit en confiance, vous gagnez en
               précision.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={scrollToStudio}
+              <Link
+                href="/rituel"
                 className="min-h-[48px] inline-flex items-center justify-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm md:text-base px-8 rounded-pill transition-colors"
               >
                 Essayer le Rituel
-              </button>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
               <button
-                onClick={scrollToStyles}
+                onClick={scrollToStudio}
                 className="min-h-[48px] inline-flex items-center justify-center gap-2 bg-transparent hover:bg-ink/5 text-ink font-bold text-sm md:text-base px-8 rounded-pill border-[1.5px] border-ink/20 transition-colors"
               >
                 Voir la démo
@@ -413,45 +365,35 @@ export default function StudioPage() {
         </div>
       </section>
 
-      {/* 4. #rituel-studio — démo interactive : le cœur de page */}
+      {/* 4. #rituel-studio — démo vidéo auto-play : le Rituel sans rien toucher */}
       <section id="rituel-studio" className="max-w-container mx-auto px-6 py-16 md:py-24">
         <div className="text-center mb-10 md:mb-12">
-          <p className="font-hand text-2xl text-terracotta">à vous de jouer</p>
+          <p className="font-hand text-2xl text-terracotta">le miroir en action</p>
           <h2 className="font-display text-3xl md:text-[34px] mt-2">
             Le Rituel du Miroir
           </h2>
           <p className="mt-3 text-ink-soft text-sm md:text-[15px] max-w-xl mx-auto">
-            Déposez les photos de votre client et laissez la magie opérer :
-            essayez les coiffures sur sa tête 3D, directement sur cette page.
+            Regardez : le scan vidéo guidé capture la tête, la reconstruction 3D
+            s’opère, les coiffures s’essayent — sans que vous ne touchiez à
+            rien. Lancez votre propre rituel quand vous voulez.
           </p>
         </div>
 
-        {/* Studio Workspace Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Photo Uploader */}
-          <div className="lg:col-span-4 space-y-6">
-            <PhotoUploader
-              onPhotosComplete={handlePhotosComplete}
-              isProcessing={isProcessing}
-            />
-          </div>
+        <div className="max-w-3xl mx-auto">
+          <RituelDemoVideo />
 
-          {/* Center/Right Column: 3D Viewport & Style Explorer */}
-          <div className="lg:col-span-8 space-y-6">
-            <Studio3DCanvas
-              hasModel={hasModel}
-              selectedHairstyle={selectedStyle}
-              lineUpCutoff={lineUpCutoff}
-              onLineUpChange={setLineUpCutoff}
-              onSaveRender={() =>
-                showToast('📸 Rendu 3D enregistré dans le Carnet Client 1Go !')
-              }
-            />
-
-            <HairstyleCatalog
-              selectedId={selectedStyle?.id || null}
-              onSelect={handleSelectStyle}
-            />
+          <div className="mt-8 text-center">
+            <Link
+              href="/rituel"
+              className="min-h-[48px] inline-flex items-center justify-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm md:text-base px-8 rounded-pill shadow-soft transition-colors"
+            >
+              Tester le rituel 1mn
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <p className="mt-3 text-xs text-ink-soft">
+              Gratuit, sans carte — le rendu final se dévoile après création de
+              compte.
+            </p>
           </div>
         </div>
       </section>
@@ -521,12 +463,12 @@ export default function StudioPage() {
                     <h3 className="font-bold text-base flex-1 min-w-[120px]">
                       {card.title}
                     </h3>
-                    <button
-                      onClick={() => personalizeStyle(item)}
-                      className="min-h-[44px] text-[13px] font-bold px-4 rounded-pill text-white bg-terracotta hover:bg-terracotta-dark transition-colors"
+                    <Link
+                      href="/rituel"
+                      className="min-h-[44px] inline-flex items-center text-[13px] font-bold px-4 rounded-pill text-white bg-terracotta hover:bg-terracotta-dark transition-colors"
                     >
                       Personnaliser
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </FadeIn>

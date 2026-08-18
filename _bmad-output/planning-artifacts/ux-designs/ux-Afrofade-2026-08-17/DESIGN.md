@@ -1,6 +1,6 @@
 ---
 status: final
-updated: 2026-08-17
+updated: 2026-08-18
 inspiration: thelma.pet (structure et feel adaptés — identité, textes et visuels Afrofade originaux)
 colors:
   terracotta:
@@ -24,6 +24,9 @@ colors:
   night_footer:
     value: "#1F1B17"
     usage: "Footer sombre, logo/typo blanc en contraste."
+  scan_success:
+    value: "#2E7D46"
+    usage: "Vert fonctionnel réservé au scanner guidé : ovale de cadrage, anneau de stabilité, coches de capture. Jamais décoratif, jamais un second accent de marque (décision scan vidéo 2026-08-18)."
 typography:
   display:
     family: "Special Gothic Expanded One (Google Fonts, licence OFL — usage commercial libre, pas de Reserved Font Name)"
@@ -51,6 +54,8 @@ components:
   style_card: "Carte blanche, visuel 3D rendu, titre, prix 'à partir de' → pour Afrofade: badge plan (Pro/VIP), bouton Personnaliser pill. Le visuel est un aperçu du modèle 3D (R3F), pas une photo."
   faq_accordion: "Fond blanc, +/− rotatif, un seul panneau ouvert à la fois."
   drawer: "Panneau latéral droit (devis/panier coiffures sélectionnées), overlay dim."
+  scan_stage: "Cadre caméra plein largeur, coins image_frame : flux vidéo miroir, ovale de cadrage scan_success (pulsation discrète motion-safe), consigne d'angle en pill blanc sur voile ink/40, anneau de stabilité, flash blanc à la capture ; filmstrip des 4 frames validées sous le cadre."
+  demo_video_autoplay: "Mockup vidéo auto-play (landing, Le Rituel du Miroir) : cadre coins image_frame sur fond radial crème→terracotta, badge « Démo automatique — sans manipulation », séquence muette en boucle (scan → reconstruction → coiffures) ; poster statique sous prefers-reduced-motion."
 ---
 
 # Afrofade — Identité Visuelle
@@ -60,6 +65,7 @@ Chaleureux, artisanal et technologique à la fois : l'esthétique "studio portra
 
 ## Colors
 - Palette réduite : un accent (`terracotta`), des neutres chauds (`cream_bg`, `ink`, `ink_soft`, `white_card`), un footer `night_footer`. Le token or premium a été retiré (décision 2026-08-18 : suppression du concept premium).
+- Exception fonctionnelle : `scan_success` (vert) n'existe que pour les états de validation du scanner guidé — ovale, anneau, coches. Il n'entre jamais dans la hiérarchie de marque.
 - Le terracotta n'apparaît que sur les actions et les repères d'étape — jamais en aplat de fond.
 - Contraste minimum 4.5:1 pour tout texte ; `ink_soft` interdit sous 16px sur `cream_bg`.
 
@@ -83,8 +89,8 @@ Chaleureux, artisanal et technologique à la fois : l'esthétique "studio portra
 - Visuels hero légèrement arrondis, jamais cerclés de bordures.
 
 ## Components
-- `navbar`, `cta_primary`, `step_card`, `style_card`, `faq_accordion`, `drawer` spécifiés en frontmatter.
-- Le viewer 3D (R3F) est intégré dans une `style_card` élargie : canvas plein cadre, coins `image_frame`, contrôles discrets en surimpression.
+- `navbar`, `cta_primary`, `step_card`, `style_card`, `faq_accordion`, `drawer`, `scan_stage`, `demo_video_autoplay` spécifiés en frontmatter.
+- Le viewer 3D (R3F) est intégré dans une `style_card` élargie : canvas plein cadre, coins `image_frame`, contrôles discrets en surimpression. Le mockup vidéo auto-play réutilise le même viewer et la même lumière 3 points que le wizard `/rituel` pour une continuité démo ↔ produit.
 
 ## Do's and Don'ts
 - **Do** : réutiliser la grammaire de layout de Thelma (étapes numérotées, grille de styles, FAQ accordéon) avec contenus et visuels Afrofade originaux.

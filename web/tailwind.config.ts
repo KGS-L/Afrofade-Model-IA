@@ -22,6 +22,11 @@ const config: Config = {
         },
         card: '#FFFFFF', // cartes, panneaux, drawer, FAQ
         night: '#1F1B17', // footer sombre
+        // DESIGN.md › scan_success : vert fonctionnel réservé au scanner guidé
+        'scan-success': {
+          DEFAULT: '#2E7D46',
+          soft: '#3FA35F',
+        },
       },
       fontFamily: {
         display: ['var(--font-display)', 'Arial Black', 'sans-serif'],
@@ -41,6 +46,21 @@ const config: Config = {
       },
       boxShadow: {
         soft: '0 4px 24px rgba(31, 27, 23, 0.08)',
+      },
+      // RituelDemoVideo : barre de progression du scan et flash de capture
+      keyframes: {
+        'demo-progress': {
+          from: { width: '0%' },
+          to: { width: '100%' },
+        },
+        'demo-flash': {
+          '0%': { opacity: '0.85' },
+          '100%': { opacity: '0' },
+        },
+      },
+      animation: {
+        'demo-progress': 'demo-progress 2600ms linear forwards',
+        'demo-flash': 'demo-flash 380ms ease-out forwards',
       },
       maxWidth: {
         container: '1200px',

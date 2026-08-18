@@ -1,6 +1,6 @@
 ---
 status: final
-updated: 2026-08-17
+updated: 2026-08-18
 ui_system: "Next.js App Router + Tailwind CSS + React Three Fiber (drei) — voir ARCHITECTURE-SPINE.md AD-1"
 form_factor: "Web responsive, cible principale : tablette salon (10-13 pouces, tactile) ; desktop marketing ; mobile secondaire."
 inspiration: thelma.pet
@@ -20,8 +20,8 @@ Landing single-page (confirmée Jonas-dev 2026-08-17) + page de test `/rituel` a
 **Route `/` (landing Afrodade)**
 1. `navbar` — ancres : Le Rituel · Styles · Tarifs · FAQ ; CTA « Tester le Rituel » vers `/rituel` (recherche et badge plan/quota retirés sur décision Jonas-dev 2026-08-18) ; drawer devis coiffures (différé).
 2. `hero` — carrousel visuels avant/après salon + titre display + double CTA (Essayer · Voir la démo).
-3. `#comment-ca-marche` — 4 `step_card` : 01 Prenez 4 photos (face, profils G/D, arrière) · 02 La reconstruction 3D s'opère · 03 Explorez les coiffures · 04 Validez ensemble devant le miroir.
-4. `#rituel-studio` — démo interactive : dropzone photos → état « Analyse IA » → galerie de styles générés sur la tête 3D (Rituel du Miroir).
+3. `#comment-ca-marche` — 4 `step_card` : 01 Filmez le scan vidéo guidé (capture automatique de la face, des profils G/D et de la nuque) · 02 La reconstruction 3D s'opère · 03 Explorez les coiffures · 04 Validez ensemble devant le miroir.
+4. `#rituel-studio` — démo vidéo auto-play : mockup animé du Rituel en boucle (scan guidé avec ovale → capture des 4 angles → avatar 3D → essayage de coiffures), **zéro interaction requise** (décision Jonas-dev 2026-08-18) ; CTA « Tester le rituel 1mn » vers `/rituel`.
 5. `#qualite` — 4 cartes labelisées (PRÉCISION · RENDU · FLUIDITÉ · CONFIDENTIALITÉ) — équivalent savoir-faire Thelma. [NOTE FOR UX] libellés proposés, à valider par Jonas-dev.
 6. `#styles` — grille de `style_card` (fade, locks, tresses, afro, barbe) dont le visuel est un aperçu du modèle 3D procédural (canvas R3F compact), avec badge plan PRO/VIP et bouton Personnaliser.
 7. `#tarifs` — 3 plans Pro / VIP / Extra (grille FCFA déjà décidée en brainstorm : 2200 / 4900 / 7500 FCFA/mois).
@@ -29,7 +29,7 @@ Landing single-page (confirmée Jonas-dev 2026-08-17) + page de test `/rituel` a
 9. `footer` — `night_footer`, logo blanc, tagline, réseaux, moyens de paiement Mobile Money (Wave, Orange Money, MTN, Moov).
 
 **Route `/rituel` (test du Rituel — wizard 4 étapes, grammaire thelma.pet/create adaptée)**
-CTA navbar « Tester le rituel 1mn ». Header minimal (logo + pill « Étape X sur 4 » + retour) et stepper numéroté 1-4. Parcours : **1) Photos** — dépôt des 4 angles (face, profils G/D, arrière), exigences photo en pills, note de confidentialité ; **2) Avatar 3D** — analyse IA (~2 s) puis aperçu de l'avatar réaliste ; **3) Coiffure** — radiogroupe de styles appliqués instantanément à l'avatar ; **4) Finition** — rendu final figé, non modifiable, téléchargeable (PNG via canvas). **Gating freemium** (décision Jonas-dev 2026-08-18) : visiteur sans compte ni abonnement actif → rendu flouté dès l'étape 2 avec mention « Avatar verrouillé » ; à la fin de l'étape 4, mur de connexion — Google ou e-mail + code OTP — puis premier abonnement (remises si profil 100 %), qui dévoile le rendu HD et active le téléchargement.
+CTA navbar « Tester le rituel 1mn ». Header minimal (logo + pill « Étape X sur 4 » + retour) et stepper numéroté 1-4. Parcours : **1) Scan vidéo guidé** — caméra temps réel (`getUserMedia`), ovale de cadrage, consigne à l'écran et capture automatique des 4 angles dans l'ordre du pipeline (Face 0° « Regardez la caméra » → Profil droit +90° → Profil gauche −90° → Nuque 180°), sans toucher l'écran ; filmstrip des frames validées ; mode démo sans caméra (progression simulée, visuels d'exemple) ; **2) Avatar 3D** — analyse IA (~2 s) puis aperçu de l'avatar réaliste ; **3) Coiffure** — radiogroupe de styles appliqués instantanément à l'avatar ; **4) Finition** — rendu final figé, non modifiable, téléchargeable (PNG via canvas). **Gating freemium** (décision Jonas-dev 2026-08-18) : visiteur sans compte ni abonnement actif → rendu flouté dès l'étape 2 avec mention « Avatar verrouillé » ; à la fin de l'étape 4, mur de connexion — Google ou e-mail + code OTP — puis premier abonnement (remises si profil 100 %), qui dévoile le rendu HD et active le téléchargement.
 
 **Routes d'authentification, espace salon et administration (2026-08-18)**
 - `/connexion` — Connexion/Inscription, deux méthodes uniquement (décision Jonas-dev) : Google, ou e-mail + code OTP 6 chiffres ; lien « Accès administrateur (démo) » ; redirection via `?next=`.
@@ -43,19 +43,20 @@ CTA navbar « Tester le rituel 1mn ». Header minimal (logo + pill « Étape X s
 
 ## Component Patterns
 - `step_card` : comportement statique, révélée au scroll (fade-in doux).
-- Démo studio : dropzone (clic + glisser, JPG/PNG/HEIC) → progression « Analyse IA » animée → grille de rendus 3D.
-- `style_card` : tap « Personnaliser » applique la coiffure au mesh 3D courant en ≤ 2 s. (Concept premium/upsell retiré de l'interface le 2026-08-18 sur décision Jonas-dev.)
+- `demo_video_autoplay` (landing `#rituel-studio`) : mockup vidéo auto-play en boucle, muet — séquence scan guidé → reconstruction → essayage pilotée par une timeline interne (tête 3D qui tourne aux 4 angles, flash de capture, filmstrip qui se remplit, coiffures qui défilent). Aucune interaction ; poster statique sous `prefers-reduced-motion`.
+- `scan_stage` (`/rituel` étape 1) : cadre caméra plein largeur coins `{rounded.image_frame}`, ovale de cadrage `{colors.scan_success}` pulsant discrètement, consigne d'angle + angle en surimpression, anneau de progression de stabilité, flash blanc à la capture, filmstrip des 4 frames validées. Écrans secondaires : `idle` (activation caméra / mode démo), erreur permission (réessayer + mode démo), résumé `done`.
+- `style_card` : tap « Personnaliser » (landing) mène au wizard `/rituel` où le style s'applique à l'avatar en ≤ 2 s. (Concept premium/upsell retiré de l'interface le 2026-08-18 sur décision Jonas-dev.)
 - `drawer` : liste des coiffures essayées, CTA final « Enregistrer la carte client » (gated plan).
 - `PricingModal` : ouverture depuis les boutons « Choisir » de #tarifs.
 
 ## State Patterns
-- **Upload** : `idle → drag_over → uploading → analyzing → ready` ; erreurs (format, réseau, quota épuisé) en message inline sous la dropzone, jamais en alert().
+- **Scan** (`/rituel` étape 1) : `idle → live → guiding(angle) → capturing → captured`, 4 angles séquentiels puis `done`. La capture se déclenche automatiquement quand la stabilité (différence de frames consécutives côté client, en attendant le tracking de pose MediaPipe du pipeline) atteint 100 %. Caméra refusée ou indisponible → bascule `mode démo` (progression simulée, visuels d'exemple). Toutes les consignes doublées en texte (`aria-live`), jamais animation seule.
 - **Quota** : à l'épuisement, CTA devient « Passer au plan supérieur » + ouverture `PricingModal`.
 - **3D loading** : squelette `white_card` + shimmer, jamais d'écran blanc.
 - **FAQ / drawer / modal** : un seul ouvert à la fois, fermeture par Échap et clic overlay.
 
 ## Interaction Primitives
-- Glisser-déposer + prise de photo directe (input capture tablette).
+- Caméra navigateur (`getUserMedia`, tablette salon) : capture automatique sans toucher pendant le scan guidé.
 - Tap pour essayer une coiffure ; rotation du modèle 3D au doigt (OrbitControls contraints).
 - Accordéon, carrousel hero, drawer latéral.
 
@@ -63,11 +64,12 @@ CTA navbar « Tester le rituel 1mn ». Header minimal (logo + pill « Étape X s
 - Navigation clavier complète (ancres, drawer, modales, carrousel avec flèches).
 - Contrastes conformes `DESIGN.md` (4.5:1) ; focus visible `{colors.terracotta}`.
 - Alternatives texte sur tous les rendus de styles ; états « analyzing » doublés d'un texte, pas seulement une animation.
+- Le mockup vidéo auto-play est muet et se fige en poster statique sous `prefers-reduced-motion` ; les consignes du scanner sont annoncées via `aria-live`.
 
 ## Key Flows
 **Awa, gérante d'un salon à Abidjan (vendredi 18h, salle comble)**
 1. Un client hésite sur un fade nouveau ; Awa sort la tablette et ouvre Afrofade.
-2. Elle photographie le client sous 4 angles — face, profils gauche/droit, arrière — depuis la dropzone (`uploading`).
+2. Elle lance le scan vidéo guidé : « Regardez la caméra » — l'ovale vert se cale sur le visage et la capture part toute seule ; puis « tournez à droite », « à gauche », « présentez la nuque ». Quatre validations, zéro manipulation.
 3. « Analyse IA » s'affiche ; le modèle 3D de la tête apparaît en `analyzing → ready`.
 4. Elle fait défiler la grille `#styles` et applique « fade mid + line-up » — le client tourne son propre visage 3D du doigt.
 5. **Climax** : le client voit le résultat sous tous les angles avant même que Awa sorte ses tondeuses, et dit « on y va ».
