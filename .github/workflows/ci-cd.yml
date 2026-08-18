@@ -76,6 +76,7 @@ jobs:
 
   deploy-vps:
     name: Deploy Afrofade to VPS (project/Afrofade)
+    environment: prod
     runs-on: [self-hosted, Linux, X64]
     needs: [docker-build]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -86,6 +87,7 @@ jobs:
       - name: Deploy Afrofade to VPS project folder
         env:
           VPS_AFROFADE_PATH: ${{ secrets.VPS_AFROFADE_PATH }}
+          VPS_SUDO_PASSWORD: ${{ secrets.VPS_SUDO_PASSWORD }}
           DOMAIN: "afrofade.pro"
           EMAIL: "contact@afrofade.pro"
         run: |
@@ -113,13 +115,25 @@ jobs:
             cp .env.example .env
           fi
           
+          # Fonction utilitaire d'exécution avec sudo si nécessaire
+          run_sudo() {
+            if [ "$EUID" -eq 0 ]; then
+              "$@"
+            elif [ -n "$VPS_SUDO_PASSWORD" ]; then
+              echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"
+            else
+              sudo -n "$@"
+            fi
+          }
+          
           # Verification DNS et Configuration Nginx / Certbot SSL
-          if [ "$EUID" -eq 0 ]; then
-            bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
-          else
-            sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
-          fi
+          run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
           
           # Démarrage des conteneurs
-          docker compose up -d --build
-          docker compose ps
+          if command -v docker &>/dev/null && docker info &>/dev/null; then
+            docker compose up -d --build
+            docker compose ps
+          else
+            run_sudo docker compose up -d --build
+            run_sudo docker compose ps
+          fi

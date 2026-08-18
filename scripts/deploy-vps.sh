@@ -43,18 +43,29 @@ if [[ ! -f .env ]]; then
   fi
 fi
 
+run_sudo() {
+  if [[ $EUID -eq 0 ]]; then
+    "$@"
+  elif [[ -n "${VPS_SUDO_PASSWORD:-${SUDO_PASSWORD:-}}" ]]; then
+    echo "${VPS_SUDO_PASSWORD:-$SUDO_PASSWORD}" | sudo -S "$@"
+  else
+    sudo -n "$@" 2>/dev/null || sudo "$@"
+  fi
+}
+
 echo "[2/4] Exécution de la vérification DNS et configuration Nginx..."
-if [[ $EUID -eq 0 ]]; then
-  bash "$TARGET_DIR/scripts/configure-vps-nginx.sh" --domain "$DOMAIN" --email "$EMAIL"
-else
-  sudo bash "$TARGET_DIR/scripts/configure-vps-nginx.sh" --domain "$DOMAIN" --email "$EMAIL"
-fi
+run_sudo bash "$TARGET_DIR/scripts/configure-vps-nginx.sh" --domain "$DOMAIN" --email "$EMAIL"
 
 echo "[3/4] Lancement des services Docker..."
-docker compose up -d --build
-
-echo "[4/4] Statut des services Afrofade :"
-docker compose ps
+if command -v docker &>/dev/null && docker info &>/dev/null; then
+  docker compose up -d --build
+  echo "[4/4] Statut des services Afrofade :"
+  docker compose ps
+else
+  run_sudo docker compose up -d --build
+  echo "[4/4] Statut des services Afrofade :"
+  run_sudo docker compose ps
+fi
 
 echo "=========================================="
 echo " Déploiement terminé avec succès dans ${TARGET_DIR} !"

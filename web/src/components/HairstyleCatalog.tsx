@@ -16,58 +16,157 @@ export interface HairstyleItem {
 }
 
 export const HAIRSTYLES_DATA: HairstyleItem[] = [
+  // FADES & DÉGRADÉS
   {
     id: 'fade_taper_low',
     category: 'fade',
     title: 'Low Taper Fade & Line-Up',
-    subtitle: 'Dégradé bas progressif avec contours rectilignes nets',
-    thumbnail: '/models/afro_taper_fade.png',
+    subtitle: 'Dégradé bas progressif avec contours rectilignes nets au rasoir',
+    thumbnail: '/models/result-final-profil-droit.png',
     color: '#1a110b',
-    isPremium: false,
-  },
-  {
-    id: 'locks_short_high_top',
-    category: 'locks',
-    title: 'Short Locks High Top',
-    subtitle: 'Locks courtes sculptées avec dégradé à blanc sur les tempes',
-    thumbnail: '/models/afro_dreadlocks.png',
-    color: '#140c07',
-    isPremium: true,
-  },
-  {
-    id: 'tresses_cornrows_lines',
-    category: 'tresses',
-    title: 'Cornrows Géométriques',
-    subtitle: 'Tresses plaquées motifs géométriques & ligne nette',
-    thumbnail: '/models/afro_cornrows.png',
-    color: '#1a100a',
-    isPremium: true,
-  },
-  {
-    id: 'barbe_sculpted_contour',
-    category: 'barbe',
-    title: 'Barbe Sculptée & Contours Rasoir',
-    subtitle: 'Taille au millimètre, contours nets & soin huile',
-    thumbnail: '/models/afro_beard_sculpted.png',
-    color: '#110b07',
-    isPremium: true,
-  },
-  {
-    id: 'afro_sponge_twists',
-    category: 'afro',
-    title: 'Afro Sponge Twists & Taper',
-    subtitle: 'Texture torsadée au sponge brush avec contours fins',
-    thumbnail: '/models/afro_taper_fade.png',
-    color: '#24150b',
     isPremium: false,
   },
   {
     id: 'fade_burst_mohawk',
     category: 'fade',
     title: 'Burst Fade Mohawk Afro',
-    subtitle: 'Dégradé arrondi autour des oreilles & crête naturelle',
-    thumbnail: '/models/afro_dreadlocks.png',
+    subtitle: 'Dégradé arrondi autour des oreilles & crête naturelle haut de tête',
+    thumbnail: '/models/result-final-face.png',
     color: '#1c120c',
+    isPremium: false,
+  },
+  {
+    id: 'fade_high_drop',
+    category: 'fade',
+    title: 'High Drop Fade & Sharp Edge',
+    subtitle: 'Dégradé haut qui plonge à la nuque avec tracé temporal ultra-précis',
+    thumbnail: '/models/result-final-nuque.png',
+    color: '#180e09',
+    isPremium: true,
+  },
+  {
+    id: 'fade_mid_temp',
+    category: 'fade',
+    title: 'Mid Temple Fade & C-Cup',
+    subtitle: 'Dégradé moyen aux tempes avec contours en C sculptés',
+    thumbnail: '/models/result-final-profil-droit.png',
+    color: '#150c07',
+    isPremium: false,
+  },
+
+  // LOCKS
+  {
+    id: 'locks_short_high_top',
+    category: 'locks',
+    title: 'Short Locks High Top',
+    subtitle: 'Locks courtes sculptées avec dégradé à blanc sur les tempes',
+    thumbnail: '/models/result-final-face.png',
+    color: '#140c07',
+    isPremium: true,
+  },
+  {
+    id: 'locks_dread_faded',
+    category: 'locks',
+    title: 'Dreadlocks Faded Sides',
+    subtitle: 'Locks mi-longues relevées en chignon avec côtés dégradés à ras',
+    thumbnail: '/models/result-final-profil-droit.png',
+    color: '#1b1009',
+    isPremium: true,
+  },
+  {
+    id: 'locks_sister_micro',
+    category: 'locks',
+    title: 'Sisterlocks & Contours Fins',
+    subtitle: 'Micro-locks affinées et bien définies avec ligne temporale naturelle',
+    thumbnail: '/models/result-final-face.png',
+    color: '#160d08',
+    isPremium: true,
+  },
+  {
+    id: 'locks_freeform_mid',
+    category: 'locks',
+    title: 'Freeform Locks Natural',
+    subtitle: 'Locks authentiques freeform avec contours des oreilles nettoyés',
+    thumbnail: '/models/result-final-nuque.png',
+    color: '#1d120a',
+    isPremium: false,
+  },
+
+  // TRESSES & CORNROWS
+  {
+    id: 'tresses_cornrows_lines',
+    category: 'tresses',
+    title: 'Cornrows Géométriques',
+    subtitle: 'Tresses plaquées motifs géométriques & ligne nette au rasoir',
+    thumbnail: '/models/result-final-face.png',
+    color: '#1a100a',
+    isPremium: true,
+  },
+  {
+    id: 'tresses_fulani_braids',
+    category: 'tresses',
+    title: 'Fulani Braids Traditionnelles',
+    subtitle: 'Tresses symétriques d’inspiration peule avec détails de nuque sculptés',
+    thumbnail: '/models/result-final-nuque.png',
+    color: '#180e08',
+    isPremium: true,
+  },
+  {
+    id: 'tresses_box_braids_short',
+    category: 'tresses',
+    title: 'Box Braids Masculines',
+    subtitle: 'Tresses carrées courtes structurées avec dégradé undercut',
+    thumbnail: '/models/result-final-profil-droit.png',
+    color: '#150c07',
+    isPremium: true,
+  },
+  {
+    id: 'tresses_twist_senegal',
+    category: 'tresses',
+    title: 'Twists Sénégalais Sculptés',
+    subtitle: 'Torsades à deux brins denses avec contours rasoir rafraîchis',
+    thumbnail: '/models/result-final-face.png',
+    color: '#190f09',
+    isPremium: false,
+  },
+
+  // AFRO & TWISTS
+  {
+    id: 'afro_sponge_twists',
+    category: 'afro',
+    title: 'Afro Sponge Twists & Taper',
+    subtitle: 'Texture torsadée au sponge brush avec contours fins et nuque propre',
+    thumbnail: '/models/result-final-profil-droit.png',
+    color: '#24150b',
+    isPremium: false,
+  },
+  {
+    id: 'afro_high_top_classic',
+    category: 'afro',
+    title: 'Afro High Top Vintage',
+    subtitle: 'Volume rectangulaire sculpté style 90s avec dégradé temporel net',
+    thumbnail: '/models/result-final-face.png',
+    color: '#1d110a',
+    isPremium: false,
+  },
+
+  // BARBES & CONTOURS
+  {
+    id: 'barbe_sculpted_contour',
+    category: 'barbe',
+    title: 'Barbe Sculptée & Contours Rasoir',
+    subtitle: 'Taille au millimètre, contours nets & soin huile finition miroir',
+    thumbnail: '/models/result-final-profil-droit.png',
+    color: '#110b07',
+    isPremium: true,
+  },
+  {
+    id: 'barbe_goatee_mustache',
+    category: 'barbe',
+    title: 'Moustache & Goatee Sculptée',
+    subtitle: 'Bouc taillé au fil du rasoir avec moustaches fines dessinées',
+    thumbnail: '/models/result-final-face.png',
+    color: '#130c07',
     isPremium: false,
   },
 ];
@@ -93,11 +192,11 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
   );
 
   const tabs = [
-    { id: 'all', label: 'Tous les 6 styles' },
+    { id: 'all', label: `Tous (${HAIRSTYLES_DATA.length})` },
     { id: 'fade', label: 'Fades & Dégradés' },
     { id: 'locks', label: 'Locks' },
     { id: 'tresses', label: 'Tresses' },
-    { id: 'afro', label: 'Afro' },
+    { id: 'afro', label: 'Afro & Twists' },
     { id: 'barbe', label: 'Barbe & Contours' },
   ];
 
@@ -117,14 +216,13 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink/10 pb-4">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-terracotta bg-terracotta-wash px-2.5 py-1 rounded-pill">
-            Étape 2 sur 3
+            Catalogue Afrofade Studio
           </span>
           <h2 className="font-display text-xl mt-2">
-            6 styles signés pour vos clients
+            {HAIRSTYLES_DATA.length} modèles de coiffures afro signés
           </h2>
           <p className="text-xs text-ink-soft mt-1">
-            Touchez une coupe pour la projeter instantanément sur le modèle 3D
-            du client.
+            Touchez une coupe pour la projeter instantanément sur le modèle 3D du client.
           </p>
         </div>
       </div>
@@ -133,7 +231,7 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
       <div
         role="tablist"
         aria-label="Familles de coiffures"
-        className="flex items-center gap-2 overflow-x-auto pb-1"
+        className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none"
       >
         {tabs.map((tab, idx) => {
           const isActive = activeTab === tab.id;
@@ -167,8 +265,8 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       >
         {filteredItems.length === 0 && (
-          <p className="text-sm text-ink-soft" role="status">
-            Aucun style ne correspond à votre recherche.
+          <p className="text-sm text-ink-soft col-span-full py-8 text-center" role="status">
+            Aucune coiffure ne correspond à votre recherche.
           </p>
         )}
         {filteredItems.map((item) => {

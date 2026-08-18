@@ -11,6 +11,7 @@ import { PricingModal } from '@/components/PricingModal';
 import { HairstylePreview3D } from '@/components/HeadModel3D';
 import { RituelDemoVideo } from '@/components/RituelDemoVideo';
 import { PLANS, formatFcfa, stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
+import { HairstyleCatalogModal } from '@/components/HairstyleCatalogModal';
 import {
   ArrowRight,
   CheckCircle2,
@@ -21,6 +22,7 @@ import {
   Gauge,
   Lock,
   Plus,
+  LayoutGrid,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -136,6 +138,7 @@ const FAQ_ITEMS = [
 
 export default function StudioPage() {
   const [isPricingOpen, setIsPricingOpen] = useState<boolean>(false);
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState<boolean>(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -475,6 +478,20 @@ export default function StudioPage() {
             );
           })}
         </div>
+
+        {/* Bouton "Voir tous les styles" — Ouverture Modal Catalogue complet */}
+        <div className="mt-12 text-center">
+          <button
+            onClick={() => setIsCatalogModalOpen(true)}
+            className="min-h-[52px] inline-flex items-center justify-center gap-3 bg-card hover:bg-terracotta-wash text-ink hover:text-terracotta border border-ink/15 hover:border-terracotta/40 font-bold text-sm md:text-base px-8 rounded-pill shadow-soft hover:shadow-soft-lg transition-all duration-300 group"
+          >
+            <LayoutGrid className="w-5 h-5 text-terracotta group-hover:scale-110 transition-transform" />
+            <span>Voir tous les styles (Catalogue complet {HAIRSTYLES_DATA.length}+)</span>
+          </button>
+          <p className="mt-3 text-xs text-ink-soft">
+            Explorez les dégradés, tresses, locks, afro & barbes avec recherche et filtres par catégories.
+          </p>
+        </div>
       </section>
 
       {/* 7. #tarifs — plans FCFA, VIP surligné (source unique lib/plans.ts) */}
@@ -661,6 +678,12 @@ export default function StudioPage() {
         isOpen={isPricingOpen}
         onClose={() => setIsPricingOpen(false)}
         onSelectPlan={handleSelectPlan}
+      />
+
+      {/* Catalogue complet des styles Modal */}
+      <HairstyleCatalogModal
+        isOpen={isCatalogModalOpen}
+        onClose={() => setIsCatalogModalOpen(false)}
       />
     </div>
   );
