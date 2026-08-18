@@ -1,17 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Scissors, Sparkles, UserCheck, Search, Menu, X } from 'lucide-react';
-
-interface NavbarProps {
-  onOpenPricing: () => void;
-  onTryRituel: () => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  quotaUsed: number;
-  quotaLimit: number;
-  currentPlan: string;
-}
+import Link from 'next/link';
+import { Scissors, Sparkles, Menu, X } from 'lucide-react';
 
 const NAV_LINKS = [
   { href: '#rituel-studio', label: 'Le Rituel' },
@@ -20,15 +11,7 @@ const NAV_LINKS = [
   { href: '#faq', label: 'FAQ' },
 ];
 
-export const Navbar: React.FC<NavbarProps> = ({
-  onOpenPricing,
-  onTryRituel,
-  searchQuery,
-  onSearchChange,
-  quotaUsed,
-  quotaLimit,
-  currentPlan,
-}) => {
+export const Navbar: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -66,51 +49,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          {/* Recherche catalogue — filtre le catalogue du Rituel */}
-          <label className="hidden lg:flex items-center gap-2 min-h-[44px] border border-ink/15 rounded-pill bg-card px-4 w-[190px]">
-            <Search className="w-4 h-4 text-ink-soft shrink-0" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Rechercher un style…"
-              aria-label="Rechercher un style dans le catalogue"
-              className="w-full bg-transparent text-[13px] text-ink placeholder:text-ink-soft focus:outline-none"
-            />
-          </label>
-
-          {/* Salon Quota & Active Plan — cliquable, ouvre le pricing */}
-          <button
-            onClick={onOpenPricing}
-            aria-label={`Plan ${currentPlan}, ${quotaUsed} têtes sur ${quotaLimit} ce mois — voir les plans`}
-            className="hidden md:flex items-center gap-3 bg-card border border-ink/10 px-4 min-h-[44px] rounded-pill text-xs hover:border-terracotta/40 transition-colors"
-          >
-            <span className="flex items-center gap-1.5 text-ink-soft">
-              <UserCheck className="w-4 h-4 text-terracotta" />
-              <span>
-                Plan{' '}
-                <strong className="text-terracotta-dark font-bold uppercase">
-                  {currentPlan}
-                </strong>
-              </span>
-            </span>
-            <span className="h-4 w-px bg-ink/15" />
-            <span className="text-ink-soft">
-              Têtes ce mois :{' '}
-              <span className="text-ink font-bold">{quotaUsed}</span> /{' '}
-              {quotaLimit}
-            </span>
-          </button>
-
-          {/* CTA pill terracotta */}
-          <button
-            onClick={onTryRituel}
+          {/* CTA pill terracotta → page dédiée au test du Rituel */}
+          <Link
+            href="/rituel"
             className="min-h-[44px] inline-flex items-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Essayer le Rituel</span>
-            <span className="sm:hidden">Essayer</span>
-          </button>
+            <span className="hidden sm:inline">Tester le Rituel</span>
+            <span className="sm:hidden">Tester</span>
+          </Link>
 
           {/* Hamburger mobile (< lg) */}
           <button
@@ -142,16 +89,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               {link.label}
             </a>
           ))}
-          <button
-            onClick={() => {
-              setMenuOpen(false);
-              onTryRituel();
-            }}
+          <Link
+            href="/rituel"
+            onClick={() => setMenuOpen(false)}
             className="w-full min-h-[48px] mt-2 inline-flex items-center justify-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            Essayer le Rituel
-          </button>
+            Tester le Rituel
+          </Link>
         </nav>
       )}
     </header>

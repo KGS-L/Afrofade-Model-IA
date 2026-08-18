@@ -9,24 +9,27 @@ inspiration: thelma.pet
 # Afrofade — Expérience
 
 ## Foundation
-- Application web Next.js 14 App Router (repo `web/`), une seule route aujourd'hui : `/`.
+- Application web Next.js 14 App Router (repo `web/`) : routes `/` (landing + démo) et `/rituel` (test du Rituel).
 - Référence visuelle : `DESIGN.md` (tokens cités par nom `{colors.terracotta}` etc.).
 - Cœur interactif : canvas React Three Fiber pour l'essayage de coiffures 3D sur la tête reconstruite.
 - Usage terrain : tablette tenue à la main dans le salon, une main possible → cibles tactiles ≥ 44px.
 
 ## Information Architecture
-Single-page marketing + démo — confirmé par Jonas-dev 2026-08-17, pas de multi-pages avant le post-MVP. Maquettes de référence : `mockups/key-landing-hero.html`, `mockups/key-studio-demo.html`, `mockups/key-styles-tarifs.html` (les spines priment sur toute maquette en cas de conflit).
+Landing single-page (confirmée Jonas-dev 2026-08-17) + page de test `/rituel` ajoutée 2026-08-18. Maquettes de référence : `mockups/key-landing-hero.html`, `mockups/key-studio-demo.html`, `mockups/key-styles-tarifs.html` (les spines priment sur toute maquette en cas de conflit).
 
 **Route `/` (landing Afrodade)**
-1. `navbar` — ancres : Le Rituel · Styles · Tarifs · FAQ ; recherche (catalogue) ; CTA « Essayer le Rituel » ; drawer devis coiffures.
+1. `navbar` — ancres : Le Rituel · Styles · Tarifs · FAQ ; CTA « Tester le Rituel » vers `/rituel` (recherche et badge plan/quota retirés sur décision Jonas-dev 2026-08-18) ; drawer devis coiffures (différé).
 2. `hero` — carrousel visuels avant/après salon + titre display + double CTA (Essayer · Voir la démo).
-3. `#comment-ca-marche` — 4 `step_card` : 01 Prenez 3-4 photos du client · 02 La reconstruction 3D s'opère · 03 Explorez les coiffures · 04 Validez ensemble devant le miroir.
+3. `#comment-ca-marche` — 4 `step_card` : 01 Prenez 4 photos (face, profils G/D, arrière) · 02 La reconstruction 3D s'opère · 03 Explorez les coiffures · 04 Validez ensemble devant le miroir.
 4. `#rituel-studio` — démo interactive : dropzone photos → état « Analyse IA » → galerie de styles générés sur la tête 3D (Rituel du Miroir).
 5. `#qualite` — 4 cartes labelisées (PRÉCISION · RENDU · FLUIDITÉ · CONFIDENTIALITÉ) — équivalent savoir-faire Thelma. [NOTE FOR UX] libellés proposés, à valider par Jonas-dev.
 6. `#styles` — grille de `style_card` (fade, locks, tresses, afro, barbe) avec badge plan/premium `{colors.premium_gold}` et bouton Personnaliser.
 7. `#tarifs` — 3 plans Pro / VIP / Extra (grille FCFA déjà décidée en brainstorm : 2200 / 4900 / 7500 FCFA/mois).
 8. `#faq` — `faq_accordion`.
 9. `footer` — `night_footer`, logo blanc, tagline, réseaux, moyens de paiement Mobile Money (Wave, Orange Money, MTN, Moov).
+
+**Route `/rituel` (test du Rituel — grammaire thelma.pet/create adaptée)**
+Header minimal (logo + retour) ; titre de mission unique « Tester le Rituel du Miroir » ; grande dropzone centrée (glisser/toucher, JPG · PNG · HEIC) ; 3 exigences photo en pills (tête entière visible · photo nette, lumière naturelle · visage dégagé) ; note de confidentialité (stockage isolé par salon, suppression après génération) ; flux mock idle → « Analyse IA » → prêt + CTA « Explorer les styles » vers `/#rituel-studio`.
 
 ## Voice and Tone
 - Français, vouvoiement — validé Jonas-dev 2026-08-17.
@@ -59,7 +62,7 @@ Single-page marketing + démo — confirmé par Jonas-dev 2026-08-17, pas de mul
 ## Key Flows
 **Awa, gérante d'un salon à Abidjan (vendredi 18h, salle comble)**
 1. Un client hésite sur un fade nouveau ; Awa sort la tablette et ouvre Afrofade.
-2. Elle photographie le client sous 3 angles depuis la dropzone (`uploading`).
+2. Elle photographie le client sous 4 angles — face, profils gauche/droit, arrière — depuis la dropzone (`uploading`).
 3. « Analyse IA » s'affiche ; le modèle 3D de la tête apparaît en `analyzing → ready`.
 4. Elle fait défiler la grille `#styles` et applique « fade mid + line-up » — le client tourne son propre visage 3D du doigt.
 5. **Climax** : le client voit le résultat sous tous les angles avant même que Awa sorte ses tondeuses, et dit « on y va ».

@@ -156,7 +156,7 @@ const STYLE_CARDS: {
 const FAQ_ITEMS = [
   {
     q: 'Combien de photos faut-il pour la reconstruction 3D ?',
-    a: 'Trois photos suffisent (face, profil gauche, profil droit) ; une quatrième en trois-quarts affine encore les volumes. Un visage dégagé et une lumière naturelle donnent les meilleurs résultats.',
+    a: 'Quatre photos suffisent : face, profil gauche, profil droit et arrière de la tête. Un visage dégagé et une lumière naturelle donnent les meilleurs résultats.',
   },
   {
     q: 'Les photos de mes clients sont-elles confidentielles ?',
@@ -189,9 +189,6 @@ export default function StudioPage() {
   const [quotaLimit, setQuotaLimit] = useState<number>(100);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Recherche navbar → filtre le catalogue du Rituel
-  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Carrousel hero : slide active + slides déjà chargées (lazy)
   const [heroSlide, setHeroSlide] = useState<number>(0);
@@ -302,16 +299,8 @@ export default function StudioPage() {
         </div>
       )}
 
-      {/* 1. Navbar — ancres Le Rituel · Styles · Tarifs · FAQ */}
-      <Navbar
-        onOpenPricing={() => setIsPricingOpen(true)}
-        onTryRituel={scrollToStudio}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        quotaUsed={quotaUsed}
-        quotaLimit={quotaLimit}
-        currentPlan={currentPlan}
-      />
+      {/* 1. Navbar — ancres Le Rituel · Styles · Tarifs · FAQ + CTA /rituel */}
+      <Navbar />
 
       {/* 2. Hero — carrousel visuels + double CTA */}
       <header className="max-w-container mx-auto px-6 pt-12 pb-16 md:pt-16 md:pb-24">
@@ -522,7 +511,6 @@ export default function StudioPage() {
               selectedId={selectedStyle?.id || null}
               onSelect={handleSelectStyle}
               onTriggerUpsell={handleTriggerUpsell}
-              query={searchQuery}
             />
           </div>
         </div>
@@ -676,7 +664,8 @@ export default function StudioPage() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => handleSelectPlan(plan.name, plan.amount)}
+                  onClick={() => setIsPricingOpen(true)}
+                  aria-label={`Voir le détail et choisir le plan ${plan.name}`}
                   className={`mt-auto min-h-[44px] rounded-pill font-bold text-sm transition-colors ${
                     plan.popular
                       ? 'bg-terracotta hover:bg-terracotta-dark text-white'
