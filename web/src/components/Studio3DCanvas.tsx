@@ -31,7 +31,7 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
   const [lightPreset, setLightPreset] = useState<'salon' | 'studio' | 'warm'>('salon');
 
   return (
-    <div className="relative w-full h-[520px] bg-card border border-ink/10 rounded-card overflow-hidden shadow-soft flex flex-col justify-between">
+    <div className="relative w-full h-[520px] bg-card border border-ink/10 rounded-card overflow-hidden shadow-soft flex flex-col justify-between select-none">
       {/* Top Floating Header */}
       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between gap-2 pointer-events-none">
         <div className="bg-card/90 backdrop-blur-sm border border-ink/10 px-3 py-1.5 rounded-pill pointer-events-auto flex items-center gap-2">
@@ -81,11 +81,11 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
       </div>
 
       {/* 3D Canvas R3F — fond chaud lumineux, tone mapping cinéma */}
-      <div className="w-full h-full bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)]">
+      <div className="w-full h-full bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)] touch-none">
         {hasModel ? (
           <Canvas
             dpr={[1, 2]}
-            gl={{ antialias: true, alpha: true }}
+            gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
             onCreated={({ gl }) => {
               gl.toneMapping = THREE.ACESFilmicToneMapping;
               gl.toneMappingExposure = 1.12;
@@ -113,9 +113,13 @@ export const Studio3DCanvas: React.FC<Studio3DCanvasProps> = ({
             <ContactShadows position={[0, -0.75, 0]} opacity={0.45} scale={4} blur={2} far={2} />
             <OrbitControls
               enablePan={false}
+              enableZoom={true}
+              rotateSpeed={0.8}
+              zoomSpeed={0.8}
               minDistance={2.0}
               maxDistance={4.5}
               target={[0, 0.7, 0]}
+              minPolarAngle={Math.PI / 6}
               maxPolarAngle={Math.PI / 2 + 0.15}
             />
           </Canvas>
