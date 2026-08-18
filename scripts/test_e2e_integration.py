@@ -1,183 +1,83 @@
 #!/usr/bin/env python3
-"""
-Script de validation d'intégration E2E pour Afrofade Production.
-Vérifie la santé des conteneurs Docker, l'API Python 3D, le proxy Next.js,
-les Webhooks de paiement et la disponibilité des pages légales.
-"""
+"""Afrofade production security smoke tests."""
 
-import sys
 import json
-import time
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
 
 WEB_URL = "http://localhost:3005"
 API_URL = "http://localhost:8005"
 
-class Colors:
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
 
-def log_test(name: str):
-    print(f"{Colors.BLUE}[TEST]{Colors.END} {name}...", end=" ", flush=True)
-
-def log_pass(msg: str = "OK"):
-    print(f"{Colors.GREEN}{Colors.BOLD}✓ {msg}{Colors.END}")
-
-def log_fail(msg: str):
-    print(f"{Colors.RED}{Colors.BOLD}✗ ÉCHEC : {msg}{Colors.END}")
-
-def http_get(url: str, timeout: int = 10) -> tuple[int, str]:
-    req = urllib.request.Request(url, headers={'User-Agent': 'Afrofade-E2E-Tester/1.0'})
+def request(url: str, method: str = "GET", data: dict | None = None, headers: dict | None = None, timeout: int = 10):
+    payload = json.dumps(data).encode("utf-8") if data is not None else None
+    req_headers = {"User-Agent": "Afrofade-E2E-Tester/2.0", **(headers or {})}
+    if data is not None:
+        req_headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=payload, headers=req_headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, resp.read().decode('utf-8')
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode('utf-8')
-    except Exception as e:
-        return 500, str(e)
+            return resp.status, resp.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8")
+    except Exception as exc:
+        return 500, str(exc)
 
-def http_post(url: str, data: dict, timeout: int = 15) -> tuple[int, str]:
-    payload = json.dumps(data).encode('utf-8')
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={
-            'Content-Type': 'application/json',
-            'User-Agent': 'Afrofade-E2E-Tester/1.0'
-        },
-        method='POST'
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, resp.read().decode('utf-8')
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode('utf-8')
-    except Exception as e:
-        return 500, str(e)
+
+def expect(name: str, condition: bool, detail: str) -> bool:
+    print(f"[{'PASS' if condition else 'FAIL'}] {name}: {detail}")
+    return condition
+
 
 def run_all_e2e_tests():
-    print(f"\n{Colors.BOLD}====================================================={Colors.END}")
-    print(f"{Colors.BOLD}   SUITE DE TESTS D'INTÉGRATION E2E — AFROFADE 3D   {Colors.END}")
-    print(f"{Colors.BOLD}====================================================={Colors.END}\n")
+    results = []
 
-    passed_count = 0
-    total_count = 0
+    status, body = request(f"{API_URL}/health")
+    results.append(expect("API health remains public", status == 200 and "afrofade-api-3d" in body, f"HTTP {status}"))
 
-    # Test 1 : Health Check API Python
-    total_count += 1
-    log_test("1. Santé du Microservice API 3D Python (GET /health)")
-    status, body = http_get(f"{API_URL}/health")
-    if status == 200 and "afrofade-api-3d" in body:
-        log_pass("API 3D en ligne (200 OK)")
-        passed_count += 1
-    else:
-        log_fail(f"Statut HTTP {status} — Reponse: {body[:100]}")
-
-    # Test 2 : Reconstruction 3D directe sur l'API Python
-    total_count += 1
-    log_test("2. Endpoint Inférence 3D Python direct (POST /api/v1/reconstruct)")
-    payload_reconstruct = {
-        "salon_id": "e2e-test-salon",
-        "client_name": "Client Test E2E",
-        "photos_urls": [
-            "https://afrofade.pro/models/demo/client-face.png",
-            "https://afrofade.pro/models/demo/client-profil-droit.png",
-            "https://afrofade.pro/models/demo/client-profil-gauche.png"
-        ],
-        "preserve_skin_texture": True
+    reconstruct_payload = {
+        "salon_id": "must-not-be-trusted",
+        "client_name": "Security Test",
+        "photos_urls": ["a", "b", "c"],
+        "preserve_skin_texture": True,
     }
-    status, body = http_post(f"{API_URL}/api/v1/reconstruct", payload_reconstruct)
-    if status == 200 and "mesh_3d_url" in body:
-        log_pass("Modèle 3D généré avec succès (200 OK)")
-        passed_count += 1
-    else:
-        log_fail(f"Statut HTTP {status} — Reponse: {body[:100]}")
 
-    # Test 3 : Proxy Next.js vers l'API Python 3D
-    total_count += 1
-    log_test("3. Proxy Next.js vers API 3D (POST /api/v1/reconstruct via Web)")
-    status, body = http_post(f"{WEB_URL}/api/v1/reconstruct", payload_reconstruct)
-    if status == 200:
-        log_pass("Proxy Next.js -> API Python fonctionnel (200 OK)")
-        passed_count += 1
-    else:
-        log_fail(f"Statut HTTP {status} — Reponse: {body[:100]}")
+    status, _ = request(f"{API_URL}/api/v1/reconstruct", method="POST", data=reconstruct_payload)
+    results.append(expect("FastAPI rejects missing internal key", status == 401, f"HTTP {status}"))
 
-    # Test 4 : Quality Check API Python
-    total_count += 1
-    log_test("4. Quality Gatekeeper Check Endpoint (POST /v1/quality-check)")
-    status, body = http_get(f"{API_URL}/")
-    if status == 200:
-        log_pass("Endpoint racine API 3D accessible")
-        passed_count += 1
-    else:
-        log_fail(f"Statut HTTP {status}")
+    status, _ = request(f"{API_URL}/api/v1/heads", method="POST", data=reconstruct_payload)
+    results.append(expect("Job API rejects missing internal key", status == 401, f"HTTP {status}"))
 
-    # Test 5 : Webhook de Paiement Mobile Money
-    total_count += 1
-    log_test("5. Webhook Paiement Mobile Money (POST /api/webhooks/payment)")
-    payload_payment = {
-        "event": "transaction.success",
-        "transaction_id": "TX-E2E-998822",
-        "amount": 15000,
-        "currency": "XOF",
-        "salon_id": "salon-test-id",
-        "plan": "PRO"
-    }
-    status, body = http_post(f"{WEB_URL}/api/webhooks/payment", payload_payment)
-    if status in [200, 400, 401]: # 200 (Success) or 400/401 (Invalid Signature Guard)
-        log_pass(f"Webhook de paiement traité (HTTP {status})")
-        passed_count += 1
-    else:
-        log_fail(f"Statut HTTP inattendu {status} — Reponse: {body[:100]}")
+    status, _ = request(f"{WEB_URL}/api/v1/reconstruct", method="POST", data=reconstruct_payload)
+    results.append(expect("Next reconstruction proxy requires user auth", status == 401, f"HTTP {status}"))
 
-    # Test 7 : API Asynchrone SaaS (POST /api/v1/heads & GET /api/v1/heads/{job_id})
-    total_count += 1
-    log_test("7. Job Queue Asynchrone SaaS (POST /api/v1/heads & Polling /heads/{job_id})")
-    status, body = http_post(f"{API_URL}/api/v1/heads", payload_reconstruct)
-    if status == 202 and "job_id" in body:
-        job_data = json.loads(body)
-        job_id = job_data["job_id"]
-        status_get, body_get = http_get(f"{API_URL}/api/v1/heads/{job_id}")
-        if status_get == 200 and "completed" in body_get:
-            log_pass(f"Job asynchrone créé (HTTP 202) et récupéré ({job_id})")
-            passed_count += 1
-        else:
-            log_fail(f"Polling job {job_id} a échoué (HTTP {status_get})")
-    else:
-        log_fail(f"Soumission job asynchrone a échoué (HTTP {status}) — Reponse: {body[:100]}")
+    status, _ = request(
+        f"{WEB_URL}/api/upload/presigned-url",
+        method="POST",
+        data={"filename": "face.jpg", "mimeType": "image/jpeg", "fileSize": 1024, "salonId": "victim"},
+    )
+    results.append(expect("Upload signing requires user auth", status == 401, f"HTTP {status}"))
 
-    # Test 6 : Disponibilité des Pages Légales & Contact
-    legal_pages = [
-        ("/legal/mentions-legales", "Mentions Légales"),
-        ("/legal/confidentialite", "Politique de Confidentialité"),
-        ("/legal/cgv", "CGV"),
-        ("/contact", "Page Support & Contact")
-    ]
+    status, _ = request(
+        f"{WEB_URL}/api/webhooks/payment",
+        method="POST",
+        data={"status": "paid", "paymentId": "fake", "token": "fake"},
+    )
+    results.append(expect("Payment webhook rejects unsigned requests", status in (401, 503), f"HTTP {status}"))
 
-    for path, title in legal_pages:
-        total_count += 1
-        log_test(f"6. Accessibilité {title} (GET {path})")
-        status, body = http_get(f"{WEB_URL}{path}")
-        if status == 200:
-            log_pass("Accessible (200 OK)")
-            passed_count += 1
-        else:
-            log_fail(f"Statut HTTP {status}")
+    status, _ = request(f"{WEB_URL}/api/cron/purge-biometric")
+    results.append(expect("Biometric purge rejects missing secret", status in (401, 503), f"HTTP {status}"))
 
-    print(f"\n{Colors.BOLD}-----------------------------------------------------{Colors.END}")
-    print(f"RÉSULTAT DES TESTS : {Colors.GREEN if passed_count == total_count else Colors.RED}{passed_count}/{total_count} SUCCÈS{Colors.END}")
-    print(f"{Colors.BOLD}-----------------------------------------------------{Colors.END}\n")
+    for path in ["/legal/mentions-legales", "/legal/confidentialite", "/legal/cgv", "/contact"]:
+        status, _ = request(f"{WEB_URL}{path}")
+        results.append(expect(f"Public page {path}", status == 200, f"HTTP {status}"))
 
-    if passed_count == total_count:
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    passed = sum(results)
+    total = len(results)
+    print(f"\nSecurity smoke tests: {passed}/{total} passed")
+    sys.exit(0 if passed == total else 1)
+
 
 if __name__ == "__main__":
     run_all_e2e_tests()
