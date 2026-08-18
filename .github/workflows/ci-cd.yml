@@ -21,10 +21,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies from lockfile
         run: |
           cd web
-          npm install
+          npm ci
+
+      - name: Audit production dependencies
+        run: |
+          cd web
+          npm audit --omit=dev --audit-level=high
 
       - name: Build Next.js Production Bundle
         run: |
@@ -36,6 +41,11 @@ jobs:
           NEXT_PUBLIC_API_URL: https://afrofade.pro/api
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          API_INTERNAL_SECRET: ci-internal-secret
+          CRON_SECRET: ci-cron-secret
+          MONEY_FUSION_API_KEY: ci-money-fusion-key
+          PAYMENT_WEBHOOK_SECRET: ci-payment-webhook-secret
 
   test-api:
     name: Validate Backend 3D AI Engine (FastAPI & OpenCV)
@@ -55,12 +65,20 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q api
+
+      - name: Check P0 security invariants
+        run: |
+          python3 scripts/check_p0_invariants.py
+
       - name: Check AI Model Downloader & Gatekeeper
         run: |
           python3 api/scripts/download_models.py
 
   docker-build:
-    name: Test Docker Compose Multi-Stage Build
+    name: Test Production Docker Compose Build & Security Boundaries
     runs-on: ubuntu-latest
     needs: [test-web, test-api]
     steps:
@@ -70,9 +88,50 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Containers
+      - name: Prepare CI runtime env
         run: |
-          docker compose build
+          cat > .env <<'EOF'
+          NEXT_PUBLIC_APP_URL=http://127.0.0.1:3005
+          NEXT_PUBLIC_API_URL=http://127.0.0.1:8005
+          API_INTERNAL_URL=http://api:8000
+          WEB_PORT=3005
+          API_PORT=8005
+          FASTAPI_ENV=production
+          NEXT_PUBLIC_SUPABASE_URL=https://placeholder-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role-key
+          MONEY_FUSION_API_KEY=ci-money-fusion-key
+          API_INTERNAL_SECRET=ci-internal-secret
+          CRON_SECRET=ci-cron-secret
+          PAYMENT_WEBHOOK_SECRET=ci-payment-webhook-secret
+          API_ALLOWED_ORIGINS=http://127.0.0.1:3005
+          EOF
+
+      - name: Build production containers only
+        run: |
+          docker compose -f docker-compose.yml build
+
+      - name: Start production stack
+        run: |
+          docker compose -f docker-compose.yml up -d
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8005/health >/dev/null && curl -fsS http://127.0.0.1:3005/ >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f docker-compose.yml ps
+          docker compose -f docker-compose.yml logs
+          exit 1
+
+      - name: Run P0 security smoke tests
+        run: |
+          python3 scripts/test_e2e_integration.py
+
+      - name: Stop production stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml down -v
 
   deploy-vps:
     name: Deploy Afrofade to VPS (projects/Afrofade)
@@ -93,26 +152,26 @@ jobs:
         run: |
           TARGET_DIR="${VPS_AFROFADE_PATH:-$HOME/projects/Afrofade}"
           echo "Dossier cible sur le VPS : $TARGET_DIR"
-          
+
           mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
-          
+
           cp -a docker-compose.yml "$TARGET_DIR/"
           if [ -f .env.example ]; then
             cp -a .env.example "$TARGET_DIR/"
           fi
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
-          
+
           if [ -d web ]; then
             rsync -a --exclude 'node_modules' --exclude '.next' web/ "$TARGET_DIR/web/" 2>/dev/null || cp -r web "$TARGET_DIR/"
           fi
           if [ -d api ]; then
             rsync -a --exclude '__pycache__' --exclude '.venv' api/ "$TARGET_DIR/api/" 2>/dev/null || cp -r api "$TARGET_DIR/"
           fi
-          
+
           cd "$TARGET_DIR"
-          
-          # Gestion du .env : si inexistant on le crée, si existant on PRÉSERVE les secrets de prod (Supabase, MoneyFusion...)
+
+          # Gestion du .env : si inexistant on le crée, si existant on PRÉSERVE les secrets de prod.
           if [ -f .env.example ]; then
             if [ ! -f .env ]; then
               cp .env.example .env
@@ -121,7 +180,7 @@ jobs:
               echo "Mise à jour des ports et clés de .env sans écraser les secrets de production existants..."
               ENV_WEB_PORT=$(grep "^WEB_PORT=" .env.example | cut -d'=' -f2)
               ENV_API_PORT=$(grep "^API_PORT=" .env.example | cut -d'=' -f2)
-              
+
               if [ -n "$ENV_WEB_PORT" ]; then
                 if grep -q "^WEB_PORT=" .env; then
                   sed -i "s/^WEB_PORT=.*/WEB_PORT=$ENV_WEB_PORT/" .env
@@ -138,7 +197,6 @@ jobs:
                 fi
               fi
 
-              # Ajout des nouvelles clés manquantes sans toucher aux valeurs existantes
               while IFS='=' read -r key value || [ -n "$key" ]; do
                 [[ "$key" =~ ^#.*$ ]] && continue
                 [[ -z "$key" ]] && continue
@@ -149,8 +207,7 @@ jobs:
               done < .env.example
             fi
           fi
-          
-          # Fonction utilitaire d'exécution avec sudo si nécessaire
+
           run_sudo() {
             if [ "$EUID" -eq 0 ]; then
               "$@"
@@ -160,15 +217,22 @@ jobs:
               sudo -n "$@"
             fi
           }
-          
-          # Verification DNS et Configuration Nginx / Certbot SSL
+
+          # Fail deployment before container startup when mandatory production secrets are absent or placeholders.
+          for required_key in API_INTERNAL_SECRET CRON_SECRET PAYMENT_WEBHOOK_SECRET SUPABASE_SERVICE_ROLE_KEY MONEY_FUSION_API_KEY; do
+            required_value=$(grep "^${required_key}=" .env | head -n1 | cut -d'=' -f2-)
+            if [ -z "$required_value" ] || echo "$required_value" | grep -Eqi '^(change-me|your-|placeholder|ci-)'; then
+              echo "ERROR: ${required_key} is missing or still a placeholder in production .env"
+              exit 1
+            fi
+          done
+
           run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
-          
-          # Démarrage des conteneurs
+
           if command -v docker &>/dev/null && docker info &>/dev/null; then
-            docker compose up -d --build
-            docker compose ps
+            docker compose -f docker-compose.yml up -d --build
+            docker compose -f docker-compose.yml ps
           else
-            run_sudo docker compose up -d --build
-            run_sudo docker compose ps
+            run_sudo docker compose -f docker-compose.yml up -d --build
+            run_sudo docker compose -f docker-compose.yml ps
           fi
