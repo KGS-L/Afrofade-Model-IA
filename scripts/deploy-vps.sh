@@ -24,6 +24,7 @@ cp -a "$REPO_DIR/docker-compose.yml" "$TARGET_DIR/"
 if [[ -f "$REPO_DIR/.env.example" ]]; then
   cp -a "$REPO_DIR/.env.example" "$TARGET_DIR/"
 fi
+
 cp -a "$REPO_DIR/scripts/"* "$TARGET_DIR/scripts/"
 cp -a "$REPO_DIR/deploy/nginx/"* "$TARGET_DIR/deploy/nginx/"
 
@@ -36,10 +37,41 @@ fi
 
 cd "$TARGET_DIR"
 
-if [[ ! -f .env ]]; then
-  if [[ -f .env.example ]]; then
+# Gestion du .env : si inexistant on le crée, si existant on PRÉSERVE les secrets de prod (Supabase, MoneyFusion...)
+if [[ -f .env.example ]]; then
+  if [[ ! -f .env ]]; then
     cp .env.example .env
-    echo "Fichier .env initialisé."
+    echo "Fichier .env initialisé depuis .env.example"
+  else
+    echo "Mise à jour des ports et clés de .env sans écraser les secrets de production existants..."
+    ENV_WEB_PORT=$(grep "^WEB_PORT=" .env.example | cut -d'=' -f2)
+    ENV_API_PORT=$(grep "^API_PORT=" .env.example | cut -d'=' -f2)
+    
+    if [[ -n "$ENV_WEB_PORT" ]]; then
+      if grep -q "^WEB_PORT=" .env; then
+        sed -i "s/^WEB_PORT=.*/WEB_PORT=$ENV_WEB_PORT/" .env
+      else
+        echo "WEB_PORT=$ENV_WEB_PORT" >> .env
+      fi
+    fi
+
+    if [[ -n "$ENV_API_PORT" ]]; then
+      if grep -q "^API_PORT=" .env; then
+        sed -i "s/^API_PORT=.*/API_PORT=$ENV_API_PORT/" .env
+      else
+        echo "API_PORT=$ENV_API_PORT" >> .env
+      fi
+    fi
+
+    # Ajout des nouvelles clés manquantes sans toucher aux valeurs existantes
+    while IFS='=' read -r key value || [[ -n "$key" ]]; do
+      [[ "$key" =~ ^#.*$ ]] && continue
+      [[ -z "$key" ]] && continue
+      clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
+      if ! grep -q "^${clean_key}=" .env; then
+        echo "${key}=${value}" >> .env
+      fi
+    done < .env.example
   fi
 fi
 
