@@ -57,7 +57,7 @@ development_status:
   4-2-dashboard-salon-jauge-de-profil-100-calcul-des-remises: done
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-webhook-geniuspay-money-fusion-gestion-des-quotas: backlog
+  epic-5: in-progress
+  5-1-webhook-geniuspay-money-fusion-gestion-des-quotas: done
   5-2-dashboard-administrateur-kpis-saas-mrr-fcfa: backlog
   epic-5-retrospective: optional
