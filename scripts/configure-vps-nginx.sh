@@ -94,7 +94,8 @@ apt-get install -y -qq nginx certbot python3-certbot-nginx
 echo "[3/5] Création du fichier Nginx /etc/nginx/sites-available/afrofade.conf..."
 mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled /var/www/certbot
 
-sed "s/__DOMAIN_NAME__/${DOMAIN}/g" "$TEMPLATE_PATH" > /etc/nginx/sites-available/afrofade.conf
+DOM_WEB_PORT="${WEB_PORT:-3005}"
+sed -e "s/__DOMAIN_NAME__/${DOMAIN}/g" -e "s/__WEB_PORT__/${DOM_WEB_PORT}/g" "$TEMPLATE_PATH" > /etc/nginx/sites-available/afrofade.conf
 
 ln -sf /etc/nginx/sites-available/afrofade.conf /etc/nginx/sites-enabled/afrofade.conf
 rm -f /etc/nginx/sites-enabled/default

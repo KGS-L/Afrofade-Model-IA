@@ -43,10 +43,16 @@ cd ~/project/Afrofade
 Créez le fichier `.env` dans `~/project/Afrofade` :
 ```bash
 cat << 'EOF' > .env
+# Ports Hôte isolés (évite les conflits avec 3000 et 8000 existants sur le VPS)
+WEB_PORT=3005
+API_PORT=8005
+
 NEXT_PUBLIC_APP_URL=https://afrofade.pro
+NEXT_PUBLIC_API_URL=http://localhost:8005
 NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+EOF
 
 MONEY_FUSION_URL=https://www.moneyfusion.net/api/v1/pay
 MONEY_FUSION_API_KEY=your-money-fusion-api-key-live

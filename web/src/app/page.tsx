@@ -36,18 +36,18 @@ const HERO_SLIDES = [
   },
   {
     src: '/models/result-3d-bald.png',
-    title: 'Étape 2 — Reconstruction 3D',
-    note: "la tête apparaît en 3D, prête pour l'essayage",
+    title: 'Étape 2 — Reconstruction 3D FLAME',
+    note: "maillage 3D brut reconstruit sans cheveux",
   },
   {
-    src: '/models/afro_taper_fade.png',
-    title: 'Étape 3 — Choix de coiffure',
-    note: 'fades, locks, tresses — essayez en un tap',
+    src: '/models/result-beard-removed.png',
+    title: 'Étape 3 — Coiffure & Taille barbe',
+    note: 'taper fade appliqué + barbe rasée & moustache taillée',
   },
   {
     src: '/models/result-final.png',
-    title: 'Étape 4 — Résultat validé',
-    note: 'coupe + barbe taillée — avant la tondeuse',
+    title: 'Étape 4 — Résultat 3D validé',
+    note: 'rendu ultra-réaliste validé avant la tondeuse',
   },
 ];
 

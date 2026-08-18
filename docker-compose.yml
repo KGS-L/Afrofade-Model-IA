@@ -8,11 +8,11 @@ services:
     container_name: afrofade-web
     restart: always
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3005}:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://afrofade.pro}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8005}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
@@ -30,7 +30,7 @@ services:
     container_name: afrofade-api-3d
     restart: always
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8005}:8000"
     environment:
       - PORT=8000
       - FASTAPI_ENV=production
