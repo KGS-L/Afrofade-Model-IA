@@ -22,10 +22,6 @@ const config: Config = {
         },
         card: '#FFFFFF', // cartes, panneaux, drawer, FAQ
         night: '#1F1B17', // footer sombre
-        premium: {
-          DEFAULT: '#C99B3F', // badges premium upsell, distinctions VIP/Extra
-          soft: '#E9D3C4',
-        },
       },
       fontFamily: {
         display: ['var(--font-display)', 'Arial Black', 'sans-serif'],

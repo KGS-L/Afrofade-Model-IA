@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Crown, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
 
 export interface HairstyleItem {
@@ -13,7 +13,6 @@ export interface HairstyleItem {
   thumbnail: string;
   color: string;
   isPremium: boolean;
-  priceTag?: string;
 }
 
 export const HAIRSTYLES_DATA: HairstyleItem[] = [
@@ -34,7 +33,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     thumbnail: '/models/afro_dreadlocks.png',
     color: '#140c07',
     isPremium: true,
-    priceTag: '+2 000 FCFA',
   },
   {
     id: 'tresses_cornrows_lines',
@@ -44,7 +42,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     thumbnail: '/models/afro_cornrows.png',
     color: '#1a100a',
     isPremium: true,
-    priceTag: '+3 000 FCFA',
   },
   {
     id: 'barbe_sculpted_contour',
@@ -54,7 +51,6 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
     thumbnail: '/models/afro_beard_sculpted.png',
     color: '#110b07',
     isPremium: true,
-    priceTag: '+2 000 FCFA (Upsell)',
   },
   {
     id: 'afro_sponge_twists',
@@ -79,15 +75,13 @@ export const HAIRSTYLES_DATA: HairstyleItem[] = [
 interface HairstyleCatalogProps {
   selectedId: string | null;
   onSelect: (item: HairstyleItem) => void;
-  onTriggerUpsell: (item: HairstyleItem) => void;
-  /** Filtre plein texte sur le titre (recherche navbar), insensible à la casse */
+  /** Filtre plein texte sur le titre, insensible à la casse */
   query?: string;
 }
 
 export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
   selectedId,
   onSelect,
-  onTriggerUpsell,
   query = '',
 }) => {
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -183,12 +177,7 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
           return (
             <div
               key={item.id}
-              onClick={() => {
-                onSelect(item);
-                if (item.isPremium) {
-                  onTriggerUpsell(item);
-                }
-              }}
+              onClick={() => onSelect(item)}
               className={`group relative rounded-card bg-card overflow-hidden cursor-pointer transition-all duration-300 border ${
                 isSelected
                   ? 'border-terracotta shadow-soft ring-2 ring-terracotta/40'
@@ -205,16 +194,11 @@ export const HairstyleCatalog: React.FC<HairstyleCatalogProps> = ({
                   className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
                 />
 
-                {/* Badge plan : PRO / VIP / PREMIUM (or) */}
+                {/* Badge plan : PRO / VIP */}
                 <span
-                  className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full flex items-center gap-1 shadow-soft ${PLAN_BADGE_CLASS[plan]}`}
+                  className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full shadow-soft ${PLAN_BADGE_CLASS[plan]}`}
                 >
-                  {item.isPremium && <Crown className="w-3 h-3" />}
-                  <span>
-                    {item.isPremium
-                      ? `Premium · ${item.priceTag || '+2 000 FCFA'}`
-                      : plan}
-                  </span>
+                  {plan}
                 </span>
 
                 {/* Selected Checkmark */}

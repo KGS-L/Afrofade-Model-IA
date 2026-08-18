@@ -39,7 +39,7 @@ export const PLANS: PlanInfo[] = [
       '100 têtes 3D générées / mois (49 FCFA / tête)',
       'Carnet Client 3D (1 Go de stockage cloud)',
       'Téléchargement HD des aperçus pour le client',
-      'Bouton upsell prestations premium intégré',
+      'Carte avant/après partageable WhatsApp',
       'Support prioritaire 7j/7',
     ],
   },
@@ -64,21 +64,22 @@ export function formatFcfa(amount: number): string {
   return String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
-export type StylePlanLabel = 'PRO' | 'VIP' | 'PREMIUM';
+export type StylePlanLabel = 'PRO' | 'VIP';
 
-/** Plan de rattachement des styles non premium (id du catalogue HairstyleCatalog) */
+/** Plan de rattachement des styles (id du catalogue HairstyleCatalog).
+ *  Les styles autrefois « premium » sont rattachés à VIP (décision 2026-08-18 :
+ *  suppression du concept premium de l'interface). */
 const STYLE_PLAN_BY_ID: { [id: string]: 'PRO' | 'VIP' } = {
   fade_taper_low: 'PRO',
   afro_sponge_twists: 'PRO',
   fade_burst_mohawk: 'VIP',
+  locks_short_high_top: 'VIP',
+  tresses_cornrows_lines: 'VIP',
+  barbe_sculpted_contour: 'VIP',
 };
 
-/** Badge plan d'un style : PREMIUM (or) si upsell, sinon PRO/VIP */
-export function stylePlan(item: {
-  id: string;
-  isPremium: boolean;
-}): StylePlanLabel {
-  if (item.isPremium) return 'PREMIUM';
+/** Badge plan d'un style : PRO ou VIP */
+export function stylePlan(item: { id: string }): StylePlanLabel {
   return STYLE_PLAN_BY_ID[item.id] ?? 'PRO';
 }
 
@@ -86,5 +87,4 @@ export function stylePlan(item: {
 export const PLAN_BADGE_CLASS: Record<StylePlanLabel, string> = {
   PRO: 'bg-ink-soft text-white',
   VIP: 'bg-terracotta-dark text-white',
-  PREMIUM: 'bg-premium text-white',
 };

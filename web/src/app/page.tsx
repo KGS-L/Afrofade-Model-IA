@@ -10,8 +10,8 @@ import {
   HairstyleItem,
   HAIRSTYLES_DATA,
 } from '@/components/HairstyleCatalog';
-import { UpsellBanner } from '@/components/UpsellBanner';
 import { PricingModal } from '@/components/PricingModal';
+import { HairstylePreview3D } from '@/components/HeadModel3D';
 import { PLANS, formatFcfa, stylePlan, PLAN_BADGE_CLASS } from '@/lib/plans';
 import {
   CheckCircle2,
@@ -48,7 +48,7 @@ const HERO_SLIDES = [
   {
     src: '/models/afro_beard_sculpted.png',
     title: 'Barbe sculptée',
-    note: 'option premium, essayage en 1 tap',
+    note: 'contours au millimètre, en 1 tap',
   },
 ];
 
@@ -101,55 +101,14 @@ const QUALITY_CARDS = [
 ];
 
 /** Grille #styles (§6) — chaque carte porte l'id de son style du catalogue ;
- *  sans photo dédiée, placeholder dégradé terracotta/encre (grammaire maquettes). */
-const STYLE_VISUAL_GRADIENTS = {
-  lineUp: 'bg-[linear-gradient(150deg,#D8B79A,#A9662F)]',
-  afro: 'bg-[linear-gradient(150deg,#D9C6A8,#C99B3F)]',
-};
-
-const STYLE_CARDS: {
-  id: string;
-  title: string;
-  img?: string;
-  visualLabel: string;
-  placeholderClass?: string;
-}[] = [
-  {
-    id: 'fade_taper_low',
-    title: 'Fade classique',
-    img: '/models/afro_taper_fade.png',
-    visualLabel: 'FADE',
-  },
-  {
-    id: 'fade_burst_mohawk',
-    title: 'Fade mid + line-up',
-    visualLabel: 'LINE-UP',
-    placeholderClass: STYLE_VISUAL_GRADIENTS.lineUp,
-  },
-  {
-    id: 'locks_short_high_top',
-    title: 'Locks courtes',
-    img: '/models/afro_dreadlocks.png',
-    visualLabel: 'LOCKS',
-  },
-  {
-    id: 'tresses_cornrows_lines',
-    title: 'Tresses collées',
-    img: '/models/afro_cornrows.png',
-    visualLabel: 'TRESSES',
-  },
-  {
-    id: 'afro_sponge_twists',
-    title: 'Afro sculpté',
-    visualLabel: 'AFRO',
-    placeholderClass: STYLE_VISUAL_GRADIENTS.afro,
-  },
-  {
-    id: 'barbe_sculpted_contour',
-    title: 'Barbe sculptée',
-    img: '/models/afro_beard_sculpted.png',
-    visualLabel: 'BARBE',
-  },
+ *  le visuel est un aperçu du modèle 3D procédural (HeadModel3D). */
+const STYLE_CARDS: { id: string; title: string }[] = [
+  { id: 'fade_taper_low', title: 'Fade classique' },
+  { id: 'fade_burst_mohawk', title: 'Fade mid + line-up' },
+  { id: 'locks_short_high_top', title: 'Locks courtes' },
+  { id: 'tresses_cornrows_lines', title: 'Tresses collées' },
+  { id: 'afro_sponge_twists', title: 'Afro sculpté' },
+  { id: 'barbe_sculpted_contour', title: 'Barbe sculptée' },
 ];
 
 /** FAQ (§8) */
@@ -228,16 +187,6 @@ export default function StudioPage() {
     showToast(`Style "${item.title}" appliqué sur le modèle 3D.`);
   };
 
-  const handleTriggerUpsell = (item: HairstyleItem) => {
-    if (item.isPremium) {
-      showToast(`🔥 Prestation Premium activée: ${item.priceTag || '+2 000 FCFA'}`);
-    }
-  };
-
-  const handleAddUpsell = (price: number, serviceName: string) => {
-    showToast(`✅ ${serviceName} (+${price} FCFA) ajouté avec succès !`);
-  };
-
   const handleSelectPlan = (planName: string, priceFcfa: number) => {
     setCurrentPlan(planName);
     if (planName === 'PRO') setQuotaLimit(30);
@@ -258,10 +207,9 @@ export default function StudioPage() {
   };
 
   /** Bouton « Personnaliser » de la grille #styles : applique le style
-   *  (upsell si premium) puis ramène au studio. */
+   *  puis ramène au studio. */
   const personalizeStyle = (item: HairstyleItem) => {
     handleSelectStyle(item);
-    if (item.isPremium) handleTriggerUpsell(item);
     scrollToStudio();
   };
 
@@ -486,13 +434,6 @@ export default function StudioPage() {
               onPhotosComplete={handlePhotosComplete}
               isProcessing={isProcessing}
             />
-
-            {hasModel && selectedStyle && (
-              <UpsellBanner
-                activeStyleTitle={selectedStyle.title}
-                onAddUpsell={handleAddUpsell}
-              />
-            )}
           </div>
 
           {/* Center/Right Column: 3D Viewport & Style Explorer */}
@@ -510,7 +451,6 @@ export default function StudioPage() {
             <HairstyleCatalog
               selectedId={selectedStyle?.id || null}
               onSelect={handleSelectStyle}
-              onTriggerUpsell={handleTriggerUpsell}
             />
           </div>
         </div>
@@ -569,25 +509,8 @@ export default function StudioPage() {
             return (
               <FadeIn key={card.id}>
                 <div className="bg-card rounded-card overflow-hidden shadow-soft flex flex-col h-full">
-                  <div className="relative aspect-[4/3] bg-terracotta-wash">
-                    {card.img ? (
-                      <Image
-                        src={card.img}
-                        alt={`Rendu 3D — ${card.title}`}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div
-                        className={`absolute inset-0 flex items-center justify-center ${card.placeholderClass}`}
-                        aria-hidden="true"
-                      >
-                        <span className="text-[11px] font-bold tracking-[0.22em] text-white/90">
-                          VISUEL 3D — {card.visualLabel}
-                        </span>
-                      </div>
-                    )}
+                  <div className="relative aspect-[4/3] bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)]">
+                    <HairstylePreview3D item={item} className="absolute inset-0" />
                     <span
                       className={`absolute top-3 right-3 text-[10px] font-bold tracking-[0.12em] px-2.5 py-1 rounded-pill ${PLAN_BADGE_CLASS[plan]}`}
                     >
@@ -600,11 +523,7 @@ export default function StudioPage() {
                     </h3>
                     <button
                       onClick={() => personalizeStyle(item)}
-                      className={`min-h-[44px] text-[13px] font-bold px-4 rounded-pill text-white transition-colors ${
-                        plan === 'PREMIUM'
-                          ? 'bg-premium hover:bg-premium/90'
-                          : 'bg-terracotta hover:bg-terracotta-dark'
-                      }`}
+                      className="min-h-[44px] text-[13px] font-bold px-4 rounded-pill text-white bg-terracotta hover:bg-terracotta-dark transition-colors"
                     >
                       Personnaliser
                     </button>

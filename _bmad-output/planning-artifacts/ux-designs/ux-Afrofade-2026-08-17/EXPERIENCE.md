@@ -23,7 +23,7 @@ Landing single-page (confirmée Jonas-dev 2026-08-17) + page de test `/rituel` a
 3. `#comment-ca-marche` — 4 `step_card` : 01 Prenez 4 photos (face, profils G/D, arrière) · 02 La reconstruction 3D s'opère · 03 Explorez les coiffures · 04 Validez ensemble devant le miroir.
 4. `#rituel-studio` — démo interactive : dropzone photos → état « Analyse IA » → galerie de styles générés sur la tête 3D (Rituel du Miroir).
 5. `#qualite` — 4 cartes labelisées (PRÉCISION · RENDU · FLUIDITÉ · CONFIDENTIALITÉ) — équivalent savoir-faire Thelma. [NOTE FOR UX] libellés proposés, à valider par Jonas-dev.
-6. `#styles` — grille de `style_card` (fade, locks, tresses, afro, barbe) avec badge plan/premium `{colors.premium_gold}` et bouton Personnaliser.
+6. `#styles` — grille de `style_card` (fade, locks, tresses, afro, barbe) dont le visuel est un aperçu du modèle 3D procédural (canvas R3F compact), avec badge plan PRO/VIP et bouton Personnaliser.
 7. `#tarifs` — 3 plans Pro / VIP / Extra (grille FCFA déjà décidée en brainstorm : 2200 / 4900 / 7500 FCFA/mois).
 8. `#faq` — `faq_accordion`.
 9. `footer` — `night_footer`, logo blanc, tagline, réseaux, moyens de paiement Mobile Money (Wave, Orange Money, MTN, Moov).
@@ -39,9 +39,9 @@ Header minimal (logo + retour) ; titre de mission unique « Tester le Rituel du 
 ## Component Patterns
 - `step_card` : comportement statique, révélée au scroll (fade-in doux).
 - Démo studio : dropzone (clic + glisser, JPG/PNG/HEIC) → progression « Analyse IA » animée → grille de rendus 3D.
-- `style_card` : tap « Personnaliser » applique la coiffure au mesh 3D courant en ≤ 2 s ; les styles premium déclenchent l'`UpsellBanner`.
+- `style_card` : tap « Personnaliser » applique la coiffure au mesh 3D courant en ≤ 2 s. (Concept premium/upsell retiré de l'interface le 2026-08-18 sur décision Jonas-dev.)
 - `drawer` : liste des coiffures essayées, CTA final « Enregistrer la carte client » (gated plan).
-- `PricingModal` : ouverture depuis CTA navbar et cartes premium.
+- `PricingModal` : ouverture depuis les boutons « Choisir » de #tarifs.
 
 ## State Patterns
 - **Upload** : `idle → drag_over → uploading → analyzing → ready` ; erreurs (format, réseau, quota épuisé) en message inline sous la dropzone, jamais en alert().
@@ -66,7 +66,7 @@ Header minimal (logo + retour) ; titre de mission unique « Tester le Rituel du 
 3. « Analyse IA » s'affiche ; le modèle 3D de la tête apparaît en `analyzing → ready`.
 4. Elle fait défiler la grille `#styles` et applique « fade mid + line-up » — le client tourne son propre visage 3D du doigt.
 5. **Climax** : le client voit le résultat sous tous les angles avant même que Awa sorte ses tondeuses, et dit « on y va ».
-6. Awa enregistre la carte client ; le badge premium « barbe sculptée » retient l'attention → upsell en 1 tap.
+6. Awa enregistre la carte client ; la barbe sculptée proposée en un tap complète le panier.
 7. Fin de mois : quota à 80 %, notification douce propose le passage VIP (4 900 FCFA).
 
 ## Inspiration & Anti-patterns

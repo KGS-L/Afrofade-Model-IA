@@ -24,9 +24,6 @@ colors:
   night_footer:
     value: "#1F1B17"
     usage: "Footer sombre, logo/typo blanc en contraste."
-  premium_gold:
-    value: "#C99B3F"
-    usage: "Badges premium upsell et distinctions VIP/Extra. Introduction Afrofade (absente de Thelma), strictement réservée à l'upsell."
 typography:
   display:
     family: "Special Gothic Expanded One (Google Fonts, licence OFL — usage commercial libre, pas de Reserved Font Name)"
@@ -51,7 +48,7 @@ components:
   navbar: "Sticky, fond translucide clair, logo gauche, ancres (Le Rituel, Styles, Tarifs, FAQ), recherche et CTA pill terracotta droite."
   cta_primary: "Pill plein terracotta, texte blanc, hover terracotta_dark."
   step_card: "Carte claire, numéro 01-04 en display énorme terracotta pâle, titre display, description body."
-  style_card: "Carte blanche, visuel 3D rendu, titre, prix 'à partir de' → pour Afrofade: badge plan (Pro/VIP/Extra) ou premium upsell, bouton Personnaliser pill."
+  style_card: "Carte blanche, visuel 3D rendu, titre, prix 'à partir de' → pour Afrofade: badge plan (Pro/VIP), bouton Personnaliser pill. Le visuel est un aperçu du modèle 3D (R3F), pas une photo."
   faq_accordion: "Fond blanc, +/− rotatif, un seul panneau ouvert à la fois."
   drawer: "Panneau latéral droit (devis/panier coiffures sélectionnées), overlay dim."
 ---
@@ -62,7 +59,7 @@ components:
 Chaleureux, artisanal et technologique à la fois : l'esthétique "studio portrait premium" de thelma.pet transposée dans l'univers du barbershop afro. Sobre, aéré, fond clair crème, un seul accent terracotta fort, accents manuscrits pour l'émotion. Le sérieux d'un outil pro (salon) enveloppé dans la douceur d'une expérience client premium.
 
 ## Colors
-- Palette réduite : un accent (`terracotta`), des neutres chauds (`cream_bg`, `ink`, `ink_soft`, `white_card`), un footer `night_footer`, un métal `premium_gold` réservé à l'upsell.
+- Palette réduite : un accent (`terracotta`), des neutres chauds (`cream_bg`, `ink`, `ink_soft`, `white_card`), un footer `night_footer`. Le token or premium a été retiré (décision 2026-08-18 : suppression du concept premium).
 - Le terracotta n'apparaît que sur les actions et les repères d'étape — jamais en aplat de fond.
 - Contraste minimum 4.5:1 pour tout texte ; `ink_soft` interdit sous 16px sur `cream_bg`.
 

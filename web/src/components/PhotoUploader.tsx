@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Camera, Upload, CheckCircle2, RefreshCw, Image as ImageIcon } from 'lucide-react';
 
 interface PhotoUploaderProps {
@@ -11,91 +12,15 @@ interface PhotoUploaderProps {
 type AngleKey = 'face' | 'profil_gauche' | 'profil_droit' | 'arriere';
 
 /**
- * Silhouettes d'orientation — même « client » vu sous les 4 angles.
- * Chaque vue respecte strictement son côté : le profil gauche regarde
- * vers la gauche du spectateur, le droit vers la droite, l'arrière ne
- * montre aucun trait de visage.
+ * Photos de démonstration (licence Pexels — voir models/CREDITS.md).
+ * La vue de profil droit sert de base ; le profil gauche est généré par
+ * miroir, conformément au flux « une photo, les autres angles dérivés ».
  */
-const AngleSilhouette: React.FC<{ angle: AngleKey; className?: string }> = ({
-  angle,
-  className,
-}) => {
-  const skin = '#A97C50';
-  const hair = '#1F1B17';
-  const line = '#3d2314';
-  return (
-    <svg
-      viewBox="0 0 64 72"
-      className={className}
-      role="img"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {/* cou */}
-      <rect x="27" y="52" width="10" height="12" rx="4" fill={skin} />
-      {/* oreilles */}
-      {(angle === 'face' || angle === 'arriere') && (
-        <>
-          <circle cx="17" cy="32" r="3.4" fill={skin} stroke={line} strokeWidth="1" />
-          <circle cx="47" cy="32" r="3.4" fill={skin} stroke={line} strokeWidth="1" />
-        </>
-      )}
-      {angle === 'profil_gauche' && (
-        <circle cx="45" cy="32" r="3.4" fill={skin} stroke={line} strokeWidth="1" />
-      )}
-      {angle === 'profil_droit' && (
-        <circle cx="19" cy="32" r="3.4" fill={skin} stroke={line} strokeWidth="1" />
-      )}
-      {/* tête — le nez dessine la direction du regard */}
-      {angle === 'face' && (
-        <>
-          <ellipse cx="32" cy="30" rx="15" ry="18" fill={skin} stroke={line} strokeWidth="1.2" />
-          <path d="M17 22 Q22 6 32 6 Q42 6 47 22 Q40 16 32 16 Q24 16 17 22 Z" fill={hair} />
-          <circle cx="26" cy="29" r="1.7" fill={line} />
-          <circle cx="38" cy="29" r="1.7" fill={line} />
-          <path d="M30 34 L34 34 L32 38 Z" fill={line} opacity="0.65" />
-          <path d="M28 43 Q32 45 36 43" stroke={line} strokeWidth="1.3" fill="none" strokeLinecap="round" />
-        </>
-      )}
-      {angle === 'profil_gauche' && (
-        <>
-          <path
-            d="M20 14 Q24 8 33 8 Q46 8 46 26 L46 40 Q46 52 33 52 Q22 52 19 42 L15 34 Q14 31 17 30 L20 29 Z"
-            fill={skin}
-            stroke={line}
-            strokeWidth="1.2"
-          />
-          <path d="M20 14 Q24 8 33 8 Q46 8 46 26 Q40 14 30 16 Q24 17 20 22 Z" fill={hair} />
-          <circle cx="31" cy="27" r="1.7" fill={line} />
-          <path d="M27 39 Q30 41 33 40" stroke={line} strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        </>
-      )}
-      {angle === 'profil_droit' && (
-        <>
-          <path
-            d="M44 14 Q40 8 31 8 Q18 8 18 26 L18 40 Q18 52 31 52 Q42 52 45 42 L49 34 Q50 31 47 30 L44 29 Z"
-            fill={skin}
-            stroke={line}
-            strokeWidth="1.2"
-          />
-          <path d="M44 14 Q40 8 31 8 Q18 8 18 26 Q24 14 34 16 Q40 17 44 22 Z" fill={hair} />
-          <circle cx="33" cy="27" r="1.7" fill={line} />
-          <path d="M37 39 Q34 41 31 40" stroke={line} strokeWidth="1.2" fill="none" strokeLinecap="round" />
-        </>
-      )}
-      {angle === 'arriere' && (
-        <>
-          <ellipse cx="32" cy="30" rx="15" ry="18" fill={skin} stroke={line} strokeWidth="1.2" />
-          {/* vue arrière : masse capillaire pleine, nuque dégagée */}
-          <path
-            d="M17 30 Q17 8 32 8 Q47 8 47 30 Q47 40 40 44 L38 50 L26 50 L24 44 Q17 40 17 30 Z"
-            fill={hair}
-          />
-          <path d="M29 46 Q32 49 35 46" stroke={line} strokeWidth="1" fill="none" strokeLinecap="round" />
-        </>
-      )}
-    </svg>
-  );
+const SAMPLE_PHOTOS: Record<AngleKey, { src: string; mirror?: boolean }> = {
+  face: { src: '/models/client-face.jpg' },
+  profil_gauche: { src: '/models/client-profil.jpg', mirror: true },
+  profil_droit: { src: '/models/client-profil.jpg' },
+  arriere: { src: '/models/client-arriere.jpg' },
 };
 
 export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
@@ -124,12 +49,12 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
 
   const handleGenerate = () => {
     if (isReady) {
-      // 4 URL envoyées au mock de reconstruction (une par angle)
+      // 4 vues envoyées au mock de reconstruction (une par angle)
       onPhotosComplete([
-        '/models/face.jpg',
-        '/models/profil-gauche.jpg',
-        '/models/profil-droit.jpg',
-        '/models/arriere.jpg',
+        SAMPLE_PHOTOS.face.src,
+        SAMPLE_PHOTOS.profil_gauche.src,
+        SAMPLE_PHOTOS.profil_droit.src,
+        SAMPLE_PHOTOS.arriere.src,
       ]);
     }
   };
@@ -154,10 +79,11 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
         crâne et la ligne d’implantation. JPG · PNG · HEIC.
       </p>
 
-      {/* 4 slots d’angles — chaque vue respecte son orientation */}
+      {/* 4 slots d’angles — vraies photos, profil gauche généré par miroir */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {slots.map((slot) => {
           const hasPhoto = photos[slot.key];
+          const sample = SAMPLE_PHOTOS[slot.key];
           return (
             <button
               type="button"
@@ -176,9 +102,14 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({
             >
               {hasPhoto ? (
                 <>
-                  <AngleSilhouette
-                    angle={slot.key}
-                    className="w-20 h-[88px] group-hover:scale-105 transition-transform duration-300"
+                  <Image
+                    src={sample.src}
+                    alt={`Photo client — ${slot.label}`}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 140px"
+                    className={`object-cover group-hover:scale-105 transition-transform duration-300 ${
+                      sample.mirror ? 'scale-x-[-1]' : ''
+                    }`}
                   />
                   <div className="absolute top-2 right-2 bg-terracotta text-white rounded-full p-1 shadow-soft">
                     <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
