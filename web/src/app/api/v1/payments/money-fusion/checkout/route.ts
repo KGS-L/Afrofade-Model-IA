@@ -38,15 +38,19 @@ function getCreditProduct(packId: unknown) {
     termId: null,
     label: `Afrofade ${pack.name} — ${pack.credits} crédits`,
     amountFcfa: pack.amountFcfa,
-    metadata: {
-      packId: pack.id,
-      credits: String(pack.credits),
-    },
+    metadata: { packId: pack.id, credits: String(pack.credits) },
   };
 }
 
 export async function POST(req: NextRequest) {
-  const supabaseAdmin = getServiceSupabase();
+  let supabaseAdmin: ReturnType<typeof getServiceSupabase>;
+  try {
+    supabaseAdmin = getServiceSupabase();
+  } catch (error) {
+    console.error('[Checkout] Supabase server credentials missing:', error);
+    return NextResponse.json({ error: 'Paiement temporairement indisponible.' }, { status: 503 });
+  }
+
   let paymentId: string | null = null;
 
   try {
@@ -55,14 +59,17 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const purpose = body?.purpose === 'credits' ? 'credits' : 'subscription';
+
+    if (purpose === 'subscription' && (!principal.salonId || principal.role === 'customer')) {
+      return NextResponse.json({ error: 'Un profil salon vérifié est requis pour souscrire.' }, { status: 403 });
+    }
+
     const product =
       purpose === 'credits'
         ? getCreditProduct(body?.packId)
         : getSubscriptionProduct(body?.planName as PlanName, body?.termId as TermId);
 
-    if (!product) {
-      return NextResponse.json({ error: 'Produit ou durée invalide.' }, { status: 400 });
-    }
+    if (!product) return NextResponse.json({ error: 'Produit ou durée invalide.' }, { status: 400 });
 
     const { data: payment, error: insertError } = await supabaseAdmin
       .from('payment_transactions')
@@ -106,7 +113,6 @@ export async function POST(req: NextRequest) {
       .eq('status', 'pending');
 
     if (updateError) throw new Error(updateError.message);
-
     return NextResponse.json({ url: session.url, paymentId: payment.id });
   } catch (error) {
     console.error('[Money Fusion Checkout Route Error]:', error);
