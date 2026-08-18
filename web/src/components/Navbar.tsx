@@ -62,7 +62,6 @@ export const Navbar: React.FC = () => {
             href="/rituel"
             className="min-h-[44px] inline-flex items-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
           >
-            <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Tester le rituel 1mn</span>
             <span className="sm:hidden">Tester 1mn</span>
           </Link>
