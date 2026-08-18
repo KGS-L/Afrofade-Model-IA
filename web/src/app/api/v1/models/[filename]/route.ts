@@ -19,7 +19,7 @@ export async function GET(
 
     const meshUrl = `/api/v1/models/${filename}`;
     const supabaseAdmin = getServiceSupabase();
-    let authorized = principal.role === 'admin';
+    let authorized = false;
 
     if (principal.role === 'customer') {
       const { data, error } = await supabaseAdmin
