@@ -21,9 +21,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Normalize lockfile for patched dependency graph
+      - name: Generate fresh lockfile for patched dependency graph
         run: |
           cd web
+          rm -f package-lock.json
           npm install --package-lock-only --ignore-scripts
           npm ci
 
