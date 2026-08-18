@@ -10,8 +10,9 @@ const config: Config = {
     extend: {
       colors: {
         terracotta: {
-          DEFAULT: '#C7816F', // CTA, liens actifs, badges d'étape, accents
-          dark: '#A9662F', // hover/pressed des CTA terracotta
+          DEFAULT: '#B8533D', // CTA, liens actifs, badges (ratio 4.6:1 conforme WCAG 2.1 AA)
+          dark: '#983E2A', // hover/pressed des CTA terracotta
+          accessible: '#AB4E39', // accents texte sur fond crème (ratio 5.1:1)
           pale: '#E5C3B5', // numéros d'étape géants
           wash: '#F6E7DF', // pastilles d'icône, fonds d'accent doux
         },

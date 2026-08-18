@@ -278,7 +278,7 @@ export const RituelDemoVideo: React.FC = () => {
         {isBald && (
           <div className="absolute inset-0">
             <Image
-              src="/models/result-3d-bald.png"
+              src="/models/hairstyles/fade_taper_low/model-1-face.png"
               alt="Reconstruction 3D — maillage brut FLAME"
               fill
               sizes="(max-width: 768px) 100vw, 700px"
@@ -291,7 +291,7 @@ export const RituelDemoVideo: React.FC = () => {
         {isStyling && (
           <div className="absolute inset-0">
             <Image
-              src="/models/result-final-face.png"
+              src="/models/hairstyles/fade_taper_low/model-1-face.png"
               alt="Coiffure 3D appliquée, barbe rasée et moustache taillée"
               fill
               sizes="(max-width: 768px) 100vw, 700px"

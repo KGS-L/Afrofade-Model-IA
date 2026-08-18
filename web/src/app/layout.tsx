@@ -1,6 +1,7 @@
 import './globals.css';
 import React from 'react';
 import localFont from 'next/font/local';
+import { Viewport, Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth';
 
 /**
@@ -32,14 +33,66 @@ const handFont = localFont({
   display: 'swap',
 });
 
-export const metadata = {
-  title: 'Afrofade — Le Rituel du Miroir : voyez la coupe avant de couper',
+export const viewport: Viewport = {
+  themeColor: '#FAF6F1',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.com'),
+  title: {
+    default: 'Afrofade — Le Rituel du Miroir : voyez la coupe 3D avant de couper',
+    template: '%s — Afrofade',
+  },
   description:
     'Afrofade reconstruit la tête de votre client en 3D à partir d’un scan vidéo guidé — capture automatique des angles — puis lui essaye fades, locks, tresses et barbes avant le premier coup de tondeuse. Pensé pour les salons et les textures crépues.',
+  keywords: [
+    'Afrofade',
+    'Coiffure Afro 3D',
+    'Mirror 3D Barber',
+    'Fade',
+    'Taper',
+    'Locks',
+    'Cornrows',
+    'Barber SaaS',
+    'Reconstruction Faciale 3D',
+    'Mobile Money Salon',
+  ],
+  authors: [{ name: 'Afrofade Team' }],
   icons: {
     icon: '/icon.png',
     shortcut: '/logo.png',
     apple: '/icon.png',
+  },
+  openGraph: {
+    title: 'Afrofade — Le Rituel du Miroir 3D pour Barbiers & Salons',
+    description:
+      'Reconstruction 3D faciale en < 2s et essayage dynamique de coupes afro (Fades, Locks, Tresses, Barbes) avant la tondeuse.',
+    url: 'https://afrofade.com',
+    siteName: 'Afrofade 3D Studio',
+    locale: 'fr_FR',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Afrofade 3D Haircut Mirror Preview',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Afrofade 3D — Le Miroir du Futur pour la Coiffure Afro',
+    description:
+      'Reconstruction 3D en < 2s et essayage instantané de coiffures afro. Découvrez le Rituel du Miroir.',
+    images: ['/og-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

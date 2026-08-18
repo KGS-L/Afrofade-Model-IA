@@ -55,6 +55,7 @@ def health_check():
     }
 
 @app.post("/v1/reconstruct", response_model=ReconstructionResponse)
+@app.post("/api/v1/reconstruct", response_model=ReconstructionResponse)
 def reconstruct_3d_head(request: ReconstructionRequest):
     if len(request.photos_urls) < 3:
         raise HTTPException(

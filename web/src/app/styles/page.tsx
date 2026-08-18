@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowLeft, Sparkles, SlidersHorizontal, Scissors } from 'lucide-react';
 import { HairstyleCatalog, HairstyleItem } from '@/components/HairstyleCatalog';
+import { Footer } from '@/components/Footer';
 
 export default function HairstyleCatalogPage() {
   const router = RouterHook();
@@ -94,16 +95,7 @@ export default function HairstyleCatalogPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-ink/10 py-8 px-6 text-center text-xs text-ink-soft">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© {new Date().getFullYear()} Afrofade Studio 3D — Tous droits réservés.</p>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="hover:text-ink transition-colors">Accueil</Link>
-            <Link href="/rituel" className="hover:text-ink transition-colors">Rituel 3D</Link>
-            <Link href="/connexion" className="hover:text-ink transition-colors">Espace Coiffeur</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

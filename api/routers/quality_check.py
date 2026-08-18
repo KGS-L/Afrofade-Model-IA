@@ -16,6 +16,7 @@ class QualityCheckResponse(BaseModel):
     next_instruction: str
 
 @router.post("/quality-check", response_model=QualityCheckResponse)
+@router.post("/api/v1/quality-check", response_model=QualityCheckResponse)
 async def check_frame_quality(
     target: str = Form("face"),
     file: UploadFile = File(...)

@@ -2,13 +2,13 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Scissors, Sparkles, Menu, X } from "lucide-react";
+import { Scissors, Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
-  { href: "#rituel-studio", label: "Le Rituel" },
-  { href: "#styles", label: "Styles" },
-  { href: "#tarifs", label: "Tarifs" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#rituel-studio", label: "Le Rituel" },
+  { href: "/styles", label: "Styles" },
+  { href: "/#tarifs", label: "Tarifs" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 export const Navbar: React.FC = () => {
@@ -18,10 +18,10 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur-md border-b border-ink/10">
       <div className="max-w-container mx-auto px-6 py-3 flex items-center gap-6">
         {/* Brand Logo */}
-        <a
-          href="#"
+        <Link
+          href="/"
           className="flex items-center gap-2.5 shrink-0"
-          aria-label="Afrofade — retour en haut de page"
+          aria-label="Afrofade — retour à l'accueil"
           onClick={() => setMenuOpen(false)}
         >
           <div className="w-10 h-10 rounded-card bg-terracotta flex items-center justify-center">
@@ -30,21 +30,21 @@ export const Navbar: React.FC = () => {
           <span className="font-display text-xl tracking-tight text-ink">
             Afro<span className="text-terracotta">fade</span>
           </span>
-        </a>
+        </Link>
 
-        {/* Ancres desktop (IA §1) */}
+        {/* Ancres desktop */}
         <nav
           aria-label="Navigation principale"
           className="hidden lg:flex items-center gap-1 ml-4"
         >
           {NAV_LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               className="min-h-[44px] flex items-center px-3 rounded-pill text-sm font-medium text-ink-soft hover:text-terracotta transition-colors"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -83,7 +83,7 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Panneau mobile : 4 ancres + CTA, cibles ≥ 44px */}
+      {/* Panneau mobile */}
       {menuOpen && (
         <nav
           id="navbar-mobile-menu"
@@ -91,14 +91,14 @@ export const Navbar: React.FC = () => {
           className="lg:hidden bg-card border-t border-ink/10 px-6 py-4 space-y-1 animate-fade-in"
         >
           {NAV_LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               onClick={() => setMenuOpen(false)}
               className="min-h-[48px] flex items-center px-3 rounded-pill text-sm font-medium text-ink hover:bg-terracotta-wash transition-colors"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
           <Link
             href="/connexion"
