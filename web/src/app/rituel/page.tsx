@@ -153,11 +153,23 @@ export default function RituelPage() {
   const selectedStyle =
     HAIRSTYLES_DATA.find((h) => h.id === styleId) || HAIRSTYLES_DATA[0];
 
-  const goStep2 = () => {
+  const goStep2 = async () => {
     if (!allPhotos) return;
     setStep(2);
     setProcessing(true);
-    window.setTimeout(() => setProcessing(false), 2200);
+    try {
+      const { trigger3DReconstruction } = await import('@/lib/inference');
+      await trigger3DReconstruction([
+        SAMPLE_PHOTOS.face.src,
+        SAMPLE_PHOTOS.profil_gauche.src,
+        SAMPLE_PHOTOS.profil_droit.src,
+        SAMPLE_PHOTOS.arriere.src,
+      ]);
+    } catch {
+      /* ignore fallback handled inside trigger3DReconstruction */
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const goStep4 = () => {
