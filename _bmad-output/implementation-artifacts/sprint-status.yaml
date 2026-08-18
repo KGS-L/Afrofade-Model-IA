@@ -35,10 +35,10 @@ project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
-  epic-1: backlog
-  1-1-schéma-de-base-de-données-postgresql-middleware-de-sécurité: backlog
-  1-2-authentification-salon-google-oauth-e-mail-code-otp: backlog
-  epic-1-retrospective: optional
+  epic-1: done
+  1-1-schéma-de-base-de-données-postgresql-middleware-de-sécurité: done
+  1-2-authentification-salon-google-oauth-e-mail-code-otp: done
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-ingestion-des-photos-via-supabase-presigned-urls: backlog
