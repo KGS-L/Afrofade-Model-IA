@@ -38,14 +38,19 @@ interface AngleDef {
   deg: string;
   sample: string;
   mirror?: boolean;
+  /** Cadrage du visuel d'exemple en mode démo — même personnage partout */
+  demoPos?: string;
+  demoClass?: string;
 }
 
-/** Ordre du pipeline (AI-ML-3D-RECONSTRUCTION-PIPELINE.md §8) */
+/** Ordre du pipeline (AI-ML-3D-RECONSTRUCTION-PIPELINE.md §8).
+ *  Un seul personnage : profil gauche = miroir du profil droit, nuque =
+ *  recadrage zoom sur l'arrière de l'Afro de la photo de profil. */
 const ANGLES: AngleDef[] = [
-  { key: 'face', label: 'Face', cue: 'Regardez la caméra', deg: '0°', sample: '/models/client-face.jpg' },
-  { key: 'profil_droit', label: 'Profil droit', cue: 'Tournez doucement la tête vers la droite', deg: '+90°', sample: '/models/client-profil.jpg' },
-  { key: 'profil_gauche', label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', sample: '/models/client-profil.jpg', mirror: true },
-  { key: 'nuque', label: 'Nuque', cue: 'Présentez la nuque à la caméra', deg: '180°', sample: '/models/client-arriere.jpg' },
+  { key: 'face', label: 'Face', cue: 'Regardez la caméra', deg: '0°', sample: '/models/client-face.jpg', demoPos: '50% 22%' },
+  { key: 'profil_droit', label: 'Profil droit', cue: 'Tournez doucement la tête vers la droite', deg: '+90°', sample: '/models/client-profil.jpg', demoPos: '42% 26%' },
+  { key: 'profil_gauche', label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', sample: '/models/client-profil.jpg', demoPos: '42% 26%', mirror: true },
+  { key: 'nuque', label: 'Nuque', cue: 'Présentez la nuque à la caméra', deg: '180°', sample: '/models/client-profil.jpg', demoPos: '42% 26%', demoClass: 'scale-[2.15] origin-[67%_18%]' },
 ];
 
 /* Paramètres du moteur de stabilité */
@@ -343,11 +348,16 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
             return (
               <div key={a.key} className="relative aspect-square rounded-frame overflow-hidden border border-ink/10 bg-cream">
                 {f && (
-                  // eslint-disable-next-line @next/next/no-img-element -- dataURL de capture caméra
+                  // Miroir/zoom uniquement en démo : les captures caméra sont
+                  // déjà orientées lors de la prise
+                  // eslint-disable-next-line @next/next/no-img-element -- dataURL ou exemple
                   <img
                     src={f.src}
                     alt={`Capture validée — ${a.label}`}
-                    className={`w-full h-full object-cover ${a.mirror ? 'scale-x-[-1]' : ''}`}
+                    className={`w-full h-full object-cover ${
+                      f.demo ? `${a.mirror ? 'scale-x-[-1]' : ''} ${a.demoClass ?? ''}` : ''
+                    }`}
+                    style={f.demo ? { objectPosition: a.demoPos ?? '50% 50%' } : undefined}
                   />
                 )}
                 <span className="absolute bottom-1 left-1 right-1 bg-ink/85 rounded px-1 py-0.5 text-[9px] font-bold text-white text-center truncate">
@@ -390,14 +400,20 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
           />
         ) : (
           <div className="absolute inset-0 bg-night overflow-hidden">
-            {/* Flux caméra simulé : photo d'exemple de l'angle courant */}
-            <div className={`absolute inset-0 ${angle.mirror ? 'scale-x-[-1]' : ''}`}>
+            {/* Flux caméra simulé : photo d'exemple de l'angle courant
+                (même personnage que la démo landing) */}
+            <div
+              className={`absolute inset-0 ${angle.mirror ? 'scale-x-[-1]' : ''} ${
+                angle.demoClass ?? ''
+              }`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element -- visuel d'exemple local */}
               <img
                 src={angle.sample}
                 alt=""
                 aria-hidden="true"
                 className="w-full h-full object-cover motion-safe:animate-demo-kenburns"
+                style={{ objectPosition: angle.demoPos ?? '50% 50%' }}
               />
             </div>
             {/* Voile léger : lisibilité des surimpressions */}
@@ -518,11 +534,14 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
               }`}
             >
               {f ? (
-                // eslint-disable-next-line @next/next/no-img-element -- dataURL de capture caméra
+                // eslint-disable-next-line @next/next/no-img-element -- dataURL ou exemple
                 <img
                   src={f.src}
                   alt={`Capture validée — ${a.label}`}
-                  className={`w-full h-full object-cover ${a.mirror ? 'scale-x-[-1]' : ''}`}
+                  className={`w-full h-full object-cover ${
+                    f.demo ? `${a.mirror ? 'scale-x-[-1]' : ''} ${a.demoClass ?? ''}` : ''
+                  }`}
+                  style={f.demo ? { objectPosition: a.demoPos ?? '50% 50%' } : undefined}
                 />
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-ink-soft">

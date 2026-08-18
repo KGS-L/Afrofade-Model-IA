@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { CheckCircle2, RefreshCw, ScanFace, Wand2 } from 'lucide-react';
 
@@ -9,11 +9,17 @@ import { CheckCircle2, RefreshCw, ScanFace, Wand2 } from 'lucide-react';
  * (EXPERIENCE.md › demo_video_autoplay). Séquence muette en boucle qui
  * montre le Rituel complet sans aucune interaction.
  *
- * Décision Jonas-dev 2026-08-18 : pas d'avatar procédural dans la démo
- * (jugé peu réaliste) — le viseur du scan montre les photos du
- * personnage client (flux caméra simulé, léger travelling), et
- * l'essayage s'appuie sur les rendus 3D démo du hero. Poster statique
- * sous prefers-reduced-motion.
+ * Flux cohérent (Jonas-dev 2026-08-18) :
+ * 1. SCAN guidé (Face → Profil droit → Profil gauche → Nuque)
+ *    - Même personnage sur les 4 angles
+ *    - Ovale de guidage positionné pour cadrer la tête à chaque angle
+ *    - Profil gauche = flip horizontal du profil droit
+ * 2. Reconstruction 3D (overlay d'analyse IA)
+ * 3. Essayage de coiffures (défilement des styles)
+ * 4. RÉSULTAT validé (la coupe choisie est confirmée)
+ * 5. Rebouclage automatique → retour au scan
+ *
+ * Poster statique sous prefers-reduced-motion.
  */
 
 const SCAN_STEPS: {
@@ -21,12 +27,50 @@ const SCAN_STEPS: {
   cue: string;
   deg: string;
   sample: string;
-  mirror?: boolean;
+  objectPosition: string;
+  /** Position du centre de l'ovale — [cx, cy] en % du viewBox 100×100 */
+  ovalCenter: [number, number];
+  /** Rayons de l'ovale — [rx, ry] en unités du viewBox */
+  ovalRadii: [number, number];
+  wrapClass?: string;
 }[] = [
-  { label: 'Face', cue: 'Regardez la caméra', deg: '0°', sample: '/models/client-face.jpg' },
-  { label: 'Profil droit', cue: 'Tournez la tête vers la droite', deg: '+90°', sample: '/models/client-profil.jpg' },
-  { label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', sample: '/models/client-profil.jpg', mirror: true },
-  { label: 'Nuque', cue: 'Présentez la nuque', deg: '180°', sample: '/models/client-arriere.jpg' },
+  {
+    label: 'Face',
+    cue: 'Regardez la caméra',
+    deg: '0°',
+    sample: '/models/client-face.jpg',
+    objectPosition: '50% 20%',
+    ovalCenter: [50, 38],
+    ovalRadii: [22, 30],
+  },
+  {
+    label: 'Profil droit',
+    cue: 'Tournez la tête vers la droite',
+    deg: '+90°',
+    sample: '/models/client-profil-droit.png',
+    objectPosition: '50% 22%',
+    ovalCenter: [50, 36],
+    ovalRadii: [24, 30],
+  },
+  {
+    label: 'Profil gauche',
+    cue: 'Tournez la tête vers la gauche',
+    deg: '−90°',
+    sample: '/models/client-profil-droit.png',
+    objectPosition: '50% 22%',
+    ovalCenter: [50, 36],
+    ovalRadii: [24, 30],
+    wrapClass: 'scale-x-[-1]',
+  },
+  {
+    label: 'Nuque',
+    cue: 'Présentez la nuque',
+    deg: '180°',
+    sample: '/models/client-nuque.png',
+    objectPosition: '50% 25%',
+    ovalCenter: [50, 36],
+    ovalRadii: [24, 30],
+  },
 ];
 
 const DEMO_RENDERS = [
@@ -39,11 +83,13 @@ const DEMO_RENDERS = [
 const SCAN_MS = 2600;
 const RECONSTRUCT_MS = 2200;
 const STYLE_MS = 2400;
+const RESULT_MS = 3200;
 
 type Phase =
   | { kind: 'scan'; i: number }
   | { kind: 'reconstruct' }
-  | { kind: 'styles'; i: number };
+  | { kind: 'styles'; i: number }
+  | { kind: 'result' };
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -61,9 +107,31 @@ export const RituelDemoVideo: React.FC = () => {
   const reduced = usePrefersReducedMotion();
   const [phase, setPhase] = useState<Phase>({ kind: 'scan', i: 0 });
   const [flashKey, setFlashKey] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  /* La séquence n'est active que lorsque la section est visible —
+     et repart TOUJOURS du scan à l'entrée dans le viewport. */
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || !('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => setVisible(entries[0].isIntersecting),
+      { threshold: 0.3 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
-    if (reduced) return;
+    if (!visible) setPhase({ kind: 'scan', i: 0 });
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || reduced) return;
     let sub: number | undefined;
     const t = window.setTimeout(() => {
       if (phase.kind === 'scan') {
@@ -74,37 +142,50 @@ export const RituelDemoVideo: React.FC = () => {
         }, 380);
       } else if (phase.kind === 'reconstruct') {
         setPhase({ kind: 'styles', i: 0 });
-      } else if (phase.i < DEMO_RENDERS.length - 1) {
-        setPhase({ kind: 'styles', i: phase.i + 1 });
+      } else if (phase.kind === 'styles') {
+        if (phase.i < DEMO_RENDERS.length - 1) setPhase({ kind: 'styles', i: phase.i + 1 });
+        else setPhase({ kind: 'result' });
       } else {
+        // Résultat montré → on reprend le même processus depuis le scan
         setPhase({ kind: 'scan', i: 0 });
       }
     },
-    phase.kind === 'scan' ? SCAN_MS : phase.kind === 'reconstruct' ? RECONSTRUCT_MS : STYLE_MS
+    phase.kind === 'scan'
+      ? SCAN_MS
+      : phase.kind === 'reconstruct'
+        ? RECONSTRUCT_MS
+        : phase.kind === 'styles'
+          ? STYLE_MS
+          : RESULT_MS
     );
     return () => {
       window.clearTimeout(t);
       if (sub) window.clearTimeout(sub);
     };
-  }, [phase, reduced]);
+  }, [phase, visible, reduced]);
 
   const isScan = phase.kind === 'scan';
   const isReconstruct = phase.kind === 'reconstruct';
+  const isResult = phase.kind === 'result';
   const scanIndex = phase.kind === 'scan' ? phase.i : 0;
   const scanStep = isScan ? SCAN_STEPS[scanIndex] : null;
   const style = phase.kind === 'styles' ? DEMO_RENDERS[phase.i] : null;
   const captured = isScan ? phase.i : 4;
   // Pendant la reconstruction, la dernière capture (nuque) reste affichée
-  // sous l'overlay d'analyse.
+  // sous l'overlay d'analyse ; au résultat, le rendu final prend le relais.
   const photoStep = isScan ? scanStep : isReconstruct ? SCAN_STEPS[SCAN_STEPS.length - 1] : null;
+  const renderStep = isResult ? DEMO_RENDERS[0] : style;
 
   return (
     <div className="space-y-4" aria-label="Démo automatique du Rituel du Miroir">
       {/* Scène — cadre façon caméra du scanner */}
-      <div className="relative rounded-frame overflow-hidden border border-ink/10 shadow-soft aspect-[4/3] bg-night">
-        {/* Flux caméra simulé — les photos du personnage client */}
+      <div
+        ref={stageRef}
+        className="relative rounded-frame overflow-hidden border border-ink/10 shadow-soft aspect-[4/3] bg-night"
+      >
+        {/* Flux caméra simulé — le même personnage sur les 4 angles */}
         {photoStep && (
-          <div className={`absolute inset-0 ${photoStep.mirror ? 'scale-x-[-1]' : ''}`}>
+          <div className={`absolute inset-0 ${photoStep.wrapClass ?? ''}`}>
             <Image
               key={`photo-${photoStep.label}`}
               src={photoStep.sample}
@@ -112,17 +193,18 @@ export const RituelDemoVideo: React.FC = () => {
               fill
               sizes="(max-width: 768px) 100vw, 700px"
               className="object-cover motion-safe:animate-demo-kenburns"
+              style={{ objectPosition: photoStep.objectPosition }}
             />
           </div>
         )}
 
-        {/* Rendus d'essayage — phase coiffures */}
-        {style && (
+        {/* Rendus d'essayage puis résultat — phase coiffures */}
+        {renderStep && (
           <div className="absolute inset-0">
             <Image
-              key={`render-${style.src}`}
-              src={style.src}
-              alt={`Rendu 3D démo — ${style.title}`}
+              key={`render-${renderStep.src}`}
+              src={renderStep.src}
+              alt={`Rendu 3D démo — ${renderStep.title}`}
               fill
               sizes="(max-width: 768px) 100vw, 700px"
               className="object-cover motion-safe:animate-demo-kenburns"
@@ -135,7 +217,7 @@ export const RituelDemoVideo: React.FC = () => {
           Démo automatique — sans manipulation
         </span>
 
-        {/* Overlays scan : ovale + consigne + progression */}
+        {/* Overlays scan : ovale adapté à chaque angle + consigne + progression */}
         {scanStep && (
           <>
             <svg
@@ -145,10 +227,10 @@ export const RituelDemoVideo: React.FC = () => {
               aria-hidden="true"
             >
               <ellipse
-                cx="50"
-                cy="46"
-                rx="25"
-                ry="34"
+                cx={scanStep.ovalCenter[0]}
+                cy={scanStep.ovalCenter[1]}
+                rx={scanStep.ovalRadii[0]}
+                ry={scanStep.ovalRadii[1]}
                 fill="none"
                 stroke="#2E7D46"
                 strokeWidth="0.9"
@@ -199,6 +281,24 @@ export const RituelDemoVideo: React.FC = () => {
           </div>
         )}
 
+        {/* Overlay résultat — fin du rituel avant rebouclage */}
+        {isResult && renderStep && (
+          <>
+            <span className="absolute top-3 right-3 bg-scan-success text-white text-[10px] font-bold px-2.5 py-1.5 rounded-pill">
+              Résultat du scan
+            </span>
+            <div className="absolute bottom-3 left-3 right-3 flex flex-col items-center gap-2">
+              <p className="bg-scan-success text-white text-xs font-bold px-4 py-2 rounded-pill inline-flex items-center gap-2 text-center shadow-soft">
+                <CheckCircle2 className="w-4 h-4" />
+                {renderStep.title} — validé devant le miroir
+              </p>
+              <p className="text-[10px] font-bold text-ink/70 bg-white/70 rounded-pill px-2.5 py-1">
+                La coupe est actée, avant la tondeuse
+              </p>
+            </div>
+          </>
+        )}
+
         {/* Flash de capture (rejoué à chaque angle) */}
         {!reduced && (
           <div
@@ -209,7 +309,7 @@ export const RituelDemoVideo: React.FC = () => {
         )}
       </div>
 
-      {/* Filmstrip des angles capturés */}
+      {/* Filmstrip des angles capturés — même personnage, même recadrage */}
       <div className="grid grid-cols-4 gap-2" aria-hidden="true">
         {SCAN_STEPS.map((s, i) => {
           const filled = i < captured;
@@ -222,20 +322,23 @@ export const RituelDemoVideo: React.FC = () => {
               }`}
             >
               {filled ? (
-                <Image
-                  src={s.sample}
-                  alt=""
-                  fill
-                  sizes="(max-width: 768px) 20vw, 110px"
-                  className={`object-cover ${s.mirror ? 'scale-x-[-1]' : ''}`}
-                />
+                <div className={`absolute inset-0 ${s.wrapClass ?? ''}`}>
+                  <Image
+                    src={s.sample}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 20vw, 110px"
+                    className="object-cover"
+                    style={{ objectPosition: s.objectPosition }}
+                  />
+                </div>
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-ink-soft">
                   {s.label}
                 </span>
               )}
               {filled && (
-                <span className="absolute top-1 right-1 bg-scan-success text-white rounded-full p-0.5">
+                <span className="absolute top-1 right-1 bg-scan-success text-white rounded-full p-0.5 z-10">
                   <CheckCircle2 className="w-3 h-3" />
                 </span>
               )}
@@ -248,7 +351,7 @@ export const RituelDemoVideo: React.FC = () => {
         <ScanFace className="w-4 h-4 text-terracotta shrink-0" />
         {reduced
           ? 'Aperçu du Rituel : scan guidé, reconstruction 3D puis essayage de coiffures.'
-          : 'Le scan, la reconstruction et l’essayage défilent en boucle — comme dans le vrai Rituel.'}
+          : 'Scan, reconstruction, essayage puis résultat validé — la séquence reboucle sur le même rituel.'}
       </p>
     </div>
   );
