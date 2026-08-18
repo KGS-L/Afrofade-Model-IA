@@ -40,10 +40,10 @@ development_status:
   1-2-authentification-salon-google-oauth-e-mail-code-otp: done
   epic-1-retrospective: done
 
-  epic-2: in-progress
+  epic-2: done
   2-1-ingestion-des-photos-via-supabase-presigned-urls: done
   2-2-endpoint-fastapi-v1-reconstruct-export-draco-glb: done
-  2-3-résilience-réseau-purge-biométrique-à-30-jours: backlog
+  2-3-résilience-réseau-purge-biométrique-à-30-jours: done
   epic-2-retrospective: optional
 
   epic-3: backlog
