@@ -9,6 +9,7 @@ import React, {
   useState,
 } from 'react';
 import { supabase } from '@/lib/supabase';
+import type { PaymentProvider } from '@/lib/payment-providers';
 import { PlanName, SalonProfileFields, TermId } from '@/lib/plans';
 
 export interface AuthUser {
@@ -35,7 +36,7 @@ interface AuthContextValue {
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (patch: Partial<SalonProfileFields>) => void;
-  subscribe: (plan: PlanName, amount: number, term: TermId) => Promise<void>;
+  subscribe: (plan: PlanName, amount: number, term: TermId, provider?: PaymentProvider) => Promise<void>;
 }
 
 const STORAGE_KEY = 'afrofade_auth_v1';
@@ -174,19 +175,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const subscribe = useCallback(async (plan: PlanName, _amount: number, term: TermId) => {
-    const response = await fetch('/api/v1/payments/money-fusion/checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ purpose: 'subscription', planName: plan, termId: term }),
-    });
+  const subscribe = useCallback(
+    async (plan: PlanName, _amount: number, term: TermId, provider: PaymentProvider = 'money_fusion') => {
+      const response = await fetch('/api/v1/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, purpose: 'subscription', planName: plan, termId: term }),
+      });
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Échec de la création du paiement.');
-    if (!data.url) throw new Error('Le prestataire de paiement n’a pas retourné de lien de paiement.');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Échec de la création du paiement.');
+      if (!data.url) throw new Error('Le prestataire de paiement n’a pas retourné de lien de paiement.');
 
-    window.location.assign(data.url);
-  }, []);
+      window.location.assign(data.url);
+    },
+    []
+  );
 
   const value = useMemo(
     () => ({
