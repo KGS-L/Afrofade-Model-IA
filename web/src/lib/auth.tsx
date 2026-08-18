@@ -180,7 +180,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/v1/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, purpose: 'subscription', planName: plan, termId: term }),
+        body: JSON.stringify({
+          provider,
+          purpose: 'subscription',
+          planName: plan,
+          termId: term,
+          customerName: user?.profile.salonName || user?.name,
+          customerPhone: user?.profile.phone,
+        }),
       });
 
       const data = await response.json();
@@ -189,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       window.location.assign(data.url);
     },
-    []
+    [user?.name, user?.profile.phone, user?.profile.salonName]
   );
 
   const value = useMemo(
