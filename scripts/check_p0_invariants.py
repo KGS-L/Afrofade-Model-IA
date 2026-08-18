@@ -19,25 +19,43 @@ def require(name: str, condition: bool, detail: str) -> bool:
 def main() -> int:
     auth = read("web/src/lib/auth.tsx")
     middleware = read("web/src/middleware.ts")
-    checkout = read("web/src/app/api/v1/payments/money-fusion/checkout/route.ts")
-    webhook = read("web/src/app/api/webhooks/payment/route.ts")
+    checkout = read("web/src/app/api/v1/payments/checkout/route.ts")
+    legacy_checkout = read("web/src/app/api/v1/payments/money-fusion/checkout/route.ts")
+    legacy_webhook = read("web/src/app/api/webhooks/payment/route.ts")
+    mf_webhook = read("web/src/app/api/webhooks/money-fusion/route.ts")
+    genius_webhook = read("web/src/app/api/webhooks/genius-pay/route.ts")
     upload = read("web/src/app/api/upload/presigned-url/route.ts")
     cron = read("web/src/app/api/cron/purge-biometric/route.ts")
     reconstruct = read("web/src/app/api/v1/reconstruct/route.ts")
     money_fusion = read("web/src/lib/money-fusion.ts")
+    genius_pay = read("web/src/lib/genius-pay.ts")
+    provider_config = read("web/src/lib/payment-providers.ts")
     api_main = read("api/main.py")
-    migration = read("web/supabase/migrations/02_p0_security_commerce.sql")
+    migration02 = read("web/supabase/migrations/02_p0_security_commerce.sql")
+    migration03 = read("web/supabase/migrations/03_dual_payment_providers.sql")
 
     checks = [
         require("No demo OTP bypass", "token === '123456'" not in auth and 'token === "123456"' not in auth, "hard-coded OTP bypass absent"),
         require("No client demo admin login", "loginAsAdmin" not in auth, "admin cannot be minted in client AuthProvider"),
         require("Middleware verifies session", "getVerifiedPrincipal" in middleware and "principal.role !== 'admin'" in middleware, "protected routes validate the Supabase-backed principal and admin role"),
-        require("Checkout requires verified user", "getVerifiedPrincipal" in checkout, "checkout is authenticated server-side"),
+        require("Unified checkout requires verified user", "getVerifiedPrincipal" in checkout, "checkout is authenticated server-side"),
         require("Checkout does not trust client amount", "body?.amountFcfa" not in checkout and "body.amountFcfa" not in checkout, "price comes from server catalog"),
-        require("Payment is persisted pending", "payment_transactions" in checkout and "status: 'pending'" in checkout, "provider session is linked to a pending DB transaction"),
-        require("Webhook fails closed", "PAYMENT_WEBHOOK_SECRET" in webhook and "finalize_afrofade_payment" in webhook, "unsigned callbacks cannot finalize commerce"),
-        require("Payment finalization is idempotent", "IF payment.status = 'paid'" in migration and "idempotency_key TEXT UNIQUE" in migration, "repeated webhook cannot credit twice"),
-        require("Commerce writes stay server-side", "GRANT EXECUTE ON FUNCTION finalize_afrofade_payment" in migration and "service_role" in migration, "clients have read-only RLS policies"),
+        require("Checkout uses server product catalogs", "PLANS.find" in checkout and "B2C_CREDIT_PACKS.find" in checkout, "subscriptions and credits are priced from trusted constants"),
+        require("Payment is persisted pending", "payment_transactions" in checkout and "status: 'pending'" in checkout and "provider," in checkout, "provider session is linked to a pending DB transaction"),
+        require("Payment providers are feature-gated", "PAYMENT_ENABLED_PROVIDERS" in provider_config and "isPaymentProviderEnabled" in checkout, "providers can be rolled out without exposing unconfigured credentials"),
+        require("Legacy Money Fusion checkout is safe", "export { POST }" in legacy_checkout and "../../checkout/route" in legacy_checkout, "old route delegates to unified server-side checkout"),
+        require("Money Fusion request matches supplied Web API", all(token in checkout + money_fusion for token in ["personal_Info", "numeroSend", "nomclient", "webhook_url"]), "required Money Fusion contract fields are present"),
+        require("Money Fusion does not invent bearer auth", "Authorization" not in money_fusion and "MONEY_FUSION_API_URL" in money_fusion, "merchant dashboard API URL is used without undocumented auth headers"),
+        require("Money Fusion payment is re-fetched", "getMoneyFusionPaymentStatus" in mf_webhook and "MONEY_FUSION_STATUS_URL" in money_fusion and "method: 'GET'" in money_fusion, "webhook event is not treated as proof of payment"),
+        require("Money Fusion amount is verified", "verified.Montant" in mf_webhook and "payment.amount_fcfa" in mf_webhook and "finalize_afrofade_payment" in mf_webhook, "provider amount is compared before finalization"),
+        require("GeniusPay uses merchant credentials", "X-API-Key" in genius_pay and "X-API-Secret" in genius_pay, "merchant API calls use both documented headers"),
+        require("GeniusPay production requires HTTPS", "GENIUS_PAY_BASE_URL must use HTTPS in production" in genius_pay, "merchant secret cannot be sent over cleartext HTTP in production"),
+        require("GeniusPay webhook uses HMAC", "createHmac('sha256'" in genius_pay and "timingSafeEqual" in genius_pay and "x-geniuspay-signature" in genius_webhook, "webhook signature is verified with HMAC-SHA256"),
+        require("GeniusPay payment is re-fetched", "getGeniusPayPayment(reference)" in genius_webhook and "verified.amount" in genius_webhook and "payment.amount_fcfa" in genius_webhook, "signed webhook is cross-checked against merchant API"),
+        require("Legacy generic webhook is retired", "status: 410" in legacy_webhook and "Legacy payment webhook retired" in legacy_webhook, "ambiguous shared-secret webhook cannot finalize payments"),
+        require("Dual-provider DB constraint exists", "money_fusion', 'genius_pay" in migration03 and "payment.provider" in migration03, "transactions and subscriptions preserve the actual provider"),
+        require("Payment finalization is idempotent", "IF payment.status = 'paid'" in migration03 and "idempotency_key TEXT UNIQUE" in migration02, "repeated notifications cannot credit twice"),
+        require("Commerce writes stay server-side", "GRANT EXECUTE ON FUNCTION finalize_afrofade_payment" in migration03 and "service_role" in migration03, "clients have no commerce write policies"),
         require("Upload ownership is server-derived", "getVerifiedPrincipal" in upload and "body?.salonId" not in upload and "body.salonId" not in upload, "caller cannot select another salon storage path"),
         require("CRON has no public fallback", "CRON_SECRET ||" not in cron and "searchParams.get('secret')" not in cron, "secret is required via header"),
         require("Money Fusion has no demo success", "mf_demo_token" not in money_fusion and "mode démo" not in money_fusion.lower(), "provider failures fail closed"),
