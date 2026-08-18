@@ -1,40 +1,40 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Canvas, useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
 import { CheckCircle2, RefreshCw, ScanFace, Wand2 } from 'lucide-react';
-import { HeadModel } from './HeadModel3D';
 
 /**
  * Mockup vidéo auto-play — section landing « Le Rituel du Miroir »
  * (EXPERIENCE.md › demo_video_autoplay). Séquence muette en boucle qui
- * montre le Rituel complet sans aucune interaction : scan guidé (ovale,
- * consignes, captures) → reconstruction 3D → essayage de coiffures.
- * Sous prefers-reduced-motion : poster statique, pas de timeline.
+ * montre le Rituel complet sans aucune interaction.
+ *
+ * Décision Jonas-dev 2026-08-18 : pas d'avatar procédural dans la démo
+ * (jugé peu réaliste) — le viseur du scan montre les photos du
+ * personnage client (flux caméra simulé, léger travelling), et
+ * l'essayage s'appuie sur les rendus 3D démo du hero. Poster statique
+ * sous prefers-reduced-motion.
  */
 
 const SCAN_STEPS: {
   label: string;
   cue: string;
   deg: string;
-  yaw: number;
   sample: string;
   mirror?: boolean;
 }[] = [
-  { label: 'Face', cue: 'Regardez la caméra', deg: '0°', yaw: 0, sample: '/models/client-face.jpg' },
-  { label: 'Profil droit', cue: 'Tournez la tête vers la droite', deg: '+90°', yaw: Math.PI / 2, sample: '/models/client-profil.jpg' },
-  { label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', yaw: -Math.PI / 2, sample: '/models/client-profil.jpg', mirror: true },
-  { label: 'Nuque', cue: 'Présentez la nuque', deg: '180°', yaw: Math.PI, sample: '/models/client-arriere.jpg' },
+  { label: 'Face', cue: 'Regardez la caméra', deg: '0°', sample: '/models/client-face.jpg' },
+  { label: 'Profil droit', cue: 'Tournez la tête vers la droite', deg: '+90°', sample: '/models/client-profil.jpg' },
+  { label: 'Profil gauche', cue: 'Tournez la tête vers la gauche', deg: '−90°', sample: '/models/client-profil.jpg', mirror: true },
+  { label: 'Nuque', cue: 'Présentez la nuque', deg: '180°', sample: '/models/client-arriere.jpg' },
 ];
 
-const DEMO_HAIRSTYLES = [
-  { id: 'fade_taper_low', title: 'Taper fade & line-up' },
-  { id: 'locks_short_high_top', title: 'Locks sculptées' },
-  { id: 'tresses_cornrows_lines', title: 'Cornrows géométriques' },
-  { id: 'afro_sponge_twists', title: 'Afro sculpté' },
-] as const;
+const DEMO_RENDERS = [
+  { src: '/models/afro_taper_fade.png', title: 'Taper fade & line-up' },
+  { src: '/models/afro_dreadlocks.png', title: 'Locks sculptées' },
+  { src: '/models/afro_cornrows.png', title: 'Cornrows géométriques' },
+  { src: '/models/afro_beard_sculpted.png', title: 'Barbe sculptée' },
+];
 
 const SCAN_MS = 2600;
 const RECONSTRUCT_MS = 2200;
@@ -44,40 +44,6 @@ type Phase =
   | { kind: 'scan'; i: number }
   | { kind: 'reconstruct' }
   | { kind: 'styles'; i: number };
-
-/** Tête 3D : vise l'angle demandé (scan) ou tourne sur elle-même (essayage). */
-function DemoHead({
-  yaw,
-  hairstyleId,
-  spin,
-}: {
-  yaw: number;
-  hairstyleId: string;
-  spin: boolean;
-}) {
-  const ref = useRef<THREE.Group>(null);
-
-  useFrame((_, delta) => {
-    const group = ref.current;
-    if (!group) return;
-    if (spin) {
-      group.rotation.y += delta * 0.5;
-      return;
-    }
-    // Chemin le plus court vers l'angle cible (±2π équivalents)
-    let target = yaw;
-    const current = group.rotation.y;
-    while (target - current > Math.PI) target -= Math.PI * 2;
-    while (target - current < -Math.PI) target += Math.PI * 2;
-    group.rotation.y = THREE.MathUtils.damp(current, target, 3.2, delta);
-  });
-
-  return (
-    <group ref={ref}>
-      <HeadModel hairstyleId={hairstyleId} lineUpCutoff={50} />
-    </group>
-  );
-}
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -108,7 +74,7 @@ export const RituelDemoVideo: React.FC = () => {
         }, 380);
       } else if (phase.kind === 'reconstruct') {
         setPhase({ kind: 'styles', i: 0 });
-      } else if (phase.i < DEMO_HAIRSTYLES.length - 1) {
+      } else if (phase.i < DEMO_RENDERS.length - 1) {
         setPhase({ kind: 'styles', i: phase.i + 1 });
       } else {
         setPhase({ kind: 'scan', i: 0 });
@@ -126,28 +92,46 @@ export const RituelDemoVideo: React.FC = () => {
   const isReconstruct = phase.kind === 'reconstruct';
   const scanIndex = phase.kind === 'scan' ? phase.i : 0;
   const scanStep = isScan ? SCAN_STEPS[scanIndex] : null;
-  const style = phase.kind === 'styles' ? DEMO_HAIRSTYLES[phase.i] : null;
+  const style = phase.kind === 'styles' ? DEMO_RENDERS[phase.i] : null;
   const captured = isScan ? phase.i : 4;
-  const hairstyleId = phase.kind === 'styles' ? DEMO_HAIRSTYLES[phase.i].id : 'bald';
+  // Pendant la reconstruction, la dernière capture (nuque) reste affichée
+  // sous l'overlay d'analyse.
+  const photoStep = isScan ? scanStep : isReconstruct ? SCAN_STEPS[SCAN_STEPS.length - 1] : null;
 
   return (
     <div className="space-y-4" aria-label="Démo automatique du Rituel du Miroir">
       {/* Scène — cadre façon caméra du scanner */}
-      <div className="relative rounded-frame overflow-hidden border border-ink/10 shadow-soft aspect-[4/3] bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)]">
-        <Canvas dpr={[1, 1.5]} camera={{ position: [0, 1.05, 3.0], fov: 38 }} gl={{ antialias: true, alpha: true }}>
-          <ambientLight intensity={0.65} />
-          <directionalLight position={[4, 6, 4]} intensity={1.4} color="#fff1e0" />
-          <directionalLight position={[-4, 2, 2]} intensity={0.45} color="#F3D9C8" />
-          <directionalLight position={[0, 4, -6]} intensity={0.9} color="#ffffff" />
-          <DemoHead
-            yaw={scanStep ? scanStep.yaw : 0}
-            hairstyleId={hairstyleId}
-            spin={phase.kind === 'styles'}
-          />
-        </Canvas>
+      <div className="relative rounded-frame overflow-hidden border border-ink/10 shadow-soft aspect-[4/3] bg-night">
+        {/* Flux caméra simulé — les photos du personnage client */}
+        {photoStep && (
+          <div className={`absolute inset-0 ${photoStep.mirror ? 'scale-x-[-1]' : ''}`}>
+            <Image
+              key={`photo-${photoStep.label}`}
+              src={photoStep.sample}
+              alt={`Flux caméra du scan guidé — ${photoStep.label}`}
+              fill
+              sizes="(max-width: 768px) 100vw, 700px"
+              className="object-cover motion-safe:animate-demo-kenburns"
+            />
+          </div>
+        )}
+
+        {/* Rendus d'essayage — phase coiffures */}
+        {style && (
+          <div className="absolute inset-0">
+            <Image
+              key={`render-${style.src}`}
+              src={style.src}
+              alt={`Rendu 3D démo — ${style.title}`}
+              fill
+              sizes="(max-width: 768px) 100vw, 700px"
+              className="object-cover motion-safe:animate-demo-kenburns"
+            />
+          </div>
+        )}
 
         {/* Badge permanent : c'est une démo automatique */}
-        <span className="absolute top-3 left-3 bg-ink/70 backdrop-blur-sm text-white text-[9px] font-bold tracking-[0.14em] uppercase px-3 py-1.5 rounded-pill">
+        <span className="absolute top-3 left-3 bg-ink/70 backdrop-blur-sm text-white text-[9px] font-bold tracking-[0.14em] uppercase px-3 py-1.5 rounded-pill z-10">
           Démo automatique — sans manipulation
         </span>
 

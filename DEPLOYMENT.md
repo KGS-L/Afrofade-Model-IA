@@ -1,27 +1,46 @@
 # 🚀 Guide de Déploiement Afrofade sur VPS (`afrofade.pro`)
 
-Ce document décrit la procédure pas à pas pour déployer l'application **Afrofade 3D Studio** en production sur un serveur VPS Linux (Ubuntu / Debian).
+Ce document décrit la procédure pas à pas et automatisée pour déployer l'application **Afrofade 3D Studio** en production sur le serveur VPS dans le dossier `project/Afrofade`.
 
 ---
 
 ## 📋 Prérequis Serveur (VPS)
 - Un VPS Linux (Ubuntu 22.04 LTS recommandé) avec adresse IP publique.
-- Nom de domaine **`afrofade.pro`** acheté, avec un enregistrement DNS **Type A** pointant vers l'IP du VPS.
+- Nom de domaine **`afrofade.pro`** avec un enregistrement DNS **Type A** pointant vers l'IP du VPS.
 - **Docker** et **Docker Compose** installés sur le VPS.
 - Ports 80 (HTTP) et 443 (HTTPS) ouverts dans le pare-feu.
+- Répertoire cible sur le VPS : `~/project/Afrofade` (ou `/root/project/Afrofade`).
 
 ---
 
-## 🛠️ Étapes de Déploiement Pas à Pas
+## 🛠️ Déploiement Automatisé ou Manuel
 
-### 1. Cloner le dépôt Git sur le VPS
+### Option A : Déploiement via le script automatisé `deploy-vps.sh`
+
+Exécutez la commande suivante pour déployer dans `~/project/Afrofade` :
 ```bash
-git clone https://github.com/sokevinjonas/Afrofade.git /var/www/afrofade
-cd /var/www/afrofade
+./scripts/deploy-vps.sh ~/project/Afrofade afrofade.pro contact@afrofade.pro
 ```
 
-### 2. Configurer le fichier d'environnement `.env`
-Créez le fichier `.env` à la racine du projet :
+Ce script effectue automatiquement :
+1. La création et synchronisation des fichiers dans `~/project/Afrofade`.
+2. La vérification de la propagation DNS via `scripts/check-dns.sh`.
+3. La configuration de Nginx & l'obtention du certificat SSL via `scripts/configure-vps-nginx.sh`.
+4. Le lancement et le build des conteneurs Docker Compose (`web` & `api`).
+
+---
+
+### Option B : Déploiement Manuel Étape par Étape
+
+#### 1. Créer le dossier et cloner le projet dans `project/Afrofade`
+```bash
+mkdir -p ~/project
+git clone https://github.com/sokevinjonas/Afrofade.git ~/project/Afrofade
+cd ~/project/Afrofade
+```
+
+#### 2. Configurer le fichier `.env`
+Créez le fichier `.env` dans `~/project/Afrofade` :
 ```bash
 cat << 'EOF' > .env
 NEXT_PUBLIC_APP_URL=https://afrofade.pro
@@ -34,28 +53,37 @@ MONEY_FUSION_API_KEY=your-money-fusion-api-key-live
 EOF
 ```
 
-### 3. Exécuter le script Nginx & Certbot SSL
+#### 3. Vérification DNS & Configuration Nginx / Certbot SSL
 ```bash
-sudo ./scripts/configure-vps-nginx.sh afrofade.pro contact@afrofade.pro
+sudo ./scripts/configure-vps-nginx.sh --domain afrofade.pro --email contact@afrofade.pro
 ```
-*Le script installe Nginx, configure le proxy vers le port 3000 et génère automatiquement le certificat SSL HTTPS gratuit via Let's Encrypt.*
+> **Note :** Le script vérifie d'abord si `afrofade.pro` résout bien par DNS avant d'exécuter Certbot pour éviter tout échec de génération Let's Encrypt.
 
-### 4. Démarrer le conteneur Docker
+#### 4. Démarrer les services Docker
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ---
 
-## 🧪 Vérification & Maintenance
+## ⚙️ CI/CD Pipeline (GitHub Actions)
 
-### Vérifier les logs du conteneur Web Next.js
+Le workflow `.github/workflows/ci-cd.yml` valide le frontend et l'API backend, puis déploie automatiquement sur le runner auto-hébergé du VPS dans le répertoire `project/Afrofade`.
+
+### Variables et Secrets recommandés dans GitHub:
+- `VPS_AFROFADE_PATH` : `/root/project/Afrofade` (ou `/home/user/project/Afrofade`)
+
+---
+
+## 🧪 Vérification & Diagnostics
+
+### Vérifier la résolution DNS
 ```bash
-docker-compose logs -f web
+./scripts/check-dns.sh afrofade.pro
 ```
 
-### Redémarrer l'application après une mise à jour Git
+### Vérifier les conteneurs Docker
 ```bash
-git pull origin main
-docker-compose up -d --build
+docker compose ps
+docker compose logs -f
 ```

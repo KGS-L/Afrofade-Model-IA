@@ -47,7 +47,8 @@ const config: Config = {
       boxShadow: {
         soft: '0 4px 24px rgba(31, 27, 23, 0.08)',
       },
-      // RituelDemoVideo : barre de progression du scan et flash de capture
+      // RituelDemoVideo : barre de progression du scan, flash de capture
+      // et léger travelling sur les visuels (effet flux caméra)
       keyframes: {
         'demo-progress': {
           from: { width: '0%' },
@@ -57,10 +58,15 @@ const config: Config = {
           '0%': { opacity: '0.85' },
           '100%': { opacity: '0' },
         },
+        'demo-kenburns': {
+          from: { transform: 'scale(1)' },
+          to: { transform: 'scale(1.07)' },
+        },
       },
       animation: {
         'demo-progress': 'demo-progress 2600ms linear forwards',
         'demo-flash': 'demo-flash 380ms ease-out forwards',
+        'demo-kenburns': 'demo-kenburns 2600ms ease-out forwards',
       },
       maxWidth: {
         container: '1200px',

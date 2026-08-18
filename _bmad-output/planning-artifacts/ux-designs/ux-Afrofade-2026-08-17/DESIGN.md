@@ -54,8 +54,8 @@ components:
   style_card: "Carte blanche, visuel 3D rendu, titre, prix 'à partir de' → pour Afrofade: badge plan (Pro/VIP), bouton Personnaliser pill. Le visuel est un aperçu du modèle 3D (R3F), pas une photo."
   faq_accordion: "Fond blanc, +/− rotatif, un seul panneau ouvert à la fois."
   drawer: "Panneau latéral droit (devis/panier coiffures sélectionnées), overlay dim."
-  scan_stage: "Cadre caméra plein largeur, coins image_frame : flux vidéo miroir, ovale de cadrage scan_success (pulsation discrète motion-safe), consigne d'angle en pill blanc sur voile ink/40, anneau de stabilité, flash blanc à la capture ; filmstrip des 4 frames validées sous le cadre."
-  demo_video_autoplay: "Mockup vidéo auto-play (landing, Le Rituel du Miroir) : cadre coins image_frame sur fond radial crème→terracotta, badge « Démo automatique — sans manipulation », séquence muette en boucle (scan → reconstruction → coiffures) ; poster statique sous prefers-reduced-motion."
+  scan_stage: "Cadre caméra plein largeur, coins image_frame : flux vidéo miroir, ovale de cadrage scan_success (pulsation discrète motion-safe), consigne d'angle en pill blanc sur voile ink/40, anneau de stabilité, flash blanc à la capture ; filmstrip des 4 frames validées sous le cadre. Mode démo : photos d'exemple du personnage affichées dans le viseur (flux simulé)."
+  demo_video_autoplay: "Mockup vidéo auto-play (landing, Le Rituel du Miroir) : cadre coins image_frame, badge « Démo automatique — sans manipulation », séquence muette en boucle — flux caméra simulé (photos du personnage client, léger travelling) avec ovale et consignes → reconstruction → rendus 3D d'essayage du hero. Aucun avatar procédural dans la démo (jugé peu réaliste, décision Jonas-dev 2026-08-18) ; poster statique sous prefers-reduced-motion."
 ---
 
 # Afrofade — Identité Visuelle

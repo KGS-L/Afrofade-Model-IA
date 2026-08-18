@@ -68,6 +68,11 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
   const [frames, setFrames] = useState<ScanFrame[]>([]);
   const [stability, setStability] = useState(0); // 0..1
   const [flash, setFlash] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const [stalled, setStalled] = useState(false);
+  // Incrémenté à chaque nouvelle session caméra : relance l'attachement
+  // du flux même quand la phase ne change pas (bouton « Réessayer »).
+  const [streamVersion, setStreamVersion] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -79,6 +84,8 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
   const modeRef = useRef<Mode>('camera');
   const angleIndexRef = useRef(0);
   const completedRef = useRef(false);
+  const videoReadyRef = useRef(false);
+  const stallStartRef = useRef(0);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -86,6 +93,21 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
   }, []);
 
   useEffect(() => () => stopStream(), [stopStream]);
+
+  /* Attachement du flux caméra : en effet post-montage (jamais en
+     setTimeout) pour garantir que le <video> existe, avec muted posé
+     en propriété DOM — l'attribut React seul peut être ignoré par la
+     politique d'autoplay de Chrome et laisser la vidéo noire. */
+  useEffect(() => {
+    if (phase !== 'live' || mode !== 'camera') return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    video.muted = true;
+    video.srcObject = stream;
+    const p = video.play();
+    if (p) p.catch(() => undefined);
+  }, [phase, mode, streamVersion]);
 
   const captureCurrentAngle = useCallback(() => {
     const angle = ANGLES[angleIndexRef.current];
@@ -149,7 +171,21 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
       }
 
       const video = videoRef.current;
-      if (!video || video.videoWidth === 0 || !sampleCanvasRef.current) return;
+      if (!video || !sampleCanvasRef.current) return;
+
+      // Première frame reçue ? sinon, chien de garde après 6 s
+      if (!videoReadyRef.current) {
+        if (video.videoWidth > 0) {
+          videoReadyRef.current = true;
+          stallStartRef.current = 0;
+          setVideoReady(true);
+          setStalled(false);
+        } else {
+          if (!stallStartRef.current) stallStartRef.current = Date.now();
+          else if (Date.now() - stallStartRef.current > 6000) setStalled(true);
+          return;
+        }
+      }
 
       if (!sampleCanvasRef.current.width) {
         sampleCanvasRef.current.width = 48;
@@ -196,14 +232,10 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
       modeRef.current = 'camera';
       setMode('camera');
       resetProgress();
+      setStreamVersion((v) => v + 1);
       setPhase('live');
-      // laisse le <video> se monter avant l'attachement du flux
-      window.setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => undefined);
-        }
-      }, 0);
+      // L'attachement du flux au <video> se fait dans le useEffect ci-dessus,
+      // une fois l'élément monté par le rendu de la phase live.
     } catch {
       setCameraError(
         'Caméra inaccessible ou permission refusée. Vous pouvez réessayer, ou lancer le mode démo pour découvrir le déroulé du scan.'
@@ -228,6 +260,10 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
     prevLumaRef.current = null;
     completedRef.current = false;
     setStability(0);
+    videoReadyRef.current = false;
+    stallStartRef.current = 0;
+    setVideoReady(false);
+    setStalled(false);
   };
 
   const restart = () => {
@@ -343,18 +379,29 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
             muted
             playsInline
             autoPlay
+            onLoadedMetadata={() => {
+              const v = videoRef.current;
+              if (v) {
+                v.muted = true;
+                v.play().catch(() => undefined);
+              }
+            }}
             className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
           />
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_35%_25%,#4A3A2E_0%,#2A211B_65%,#1F1B17_100%)] flex items-center justify-center">
-            <div className="text-center space-y-2 px-6">
-              <Video className="w-8 h-8 text-white/50 mx-auto" />
-              <p className="text-xs font-bold text-white/85">Mode démo — scan simulé</p>
-              <p className="text-[10px] text-white/55 leading-relaxed max-w-[220px]">
-                Sur tablette, la caméra remplacera cet écran et capturera vos
-                angles en direct.
-              </p>
+          <div className="absolute inset-0 bg-night overflow-hidden">
+            {/* Flux caméra simulé : photo d'exemple de l'angle courant */}
+            <div className={`absolute inset-0 ${angle.mirror ? 'scale-x-[-1]' : ''}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- visuel d'exemple local */}
+              <img
+                src={angle.sample}
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover motion-safe:animate-demo-kenburns"
+              />
             </div>
+            {/* Voile léger : lisibilité des surimpressions */}
+            <div className="absolute inset-0 bg-night/30 pointer-events-none" />
           </div>
         )}
 
@@ -396,7 +443,9 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
 
         <div className="absolute bottom-3 left-3 right-3 flex flex-col items-center gap-2">
           <p aria-live="polite" className="bg-ink/70 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-pill text-center">
-            {stability > 0.15 ? angle.cue : `${angle.cue} — restez stable…`}
+            {mode === 'camera' && !videoReady
+              ? 'Initialisation de la caméra…'
+              : angle.cue}
           </p>
           <div className="w-full max-w-[280px] h-1.5 bg-white/25 rounded-pill overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`Stabilité de l'angle ${angle.label}`}>
             <div
@@ -408,6 +457,44 @@ export const GuidedScanner: React.FC<{ onComplete: (frames: ScanFrame[]) => void
             Capture automatique à 100 % — ne touchez à rien
           </p>
         </div>
+
+        {/* Caméra muette : secours après délai (flux obtenu mais aucune frame) */}
+        {stalled && (
+          <div className="absolute inset-0 z-10 bg-night/90 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <CameraOff className="w-8 h-8 text-white/80" />
+            <p className="text-sm font-bold text-white">
+              La caméra ne renvoie pas d’image
+            </p>
+            <p className="text-[11px] text-white/65 max-w-[300px] leading-relaxed">
+              La caméra est active mais aucune image n’arrive — vérifiez
+              qu’aucune autre application ne l’utilise, puis réessayez.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  stopStream();
+                  startCamera();
+                }}
+                className="min-h-[44px] px-5 rounded-pill bg-terracotta hover:bg-terracotta-dark text-white text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors"
+              >
+                <Camera className="w-4 h-4" />
+                Réessayer
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  stopStream();
+                  startDemo();
+                }}
+                className="min-h-[44px] px-5 rounded-pill border-[1.5px] border-white/30 hover:border-white/60 text-white text-xs font-bold inline-flex items-center justify-center gap-2 transition-colors"
+              >
+                <Video className="w-4 h-4" />
+                Passer en mode démo
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Flash de capture */}
         <div

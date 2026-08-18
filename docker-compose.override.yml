@@ -1,0 +1,25 @@
+version: '3.8'
+
+# Configuration spécifique au Développement Local avec Hot-Reload (Rechargement automatique)
+# Docker Compose fusionne automatiquement ce fichier avec docker-compose.yml en local.
+
+services:
+  web:
+    build:
+      context: ./web
+      target: deps
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev -- -p 3000
+
+  api:
+    environment:
+      - FASTAPI_ENV=development
+    volumes:
+      - ./api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload

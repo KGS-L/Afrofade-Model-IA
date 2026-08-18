@@ -73,3 +73,53 @@ jobs:
       - name: Build Docker Containers
         run: |
           docker compose build
+
+  deploy-vps:
+    name: Deploy Afrofade to VPS (project/Afrofade)
+    runs-on: [self-hosted, Linux, X64]
+    needs: [docker-build]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Afrofade to VPS project folder
+        env:
+          VPS_AFROFADE_PATH: ${{ secrets.VPS_AFROFADE_PATH }}
+          DOMAIN: "afrofade.pro"
+          EMAIL: "contact@afrofade.pro"
+        run: |
+          TARGET_DIR="${VPS_AFROFADE_PATH:-$HOME/project/Afrofade}"
+          echo "Dossier cible sur le VPS : $TARGET_DIR"
+          
+          mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
+          
+          cp -a docker-compose.yml "$TARGET_DIR/"
+          if [ -f .env.example ]; then
+            cp -a .env.example "$TARGET_DIR/"
+          fi
+          cp -a scripts/* "$TARGET_DIR/scripts/"
+          cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
+          
+          if [ -d web ]; then
+            rsync -a --exclude 'node_modules' --exclude '.next' web/ "$TARGET_DIR/web/" 2>/dev/null || cp -r web "$TARGET_DIR/"
+          fi
+          if [ -d api ]; then
+            rsync -a --exclude '__pycache__' --exclude '.venv' api/ "$TARGET_DIR/api/" 2>/dev/null || cp -r api "$TARGET_DIR/"
+          fi
+          
+          cd "$TARGET_DIR"
+          if [ ! -f .env ] && [ -f .env.example ]; then
+            cp .env.example .env
+          fi
+          
+          # Verification DNS et Configuration Nginx / Certbot SSL
+          if [ "$EUID" -eq 0 ]; then
+            bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
+          else
+            sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
+          fi
+          
+          # Démarrage des conteneurs
+          docker compose up -d --build
+          docker compose ps
