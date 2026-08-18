@@ -30,24 +30,24 @@ import {
 /** Carrousel hero (§2) : visuels de démonstration des rendus 3D */
 const HERO_SLIDES = [
   {
+    src: '/models/client-face.jpg',
+    title: 'Étape 1 — Scan vidéo guidé',
+    note: 'la caméra capture face, profils et nuque',
+  },
+  {
+    src: '/models/result-3d-bald.png',
+    title: 'Étape 2 — Reconstruction 3D',
+    note: "la tête apparaît en 3D, prête pour l'essayage",
+  },
+  {
     src: '/models/afro_taper_fade.png',
-    title: 'Taper fade & line-up',
-    note: 'rendu 3D · rotation du doigt',
+    title: 'Étape 3 — Choix de coiffure',
+    note: 'fades, locks, tresses — essayez en un tap',
   },
   {
-    src: '/models/afro_dreadlocks.png',
-    title: 'Locks sculptées',
-    note: 'volumes fidèles, textures crépues',
-  },
-  {
-    src: '/models/afro_cornrows.png',
-    title: 'Cornrows géométriques',
-    note: 'motifs lisibles sous tous les angles',
-  },
-  {
-    src: '/models/afro_beard_sculpted.png',
-    title: 'Barbe sculptée',
-    note: 'contours au millimètre, en 1 tap',
+    src: '/models/result-final.png',
+    title: 'Étape 4 — Résultat validé',
+    note: 'coupe + barbe taillée — avant la tondeuse',
   },
 ];
 
