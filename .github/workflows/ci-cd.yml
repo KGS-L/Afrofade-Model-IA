@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test-web:
@@ -24,11 +24,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Generate fresh lockfile for patched dependency graph
+      - name: Install dependencies from committed lockfile
         run: |
           cd web
-          rm -f package-lock.json
-          npm install --package-lock-only --ignore-scripts
           npm ci
 
       - name: Audit production dependencies
@@ -56,25 +54,6 @@ jobs:
           CRON_SECRET: ci-cron-secret
           MONEY_FUSION_API_KEY: ci-money-fusion-key
           PAYMENT_WEBHOOK_SECRET: ci-payment-webhook-secret
-
-      - name: Persist validated lockfile to PR branch
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          cp web/package-lock.json /tmp/afrofade-package-lock.json
-          git fetch origin "$HEAD_REF"
-          git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
-          cp /tmp/afrofade-package-lock.json web/package-lock.json
-          git add web/package-lock.json
-          if git diff --cached --quiet; then
-            echo "Lockfile already synchronized."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "build: refresh web package lock"
-          git push origin "HEAD:$HEAD_REF"
 
   test-api:
     name: Validate Backend 3D AI Engine (FastAPI & OpenCV)
