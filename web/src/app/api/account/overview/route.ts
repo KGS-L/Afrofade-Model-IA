@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const { principal } = auth;
     const supabaseAdmin = getServiceSupabase();
 
-    const [profileResult, walletResult, ledgerResult, paymentsResult] = await Promise.all([
+    const [profileResult, walletResult, ledgerResult, paymentsResult, headsResult] = await Promise.all([
       supabaseAdmin
         .from('customer_profiles')
         .select('display_name, phone, country, updated_at')
@@ -43,10 +43,10 @@ export async function GET(req: NextRequest) {
         .maybeSingle(),
       supabaseAdmin
         .from('credit_transactions')
-        .select('id, delta, reason, created_at')
+        .select('id, delta, reason, reference_id, created_at')
         .eq('user_id', principal.user.id)
         .order('created_at', { ascending: false })
-        .limit(20),
+        .limit(30),
       supabaseAdmin
         .from('payment_transactions')
         .select('id, provider, product_id, amount_fcfa, status, created_at, paid_at')
@@ -54,9 +54,15 @@ export async function GET(req: NextRequest) {
         .eq('purpose', 'credits')
         .order('created_at', { ascending: false })
         .limit(20),
+      supabaseAdmin
+        .from('customer_heads')
+        .select('id, client_name, mesh_3d_url, saved_hairstyle_id, is_saved_permanently, expires_at, created_at')
+        .eq('user_id', principal.user.id)
+        .order('created_at', { ascending: false })
+        .limit(12),
     ]);
 
-    for (const result of [profileResult, walletResult, ledgerResult, paymentsResult]) {
+    for (const result of [profileResult, walletResult, ledgerResult, paymentsResult, headsResult]) {
       if (result.error) throw new Error(result.error.message);
     }
 
@@ -76,6 +82,7 @@ export async function GET(req: NextRequest) {
       },
       ledger: ledgerResult.data || [],
       payments: paymentsResult.data || [],
+      heads: headsResult.data || [],
     });
   } catch (error) {
     console.error('[Customer Account] GET failed:', error);
