@@ -99,6 +99,12 @@ def main() -> None:
     invalid_anchor_version = {**hair_payload, "scalpAnchorVersion": ""}
     expect_validation_error("empty anchor version rejected", CanonicalHairAsset, invalid_anchor_version)
 
+    invalid_source_job = {**hair_payload, "sourceJobId": ""}
+    expect_validation_error("empty optional source job rejected", CanonicalHairAsset, invalid_source_job)
+
+    invalid_fit_job = {**try_on_payload, "fitJobId": ""}
+    expect_validation_error("empty optional fit job rejected", TryOnAsset, invalid_fit_job)
+
     print("\nCanonical 3D contracts: PASS")
 
 
