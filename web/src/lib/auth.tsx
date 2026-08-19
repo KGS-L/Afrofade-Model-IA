@@ -33,7 +33,7 @@ interface AuthContextValue {
   hydrated: boolean;
   loginWithEmail: (email: string) => Promise<boolean>;
   verifyEmailOtp: (email: string, token: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithGoogle: (nextUrl?: string) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (patch: Partial<SalonProfileFields>) => void;
   subscribe: (plan: PlanName, amount: number, term: TermId, provider?: PaymentProvider) => Promise<void>;
@@ -77,7 +77,6 @@ async function establishServerSession(accessToken: string): Promise<ServerSessio
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ accessToken }),
   });
-
   if (!response.ok) return null;
   const data = await response.json();
   return data.user ?? null;
@@ -93,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (next) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       else window.localStorage.removeItem(STORAGE_KEY);
     } catch {
-      /* storage unavailable */
+      // storage unavailable
     }
   }, []);
 
@@ -117,9 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => persist(null))
       .finally(() => setHydrated(true));
 
-    // The provider redirect can arrive a few seconds before its webhook. When
-    // returning with payment=pending, re-read server billing state briefly so
-    // a verified subscription unlocks the UI without any client-side trust.
     const paymentPending = new URLSearchParams(window.location.search).get('payment') === 'pending';
     if (paymentPending) {
       paymentPollTimer = window.setInterval(async () => {
@@ -131,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
             } catch {
-              /* ignore */
+              // ignore
             }
             return next;
           });
@@ -140,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             paymentPollTimer = null;
           }
         } catch {
-          /* transient provider/webhook lag; next poll will retry */
+          // transient provider/webhook lag
         }
       }, 2000);
 
@@ -169,11 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = useCallback(async (email: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
-      },
+      options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
     });
-
     if (error) console.warn('[Auth] Unable to send OTP:', error.message);
     return !error;
   }, []);
@@ -182,20 +175,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (email: string, token: string): Promise<boolean> => {
       const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
       if (error || !data.session) return false;
-
       const serverUser = await establishServerSession(data.session.access_token);
       if (!serverUser) return false;
-
       persist(mergeServerUser(serverUser, user));
       return true;
     },
     [persist, user]
   );
 
-  const loginWithGoogle = useCallback(async () => {
+  const loginWithGoogle = useCallback(async (nextUrl = '/dashboard') => {
+    const safeNext = nextUrl.startsWith('/') && !nextUrl.startsWith('//') ? nextUrl : '/dashboard';
+    const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+    callbackUrl.searchParams.set('next', safeNext);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { redirectTo: callbackUrl.toString() },
     });
     if (error) throw error;
   }, []);
@@ -208,6 +203,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persist(null);
   }, [persist]);
 
+  // Kept for compatibility with legacy UI; operational dashboards persist
+  // profile changes through authenticated server routes instead of this cache.
   const updateProfile = useCallback((patch: Partial<SalonProfileFields>) => {
     setUser((prev) => {
       if (!prev) return prev;
@@ -215,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch {
-        /* ignore */
+        // ignore
       }
       return next;
     });
@@ -226,23 +223,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await fetch('/api/v1/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider,
-          purpose: 'subscription',
-          planName: plan,
-          termId: term,
-          customerName: user?.profile.salonName || user?.name,
-          customerPhone: user?.profile.phone,
-        }),
+        body: JSON.stringify({ provider, purpose: 'subscription', planName: plan, termId: term }),
       });
-
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Échec de la création du paiement.');
       if (!data.url) throw new Error('Le prestataire de paiement n’a pas retourné de lien de paiement.');
-
       window.location.assign(data.url);
     },
-    [user?.name, user?.profile.phone, user?.profile.salonName]
+    []
   );
 
   const value = useMemo(

@@ -42,9 +42,14 @@ services:
       - FASTAPI_ENV=production
       - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
       - API_ALLOWED_ORIGINS=${API_ALLOWED_ORIGINS:-https://afrofade.pro}
+    volumes:
+      - afrofade-generated-models:/tmp/generated_models
     networks:
       - afrofade-network
 
 networks:
   afrofade-network:
     driver: bridge
+
+volumes:
+  afrofade-generated-models:

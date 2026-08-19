@@ -1,0 +1,158 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getVerifiedPrincipal } from '@/lib/server-auth';
+import { getServiceSupabase } from '@/lib/supabase';
+
+function cleanString(value: unknown, max = 120): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, max);
+}
+
+function cleanPhone(value: unknown): string {
+  const phone = cleanString(value, 50).replace(/[\s()-]/g, '');
+  if (!phone) return '';
+  return /^\+?[0-9]{8,20}$/.test(phone) ? phone : '';
+}
+
+function completion(name: string | null, country: string | null, phone: string | null): number {
+  const filled = [name, country, phone].filter((value) => Boolean(value && value.trim())).length;
+  return Math.round((filled / 3) * 100);
+}
+
+async function requireSalon(req: NextRequest) {
+  const principal = await getVerifiedPrincipal(req);
+  if (!principal) return { response: NextResponse.json({ error: 'Authentification requise.' }, { status: 401 }) };
+  if (principal.role !== 'salon' || !principal.salonId) {
+    return { response: NextResponse.json({ error: 'Espace réservé aux salons.' }, { status: 403 }) };
+  }
+  return { principal };
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = await requireSalon(req);
+    if ('response' in auth) return auth.response;
+
+    const { principal } = auth;
+    const supabaseAdmin = getServiceSupabase();
+    const now = new Date().toISOString();
+
+    const [salonResult, headsCountResult, recentHeadsResult, subscriptionResult, paymentsResult] = await Promise.all([
+      supabaseAdmin
+        .from('salons')
+        .select('id, name, phone, country, plan, quota_limit, quota_used, storage_used_bytes, created_at, updated_at')
+        .eq('id', principal.salonId)
+        .single(),
+      supabaseAdmin
+        .from('clients_heads')
+        .select('*', { count: 'exact', head: true })
+        .eq('salon_id', principal.salonId),
+      supabaseAdmin
+        .from('clients_heads')
+        .select('id, client_name, mesh_3d_url, saved_hairstyle_id, is_saved_permanently, created_at, expires_at')
+        .eq('salon_id', principal.salonId)
+        .order('created_at', { ascending: false })
+        .limit(8),
+      supabaseAdmin
+        .from('subscriptions')
+        .select('id, provider, amount_fcfa, status, expires_at, created_at')
+        .eq('salon_id', principal.salonId)
+        .eq('status', 'active')
+        .gt('expires_at', now)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from('payment_transactions')
+        .select('id, provider, product_id, term_id, amount_fcfa, status, created_at, paid_at')
+        .eq('salon_id', principal.salonId)
+        .eq('purpose', 'subscription')
+        .order('created_at', { ascending: false })
+        .limit(10),
+    ]);
+
+    for (const result of [salonResult, headsCountResult, recentHeadsResult, subscriptionResult, paymentsResult]) {
+      if (result.error) throw new Error(result.error.message);
+    }
+
+    if (!salonResult.data) throw new Error('Salon profile not found.');
+    const salon = salonResult.data;
+    const profileCompletion = completion(salon.name, salon.country, salon.phone);
+    const hasPaidBefore = (paymentsResult.data || []).some((payment) => payment.status === 'paid');
+
+    return NextResponse.json({
+      salon: {
+        id: salon.id,
+        name: salon.name || '',
+        phone: salon.phone || '',
+        country: salon.country || '',
+        plan: salon.plan,
+        quotaLimit: salon.quota_limit,
+        quotaUsed: salon.quota_used,
+        quotaRemaining: Math.max(0, salon.quota_limit - salon.quota_used),
+        storageUsedBytes: salon.storage_used_bytes,
+        profileCompletion,
+        discountEligible: profileCompletion === 100 && !hasPaidBefore,
+      },
+      headsCount: headsCountResult.count ?? 0,
+      recentHeads: recentHeadsResult.data || [],
+      subscription: subscriptionResult.data || null,
+      payments: paymentsResult.data || [],
+    });
+  } catch (error) {
+    console.error('[Salon Dashboard] GET failed:', error);
+    return NextResponse.json({ error: 'Impossible de charger le tableau de bord salon.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const auth = await requireSalon(req);
+    if ('response' in auth) return auth.response;
+
+    const { principal } = auth;
+    const body = await req.json();
+    const name = cleanString(body?.name, 255);
+    const country = cleanString(body?.country, 100);
+    const phone = cleanPhone(body?.phone);
+
+    if (!name || !country || !phone) {
+      return NextResponse.json(
+        { error: 'Nom du salon, pays et numéro de téléphone valide sont requis.' },
+        { status: 400 }
+      );
+    }
+
+    const supabaseAdmin = getServiceSupabase();
+    const { data, error } = await supabaseAdmin
+      .from('salons')
+      .update({
+        name,
+        country,
+        phone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', principal.salonId)
+      .select('id, name, phone, country, plan, quota_limit, quota_used, storage_used_bytes')
+      .single();
+
+    if (error || !data) throw new Error(error?.message || 'Salon profile not found.');
+
+    return NextResponse.json({
+      salon: {
+        id: data.id,
+        name: data.name || '',
+        phone: data.phone || '',
+        country: data.country || '',
+        plan: data.plan,
+        quotaLimit: data.quota_limit,
+        quotaUsed: data.quota_used,
+        quotaRemaining: Math.max(0, data.quota_limit - data.quota_used),
+        storageUsedBytes: data.storage_used_bytes,
+        profileCompletion: 100,
+      },
+    });
+  } catch (error) {
+    console.error('[Salon Dashboard] PATCH failed:', error);
+    return NextResponse.json({ error: 'Impossible d’enregistrer le profil salon.' }, { status: 500 });
+  }
+}
