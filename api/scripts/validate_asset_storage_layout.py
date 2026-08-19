@@ -59,7 +59,6 @@ def assert_bucket_migration() -> None:
         "FALSE",
         "10485760",
         "image/jpeg",
-        "image/jpg",
         "image/png",
         "image/webp",
         "ON CONFLICT (id) DO UPDATE",
@@ -68,12 +67,17 @@ def assert_bucket_migration() -> None:
     missing = [fragment for fragment in required if fragment not in migration]
     if missing:
         raise AssertionError(f"Private bucket migration missing: {missing}")
-    print("[PASS] private asset buckets are provisioned reproducibly")
+    if "image/jpg" in migration:
+        raise AssertionError("Private bucket must use canonical image/jpeg instead of image/jpg")
+    print("[PASS] private asset buckets are provisioned reproducibly with canonical MIME types")
 
 
 def assert_web_layout() -> None:
     upload_route = (
         REPO_ROOT / "web" / "src" / "app" / "api" / "upload" / "presigned-url" / "route.ts"
+    ).read_text(encoding="utf-8")
+    storage_client = (
+        REPO_ROOT / "web" / "src" / "lib" / "storage.ts"
     ).read_text(encoding="utf-8")
     signed_read_route = (
         REPO_ROOT / "web" / "src" / "app" / "api" / "storage" / "signed-read" / "route.ts"
@@ -81,6 +85,9 @@ def assert_web_layout() -> None:
 
     checks = {
         "temporary photo namespace": "`temporary/${ownerPrefix}/" in upload_route,
+        "server normalizes image/jpg to image/jpeg": "mimeType === 'image/jpg' ? 'image/jpeg'" in upload_route,
+        "client normalizes image/jpg to image/jpeg": "mimeType === 'image/jpg' ? 'image/jpeg'" in storage_client,
+        "client uploads canonical content type": "contentType: uploadContentType" in storage_client,
         "temporary signed-read ownership": "`temporary/${prefix}`" in signed_read_route,
         "canonical head ownership": "`canonical/${prefix}`" in signed_read_route,
         "try-on export ownership": "`exports/${prefix}`" in signed_read_route,
@@ -89,7 +96,7 @@ def assert_web_layout() -> None:
     failed = [name for name, ok in checks.items() if not ok]
     if failed:
         raise AssertionError(f"Web private storage layout failed: {failed}")
-    print("[PASS] web routes enforce bucket-specific owned prefixes")
+    print("[PASS] web routes enforce bucket-specific owned prefixes and canonical MIME upload")
 
 
 def main() -> None:
