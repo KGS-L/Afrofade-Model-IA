@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = useCallback(async (email: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { shouldCreateUser: true },
     });
     if (error) console.warn('[Auth] Unable to send OTP:', error.message);
     return !error;
