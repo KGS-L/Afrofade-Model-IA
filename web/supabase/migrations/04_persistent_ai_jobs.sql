@@ -112,23 +112,8 @@ BEGIN
         RAISE EXCEPTION 'invalid_max_attempts';
     END IF;
 
-    SELECT * INTO existing
-    FROM ai_jobs
-    WHERE idempotency_key = p_idempotency_key;
-
-    IF FOUND THEN
-        IF existing.job_type IS DISTINCT FROM p_job_type
-           OR existing.user_id IS DISTINCT FROM p_user_id
-           OR existing.salon_id IS DISTINCT FROM p_salon_id
-           OR existing.provider IS DISTINCT FROM p_provider THEN
-            RAISE EXCEPTION 'idempotency_key_conflict';
-        END IF;
-
-        RETURN NEXT existing;
-        RETURN;
-    END IF;
-
-    RETURN QUERY
+    -- Concurrency-safe idempotency: the first transaction inserts; concurrent
+    -- requests with the same key do nothing and then read/validate that row.
     INSERT INTO ai_jobs (
         job_type,
         user_id,
@@ -148,7 +133,31 @@ BEGIN
         p_max_attempts,
         p_priority
     )
-    RETURNING *;
+    ON CONFLICT (idempotency_key) DO NOTHING
+    RETURNING * INTO existing;
+
+    IF FOUND THEN
+        RETURN NEXT existing;
+        RETURN;
+    END IF;
+
+    SELECT * INTO existing
+    FROM ai_jobs
+    WHERE idempotency_key = p_idempotency_key;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'idempotent_enqueue_resolution_failed';
+    END IF;
+
+    IF existing.job_type IS DISTINCT FROM p_job_type
+       OR existing.user_id IS DISTINCT FROM p_user_id
+       OR existing.salon_id IS DISTINCT FROM p_salon_id
+       OR existing.provider IS DISTINCT FROM p_provider THEN
+        RAISE EXCEPTION 'idempotency_key_conflict';
+    END IF;
+
+    RETURN NEXT existing;
+    RETURN;
 END;
 $$;
 
