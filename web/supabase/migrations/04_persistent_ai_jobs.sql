@@ -73,8 +73,6 @@ USING (
     )
 );
 
--- Browser/authenticated roles intentionally receive no INSERT/UPDATE/DELETE policy.
-
 CREATE OR REPLACE FUNCTION enqueue_ai_job(
     p_job_type VARCHAR,
     p_user_id UUID,
@@ -205,5 +203,8 @@ REVOKE ALL ON FUNCTION claim_ai_jobs(TEXT, INT, INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION enqueue_ai_job(VARCHAR, UUID, UUID, VARCHAR, JSONB, TEXT, INT, SMALLINT) TO service_role;
 GRANT EXECUTE ON FUNCTION claim_ai_jobs(TEXT, INT, INT) TO service_role;
 
--- Direct mutations remain reserved for trusted server/service-role code.
-REVOKE INSERT, UPDATE, DELETE ON ai_jobs FROM anon, authenticated;
+-- Explicit table privileges: anonymous users get nothing; authenticated users
+-- may only SELECT rows allowed by RLS. Mutations stay service-role/RPC only.
+REVOKE ALL ON ai_jobs FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON ai_jobs FROM authenticated;
+GRANT SELECT ON ai_jobs TO authenticated;
