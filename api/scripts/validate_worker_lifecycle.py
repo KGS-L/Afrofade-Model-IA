@@ -133,7 +133,7 @@ def config(**overrides: Any) -> WorkerConfig:
 
 
 def assert_migration_contract() -> None:
-    sql = (REPO_ROOT / "web" / "supabase" / "migrations" / "05_ai_job_worker_lifecycle.sql").read_text(encoding="utf-8")
+    sql = (REPO_ROOT / "web" / "supabase" / "migrations" / "06_ai_job_worker_lifecycle.sql").read_text(encoding="utf-8")
     required = [
         "CREATE OR REPLACE FUNCTION heartbeat_ai_job",
         "CREATE OR REPLACE FUNCTION complete_ai_job",
