@@ -163,6 +163,7 @@ def assert_client_mapping() -> None:
 def assert_fail_closed_configuration() -> None:
     old_url = os.environ.pop("SUPABASE_URL", None)
     old_key = os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
+    old_env = os.environ.get("FASTAPI_ENV")
     try:
         try:
             SupabasePostgresJobQueue.from_env()
@@ -170,11 +171,23 @@ def assert_fail_closed_configuration() -> None:
             print("[PASS] missing server credentials fail closed")
         else:
             raise AssertionError("Missing Supabase server credentials unexpectedly succeeded")
+
+        os.environ["FASTAPI_ENV"] = "production"
+        try:
+            SupabasePostgresJobQueue("http://project.supabase.local", "service-role-test-key")
+        except JobQueueError:
+            print("[PASS] cleartext Supabase queue URL rejected in production")
+        else:
+            raise AssertionError("Production queue unexpectedly accepted an HTTP Supabase URL")
     finally:
         if old_url is not None:
             os.environ["SUPABASE_URL"] = old_url
         if old_key is not None:
             os.environ["SUPABASE_SERVICE_ROLE_KEY"] = old_key
+        if old_env is None:
+            os.environ.pop("FASTAPI_ENV", None)
+        else:
+            os.environ["FASTAPI_ENV"] = old_env
 
 
 def assert_input_validation() -> None:
