@@ -61,6 +61,8 @@ class SupabasePostgresJobQueue(JobQueue):
 
         if not base_url.startswith(("https://", "http://")):
             raise JobQueueError("SUPABASE_URL must be an HTTP(S) URL")
+        if os.getenv("FASTAPI_ENV", "").strip().lower() == "production" and not base_url.startswith("https://"):
+            raise JobQueueError("SUPABASE_URL must use HTTPS in production")
         if not key:
             raise JobQueueError("SUPABASE_SERVICE_ROLE_KEY is required")
         if timeout_seconds <= 0:
