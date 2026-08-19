@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getVerifiedPrincipal } from '@/lib/server-auth';
 
-const PROTECTED_ROUTES = ['/dashboard', '/admin', '/account'];
+const PROTECTED_ROUTES = ['/dashboard', '/admin', '/account', '/onboarding'];
 
-function homeForPrincipal(principal: NonNullable<Awaited<ReturnType<typeof getVerifiedPrincipal>>>, request: NextRequest) {
+function homeForPrincipal(
+  principal: NonNullable<Awaited<ReturnType<typeof getVerifiedPrincipal>>>,
+  request: NextRequest,
+) {
+  if (!principal.profileConfigured) return new URL('/onboarding', request.url);
   if (principal.role === 'admin') return new URL('/admin', request.url);
   if (principal.role === 'salon' && principal.salonId) return new URL('/dashboard', request.url);
   if (principal.role === 'customer') return new URL('/account', request.url);
@@ -30,6 +34,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (!principal.profileConfigured) {
+    if (!pathname.startsWith('/onboarding')) {
+      return NextResponse.redirect(new URL('/onboarding', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith('/onboarding')) {
+    return NextResponse.redirect(homeForPrincipal(principal, request));
+  }
+
   if (pathname.startsWith('/admin') && principal.role !== 'admin') {
     return NextResponse.redirect(homeForPrincipal(principal, request));
   }
@@ -46,5 +61,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/account/:path*'],
+  matcher: ['/dashboard/:path*', '/admin/:path*', '/account/:path*', '/onboarding/:path*'],
 };
