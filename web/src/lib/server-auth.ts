@@ -9,15 +9,14 @@ export interface VerifiedPrincipal {
   role: AppRole;
   salonId: string | null;
   accessToken: string;
+  profileConfigured: boolean;
 }
 
 function extractAccessToken(request: NextRequest): string | null {
   const cookieToken = request.cookies.get('afrofade_session')?.value;
   if (cookieToken) return cookieToken;
-
   const authorization = request.headers.get('authorization');
   if (!authorization?.startsWith('Bearer ')) return null;
-
   const token = authorization.slice('Bearer '.length).trim();
   return token || null;
 }
@@ -25,7 +24,6 @@ function extractAccessToken(request: NextRequest): string | null {
 export async function verifyAccessToken(accessToken: string): Promise<VerifiedPrincipal | null> {
   const supabaseAdmin = getServiceSupabase();
   const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-
   if (error || !data.user) return null;
 
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -34,7 +32,6 @@ export async function verifyAccessToken(accessToken: string): Promise<VerifiedPr
     .eq('user_id', data.user.id)
     .maybeSingle();
 
-  // A missing profile is a valid authenticated end-user, but never an admin.
   if (profileError && profileError.code !== 'PGRST116') {
     console.warn('[Auth] Unable to load user profile:', profileError.message);
   }
@@ -49,6 +46,7 @@ export async function verifyAccessToken(accessToken: string): Promise<VerifiedPr
     role,
     salonId: profile?.salon_id ?? null,
     accessToken,
+    profileConfigured: Boolean(profile),
   };
 }
 
