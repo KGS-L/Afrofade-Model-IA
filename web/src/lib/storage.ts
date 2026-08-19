@@ -1,56 +1,66 @@
 import { fetchWithRetry } from './resilience';
+import { supabase } from './supabase';
+import type { SignedUploadDescriptor, StoredAssetRef } from './storage-types';
+import { isStoredAssetRef } from './storage-types';
 
 export interface UploadResponse {
-  publicUrl: string;
-  path: string;
-  error?: string;
+  storageRef: StoredAssetRef;
 }
 
-export async function uploadClientPhoto(
-  file: File,
-  salonId = 'demo-salon'
-): Promise<UploadResponse> {
-  try {
-    // 1. Get presigned upload URL from Next.js API with resilience retry
-    const res = await fetchWithRetry('/api/upload/presigned-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        filename: file.name,
-        mimeType: file.type || 'image/jpeg',
-        fileSize: file.size,
-        salonId,
-      }),
-      maxRetries: 3,
+export async function uploadClientPhoto(file: File): Promise<UploadResponse> {
+  const res = await fetchWithRetry('/api/upload/presigned-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filename: file.name,
+      mimeType: file.type || 'image/jpeg',
+      fileSize: file.size,
+    }),
+    maxRetries: 3,
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || 'Impossible d’obtenir l’URL d’upload');
+  }
+
+  const descriptor = (await res.json()) as Partial<SignedUploadDescriptor>;
+  if (
+    !isStoredAssetRef(descriptor.storageRef) ||
+    typeof descriptor.token !== 'string' ||
+    !descriptor.token
+  ) {
+    throw new Error('Le serveur a retourné une référence de stockage invalide.');
+  }
+
+  const { error } = await supabase.storage
+    .from(descriptor.storageRef.bucket)
+    .uploadToSignedUrl(descriptor.storageRef.path, descriptor.token, file, {
+      contentType: file.type || 'image/jpeg',
     });
 
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || 'Impossible d’obtenir l’URL d’upload');
-    }
-
-    const { signedUrl, publicUrl, path } = await res.json();
-
-    // 2. Upload file directly if signedUrl is provided
-    if (signedUrl) {
-      const uploadRes = await fetch(signedUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'image/jpeg' },
-        body: file,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Échec du transfert vers le stockage cloud');
-      }
-    }
-
-    return { publicUrl, path };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erreur d’upload';
-    console.warn('Fallback local pour la photo:', message);
-    return {
-      publicUrl: URL.createObjectURL(file),
-      path: `local/${file.name}`,
-    };
+  if (error) {
+    throw new Error(error.message || 'Échec du transfert vers le stockage cloud');
   }
+
+  return { storageRef: descriptor.storageRef };
+}
+
+export async function createSignedReadUrl(
+  storageRef: StoredAssetRef,
+  expiresIn = 300
+): Promise<string> {
+  const response = await fetch('/api/storage/signed-read', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ storageRef, expiresIn }),
+    cache: 'no-store',
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || typeof data.signedUrl !== 'string') {
+    throw new Error(data.error || 'Impossible de créer l’URL de lecture sécurisée.');
+  }
+
+  return data.signedUrl;
 }
