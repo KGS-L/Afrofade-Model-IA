@@ -44,6 +44,43 @@ class JobQueue(ABC):
     ) -> list[AIJobRecord]:
         raise NotImplementedError
 
+    @abstractmethod
+    def heartbeat(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        lease_seconds: int = 300,
+    ) -> AIJobRecord:
+        raise NotImplementedError
+
+    @abstractmethod
+    def complete(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        output_payload: dict[str, Any],
+    ) -> AIJobRecord:
+        raise NotImplementedError
+
+    @abstractmethod
+    def fail(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        error_code: str,
+        error_message: str,
+        retryable: bool = True,
+        retry_delay_seconds: int = 30,
+    ) -> AIJobRecord:
+        raise NotImplementedError
+
+    @abstractmethod
+    def recover_expired(self, *, limit: int = 100) -> list[AIJobRecord]:
+        raise NotImplementedError
+
 
 class SupabasePostgresJobQueue(JobQueue):
     """Thin service-role client for the PostgreSQL queue RPCs exposed by Supabase/PostgREST."""
@@ -125,6 +162,13 @@ class SupabasePostgresJobQueue(JobQueue):
             raise JobQueueError("Job queue returned an unexpected payload")
         return AIJobRecord.model_validate(payload)
 
+    @classmethod
+    def _required_job(cls, payload: Any, operation: str) -> AIJobRecord:
+        job = cls._first_job(payload)
+        if job is None:
+            raise JobQueueError(f"{operation} returned no job")
+        return job
+
     def enqueue(
         self,
         *,
@@ -163,10 +207,7 @@ class SupabasePostgresJobQueue(JobQueue):
                 "p_priority": priority,
             },
         )
-        job = self._first_job(payload)
-        if job is None:
-            raise JobQueueError("enqueue_ai_job returned no job")
-        return job
+        return self._required_job(payload, "enqueue_ai_job")
 
     def get(self, job_id: UUID) -> AIJobRecord | None:
         payload = self._request(
@@ -206,4 +247,94 @@ class SupabasePostgresJobQueue(JobQueue):
         )
         if not isinstance(payload, list):
             raise JobQueueError("claim_ai_jobs returned an unexpected payload")
+        return [AIJobRecord.model_validate(item) for item in payload]
+
+    def heartbeat(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        lease_seconds: int = 300,
+    ) -> AIJobRecord:
+        worker_id = worker_id.strip()
+        if not worker_id:
+            raise JobQueueError("worker_id is required")
+        if lease_seconds < 10 or lease_seconds > 3600:
+            raise JobQueueError("lease_seconds must be between 10 and 3600")
+
+        payload = self._request(
+            "POST",
+            "rpc/heartbeat_ai_job",
+            json={
+                "p_job_id": str(job_id),
+                "p_worker_id": worker_id,
+                "p_lease_seconds": lease_seconds,
+            },
+        )
+        return self._required_job(payload, "heartbeat_ai_job")
+
+    def complete(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        output_payload: dict[str, Any],
+    ) -> AIJobRecord:
+        worker_id = worker_id.strip()
+        if not worker_id:
+            raise JobQueueError("worker_id is required")
+
+        payload = self._request(
+            "POST",
+            "rpc/complete_ai_job",
+            json={
+                "p_job_id": str(job_id),
+                "p_worker_id": worker_id,
+                "p_output_payload": output_payload,
+            },
+        )
+        return self._required_job(payload, "complete_ai_job")
+
+    def fail(
+        self,
+        *,
+        job_id: UUID,
+        worker_id: str,
+        error_code: str,
+        error_message: str,
+        retryable: bool = True,
+        retry_delay_seconds: int = 30,
+    ) -> AIJobRecord:
+        worker_id = worker_id.strip()
+        error_code = error_code.strip() or "worker_error"
+        if not worker_id:
+            raise JobQueueError("worker_id is required")
+        if retry_delay_seconds < 0 or retry_delay_seconds > 3600:
+            raise JobQueueError("retry_delay_seconds must be between 0 and 3600")
+
+        payload = self._request(
+            "POST",
+            "rpc/fail_ai_job",
+            json={
+                "p_job_id": str(job_id),
+                "p_worker_id": worker_id,
+                "p_error_code": error_code,
+                "p_error_message": error_message,
+                "p_retryable": retryable,
+                "p_retry_delay_seconds": retry_delay_seconds,
+            },
+        )
+        return self._required_job(payload, "fail_ai_job")
+
+    def recover_expired(self, *, limit: int = 100) -> list[AIJobRecord]:
+        if limit < 1 or limit > 500:
+            raise JobQueueError("limit must be between 1 and 500")
+
+        payload = self._request(
+            "POST",
+            "rpc/recover_expired_ai_jobs",
+            json={"p_limit": limit},
+        )
+        if not isinstance(payload, list):
+            raise JobQueueError("recover_expired_ai_jobs returned an unexpected payload")
         return [AIJobRecord.model_validate(item) for item in payload]
