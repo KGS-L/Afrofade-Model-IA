@@ -1,40 +1,23 @@
-# STATUS DEFINITIONS:
-# ==================
-# Epic Status:
-#   - backlog: Epic not yet started
-#   - in-progress: Epic actively being worked on
-#   - done: All stories in epic completed
+# BMAD Sprint Status — Afrofade
+# Historical epics 1-5 remain complete. Post-P0 Correct Course continues at Epic 6+.
 
-# Story Status:
-#   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created, ready for development
-#   - in-progress: Developer actively working on implementation
-#   - review: Implementation complete, ready for review
-#   - done: Story completed
-
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
-
-# Action Item Status:
-#   - open: Committed during a retrospective, not yet addressed
-#   - in-progress: Actively being worked on
-#   - done: Completed
-
-# WORKFLOW NOTES:
-# ===============
-# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
-# - Stories can be worked in parallel if team capacity allows
-# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
-# - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: '2026-08-18'
-last_updated: '08-18-2026 13:34'
+last_updated: '2026-08-19'
 project: Afrofade
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
+
+readiness_gate:
+  result: PASS
+  rationale:
+    - P0 security/commerce boundaries are implemented and CI-validated.
+    - PRD and Architecture Spine were refreshed by Correct Course on 2026-08-19.
+    - Post-P0 epic numbering preserves historical BMAD artifacts.
+    - P1 queue/storage/canonical-contract decisions are explicit enough for Build.
+
 development_status:
+  # Historical baseline
   epic-1: done
   1-1-schéma-de-base-de-données-postgresql-middleware-de-sécurité: done
   1-2-authentification-salon-google-oauth-e-mail-code-otp: done
@@ -61,17 +44,65 @@ development_status:
   5-1-webhook-geniuspay-money-fusion-gestion-des-quotas: done
   5-2-dashboard-administrateur-kpis-saas-mrr-fcfa: done
   epic-5-retrospective: done
+
+  # Post-P0 Correct Course
+  epic-6: backlog
+  6-1-ownership-rls-propagation-post-p0: backlog
+  6-2-credit-consumption-service: backlog
+  6-3-provider-rollout-completion: backlog
+  epic-6-retrospective: optional
+
+  epic-7: in-progress
+  7-1-canonical-3d-data-contracts: ready-for-dev
+  7-2-persistent-ai-jobs-schema-jobqueue: backlog
+  7-3-restart-safe-python-worker: backlog
+  7-4-assetstorage-abstraction: backlog
+  7-5-headgenerationmanager-real-flame: backlog
+  7-6-head-job-integration-tests: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-hair-asset-versioning-schema: backlog
+  8-2-fix-provider-scaffolding-defects: backlog
+  8-3-hairassetnormalizer-real-pipeline: backlog
+  8-4-trellis2-afrofade-lora-provider: backlog
+  8-5-hunyuan3d-multiview-provider: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-hairfitter-contract: backlog
+  9-2-catalog-swap-performance: backlog
+  9-3-line-up-durable-export: backlog
+  epic-9-retrospective: optional
+
+  epic-10: backlog
+  10-1-customer-dashboard-wallet: backlog
+  10-2-customer-head-creation: backlog
+  10-3-free-hairstyle-exploration: backlog
+  10-4-hd-download-share: backlog
+  epic-10-retrospective: optional
+
+  epic-11: backlog
+  11-1-salon-dashboard-server-truth: backlog
+  11-2-salon-quota-engine: backlog
+  11-3-admin-kpi-job-dashboard: backlog
+  11-4-admin-hair-catalog-workflow: backlog
+  11-5-privacy-retention-observability: backlog
+  11-6-ci-e2e-expansion: backlog
+  epic-11-retrospective: optional
+
 action_items:
   - id: "epic-5-retro-item-1-déployer-la-version-finale-sur-le-vps-de"
     epic: 5
-    action: "Déployer la version finale sur le VPS de production avec Docker Compose
-      et Nginx SSL."
+    action: "Déployer la version finale sur le VPS de production avec Docker Compose et Nginx SSL."
     owner: "DevOps"
-    status: open
+    status: deferred
     ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-08-18.md"
-  - id: "epic-5-retro-item-2-automatiser-les-tests-d-intégration-e2e"
-    epic: 5
-    action: "Automatiser les tests d intégration E2E du webhook de paiement GeniusPay."
-    owner: "QA"
-    status: done
-    ref: "_bmad-output/implementation-artifacts/epic-5-retro-2026-08-18.md"
+    note: "Deferred until P0 PR merge + production migrations/secrets validation."
+
+  - id: "post-p0-correct-course"
+    epic: 7
+    action: "Complete Epic 7 before enabling paid hair-generation providers."
+    owner: "Architecture/Dev"
+    status: in-progress
+    ref: "_bmad-output/planning-artifacts/change-proposal-2026-08-19-p0-to-p1.md"
