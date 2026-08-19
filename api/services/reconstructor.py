@@ -7,22 +7,27 @@ the generated-models volume until the user journey is migrated to async jobs.
 
 from __future__ import annotations
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 import json
 import logging
 import os
 import time
 
-import trimesh
-
 from models.head_generation import ReconstructedHeadPayload
-from services.fitting.shared_identity_fitter import SharedIdentityFitter
 
 logger = logging.getLogger("afrofade.reconstruction")
 
 
 class ReconstructionPipelineService:
-    _fitter = SharedIdentityFitter(shape_dim=100)
+    _fitter: Any | None = None
+
+    @classmethod
+    def _get_fitter(cls) -> Any:
+        if cls._fitter is None:
+            from services.fitting.shared_identity_fitter import SharedIdentityFitter
+
+            cls._fitter = SharedIdentityFitter(shape_dim=100)
+        return cls._fitter
 
     @classmethod
     def generate_3d_head_asset(
@@ -42,12 +47,15 @@ class ReconstructionPipelineService:
         if not all(isinstance(url, str) and url.strip() for url in photos_urls):
             raise ValueError("invalid_photo_input")
 
+        from trimesh import Trimesh
+
         start_time = time.time()
         durable_job_id = job_id.strip()
         safe_client_name = client_name.strip() or "Client Afrofade"
         logger.info("Starting FLAME reconstruction for %s (%s).", safe_client_name, durable_job_id)
 
-        fit_results = cls._fitter.fit_single_or_multi_view(
+        fitter = cls._get_fitter()
+        fit_results = fitter.fit_single_or_multi_view(
             image_inputs=[url.strip() for url in photos_urls],
             job_id=durable_job_id,
             max_iterations=100,
@@ -56,7 +64,7 @@ class ReconstructionPipelineService:
         beta_fitted = fit_results["beta_fitted"]
         vertices_fitted = fit_results["vertices_3d"]
         faces = fit_results["faces"]
-        flame_model = cls._fitter.flame_model
+        flame_model = fitter.flame_model
         template_vertices = flame_model.v_mean.cpu().numpy()
 
         debug_dir = os.path.join("/tmp", "afrofade_debug", durable_job_id)
@@ -92,7 +100,7 @@ class ReconstructionPipelineService:
         with open(os.path.join(debug_dir, "fit_report.json"), "w", encoding="utf-8") as handle:
             json.dump(fit_metadata, handle, indent=2)
 
-        mesh = trimesh.Trimesh(vertices=vertices_fitted, faces=faces, process=False)
+        mesh = Trimesh(vertices=vertices_fitted, faces=faces, process=False)
         exported = mesh.export(file_type="glb")
         glb_bytes = bytes(exported) if not isinstance(exported, bytes) else exported
         if not glb_bytes:
