@@ -81,15 +81,16 @@ class FakeSession:
 
 
 def running_job(**overrides: Any) -> dict[str, Any]:
-    return sample_job(
+    payload = sample_job(
         status="running",
         attempts=1,
         locked_at=NOW,
         locked_by="worker-ci-1",
         lease_expires_at=NOW,
         started_at=NOW,
-        **overrides,
     )
+    payload.update(overrides)
+    return payload
 
 
 def assert_migration_contract() -> None:
@@ -178,7 +179,15 @@ def assert_client_mapping() -> None:
     }
     print("[PASS] heartbeat RPC mapping")
 
-    session.push([running_job(status="completed", output_payload={"mesh": "ok"}, progress_percent=100, locked_at=None, locked_by=None, lease_expires_at=None, completed_at=NOW)])
+    session.push([running_job(
+        status="completed",
+        output_payload={"mesh": "ok"},
+        progress_percent=100,
+        locked_at=None,
+        locked_by=None,
+        lease_expires_at=None,
+        completed_at=NOW,
+    )])
     completed = queue.complete(
         job_id=JOB_ID,
         worker_id="worker-ci-1",
