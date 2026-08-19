@@ -40,14 +40,16 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.com'),
+  metadataBase: new URL(siteUrl),
   title: {
-    default: 'Afrofade — Le Rituel du Miroir : voyez la coupe 3D avant de couper',
+    default: 'Afrofade — Studio Virtuel de Coiffure 3D & Essayage de Coupes',
     template: '%s — Afrofade',
   },
   description:
-    'Afrofade reconstruit la tête de votre client en 3D à partir d’un scan vidéo guidé — capture automatique des angles — puis lui essaye fades, locks, tresses et barbes avant le premier coup de tondeuse. Pensé pour les salons et les textures crépues.',
+    'Afrofade est l’application web de référence pour la coiffure afro. Elle reconstruit la tête de votre client en 3D à partir d’un scan vidéo guidé et permet d’essayer virtuellement des coupes (fades, locks, tresses, barbes) avant la tondeuse.',
   keywords: [
     'Afrofade',
     'Coiffure Afro 3D',
@@ -67,11 +69,11 @@ export const metadata: Metadata = {
     apple: '/icon.png',
   },
   openGraph: {
-    title: 'Afrofade — Le Rituel du Miroir 3D pour Barbiers & Salons',
+    title: 'Afrofade — Studio Virtuel de Coiffure 3D & Essayage de Coupes',
     description:
-      'Reconstruction 3D faciale en < 2s et essayage dynamique de coupes afro (Fades, Locks, Tresses, Barbes) avant la tondeuse.',
-    url: 'https://afrofade.com',
-    siteName: 'Afrofade 3D Studio',
+      'Afrofade : Reconstruction 3D faciale en < 2s et essayage dynamique de coupes afro (Fades, Locks, Tresses, Barbes) avant le passage au salon.',
+    url: 'https://afrofade.pro',
+    siteName: 'Afrofade',
     locale: 'fr_FR',
     type: 'website',
     images: [
@@ -79,15 +81,15 @@ export const metadata: Metadata = {
         url: '/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Afrofade 3D Haircut Mirror Preview',
+        alt: 'Afrofade — Studio Virtuel de Coiffure 3D',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Afrofade 3D — Le Miroir du Futur pour la Coiffure Afro',
+    title: 'Afrofade — Studio Virtuel de Coiffure 3D',
     description:
-      'Reconstruction 3D en < 2s et essayage instantané de coiffures afro. Découvrez le Rituel du Miroir.',
+      'Afrofade : Reconstruction 3D en < 2s et essayage instantané de coiffures afro.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -101,11 +103,33 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Afrofade',
+    url: siteUrl,
+    applicationCategory: 'LifestyleApplication',
+    operatingSystem: 'All',
+    description:
+      'Afrofade est un studio virtuel de coiffure 3D qui permet d’essayer des coupes de cheveux (fades, tresses, locks, afros) sur un modèle 3D reconstruit à partir d’un scan vidéo.',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'XOF',
+    },
+  };
+
   return (
     <html
       lang="fr"
       className={`${displayFont.variable} ${bodyFont.variable} ${handFont.variable}`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-body">
         {/* Fallback no-JS : les révélations au scroll (.fade-safe) restent visibles */}
         <noscript>
@@ -118,3 +142,4 @@ export default function RootLayout({
     </html>
   );
 }
+

@@ -8,7 +8,9 @@ export async function POST() {
 }
 
 export async function GET(req: NextRequest) {
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro').replace(/\/$/, '');
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : req.nextUrl.origin)).replace(/\/$/, '');
   const paymentId = req.nextUrl.searchParams.get('payment_id');
   const suffix = paymentId ? `&payment_id=${encodeURIComponent(paymentId)}` : '';
 

@@ -21,7 +21,10 @@ echo "[1/4] Préparation et synchronisation du dossier projet..."
 mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
 
 cp -a "$REPO_DIR/docker-compose.yml" "$TARGET_DIR/"
-if [[ -f "$REPO_DIR/.env.example" ]]; then
+if [[ -f "$REPO_DIR/.env.pro" ]]; then
+  cp -a "$REPO_DIR/.env.pro" "$TARGET_DIR/"
+  cp -a "$REPO_DIR/.env.pro" "$TARGET_DIR/.env"
+elif [[ -f "$REPO_DIR/.env.example" ]]; then
   cp -a "$REPO_DIR/.env.example" "$TARGET_DIR/"
 fi
 

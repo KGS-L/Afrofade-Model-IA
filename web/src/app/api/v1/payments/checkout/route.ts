@@ -195,7 +195,9 @@ export async function POST(req: NextRequest) {
     if (insertError || !payment) throw new Error(insertError?.message || 'Unable to create payment transaction.');
     paymentId = payment.id;
 
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro').replace(/\/$/, '');
+    const forwardedHost = req.headers.get('x-forwarded-host');
+    const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : req.nextUrl.origin)).replace(/\/$/, '');
     const returnBase = `${appUrl}${purpose === 'credits' ? '/account' : '/dashboard'}`;
     const commonProviderMetadata = {
       paymentId: payment.id,

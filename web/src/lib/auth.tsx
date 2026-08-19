@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = useCallback(async (email: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+      options: { shouldCreateUser: true },
     });
     if (error) console.warn('[Auth] Unable to send OTP:', error.message);
     return !error;
@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = useCallback(async (nextUrl = '/dashboard') => {
     const safeNext = nextUrl.startsWith('/') && !nextUrl.startsWith('//') ? nextUrl : '/dashboard';
-    const callbackUrl = new URL('/api/auth/callback', window.location.origin);
+    const callbackUrl = new URL('/connexion', window.location.origin);
     callbackUrl.searchParams.set('next', safeNext);
 
     const { error } = await supabase.auth.signInWithOAuth({

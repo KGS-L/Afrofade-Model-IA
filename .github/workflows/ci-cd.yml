@@ -122,7 +122,6 @@ jobs:
           WEB_PORT=3005
           API_PORT=8005
           FASTAPI_ENV=production
-          SUPABASE_URL=https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_URL=https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role-key
@@ -201,25 +200,15 @@ jobs:
           fi
           cd "$TARGET_DIR"
 
-          if [ -f .env.example ]; then
-            if [ ! -f .env ]; then
-              cp .env.example .env
-            else
-              ENV_WEB_PORT=$(grep "^WEB_PORT=" .env.example | cut -d'=' -f2)
-              ENV_API_PORT=$(grep "^API_PORT=" .env.example | cut -d'=' -f2)
-              if [ -n "$ENV_WEB_PORT" ]; then
-                if grep -q "^WEB_PORT=" .env; then sed -i "s/^WEB_PORT=.*/WEB_PORT=$ENV_WEB_PORT/" .env; else echo "WEB_PORT=$ENV_WEB_PORT" >> .env; fi
-              fi
-              if [ -n "$ENV_API_PORT" ]; then
-                if grep -q "^API_PORT=" .env; then sed -i "s/^API_PORT=.*/API_PORT=$ENV_API_PORT/" .env; else echo "API_PORT=$ENV_API_PORT" >> .env; fi
-              fi
-              while IFS='=' read -r key value || [ -n "$key" ]; do
-                [[ "$key" =~ ^#.*$ ]] && continue
-                [[ -z "$key" ]] && continue
-                clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
-                if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
-              done < .env.example
-            fi
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          else
+            while IFS='=' read -r key value || [ -n "$key" ]; do
+              [[ "$key" =~ ^#.*$ ]] && continue
+              [[ -z "$key" ]] && continue
+              clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
+              if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
+            done < .env.example
           fi
 
           run_sudo() {
@@ -239,12 +228,12 @@ jobs:
 
           require_value API_INTERNAL_SECRET
           require_value CRON_SECRET
-          require_value SUPABASE_URL
+          require_value NEXT_PUBLIC_SUPABASE_URL
           require_value SUPABASE_SERVICE_ROLE_KEY
 
-          supabase_url=$(grep '^SUPABASE_URL=' .env | head -n1 | cut -d'=' -f2-)
+          supabase_url=$(grep '^NEXT_PUBLIC_SUPABASE_URL=' .env | head -n1 | cut -d'=' -f2-)
           if ! echo "$supabase_url" | grep -q '^https://'; then
-            echo "ERROR: SUPABASE_URL must use HTTPS in production"
+            echo "ERROR: NEXT_PUBLIC_SUPABASE_URL must use HTTPS in production"
             exit 1
           fi
 
