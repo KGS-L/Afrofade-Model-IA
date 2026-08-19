@@ -93,8 +93,8 @@ export const Footer: React.FC = () => {
               </a>
             </li>
             <li>
-              <a href="mailto:support@afrofade.com" className="hover:text-terracotta transition-colors">
-                support@afrofade.com
+              <a href="mailto:support@afrofade.pro" className="hover:text-terracotta transition-colors">
+                support@afrofade.pro
               </a>
             </li>
           </ul>
