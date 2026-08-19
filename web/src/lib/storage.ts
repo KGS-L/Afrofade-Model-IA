@@ -7,13 +7,19 @@ export interface UploadResponse {
   storageRef: StoredAssetRef;
 }
 
+function normalizeImageMimeType(value: string | undefined): string {
+  const mimeType = (value || 'image/jpeg').trim().toLowerCase();
+  return mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;
+}
+
 export async function uploadClientPhoto(file: File): Promise<UploadResponse> {
+  const contentType = normalizeImageMimeType(file.type);
   const res = await fetchWithRetry('/api/upload/presigned-url', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       filename: file.name,
-      mimeType: file.type || 'image/jpeg',
+      mimeType: contentType,
       fileSize: file.size,
     }),
     maxRetries: 3,
@@ -24,7 +30,7 @@ export async function uploadClientPhoto(file: File): Promise<UploadResponse> {
     throw new Error(errData.error || 'Impossible d’obtenir l’URL d’upload');
   }
 
-  const descriptor = (await res.json()) as Partial<SignedUploadDescriptor>;
+  const descriptor = (await res.json()) as Partial<SignedUploadDescriptor> & { contentType?: string };
   if (
     !isStoredAssetRef(descriptor.storageRef) ||
     typeof descriptor.token !== 'string' ||
@@ -33,10 +39,11 @@ export async function uploadClientPhoto(file: File): Promise<UploadResponse> {
     throw new Error('Le serveur a retourné une référence de stockage invalide.');
   }
 
+  const uploadContentType = normalizeImageMimeType(descriptor.contentType || contentType);
   const { error } = await supabase.storage
     .from(descriptor.storageRef.bucket)
     .uploadToSignedUrl(descriptor.storageRef.path, descriptor.token, file, {
-      contentType: file.type || 'image/jpeg',
+      contentType: uploadContentType,
     });
 
   if (error) {
