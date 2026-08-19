@@ -70,8 +70,8 @@ def expect_asset_error(name: str, callback) -> None:
 
 
 def assert_path_validation() -> None:
-    valid = validate_asset_ref(StoredAssetRef("heads", "users/u1/canonical/head.glb"))
-    assert valid.path == "users/u1/canonical/head.glb"
+    valid = validate_asset_ref(StoredAssetRef("heads", "canonical/users/u1/head.glb"))
+    assert valid.path == "canonical/users/u1/head.glb"
 
     expect_asset_error(
         "absolute storage path rejected",
@@ -79,7 +79,15 @@ def assert_path_validation() -> None:
     )
     expect_asset_error(
         "path traversal rejected",
-        lambda: validate_asset_ref(StoredAssetRef("heads", "users/u1/../other/head.glb")),
+        lambda: validate_asset_ref(StoredAssetRef("heads", "canonical/users/u1/../other/head.glb")),
+    )
+    expect_asset_error(
+        "double-slash storage path rejected before normalization",
+        lambda: validate_asset_ref(StoredAssetRef("heads", "canonical/users/u1//head.glb")),
+    )
+    expect_asset_error(
+        "dot storage path segment rejected before normalization",
+        lambda: validate_asset_ref(StoredAssetRef("heads", "canonical/users/u1/./head.glb")),
     )
     expect_asset_error(
         "backslash path rejected",
@@ -99,7 +107,7 @@ def assert_sdk_mapping() -> None:
         "service-role-test-key",
         client=client,
     )
-    asset = StoredAssetRef("heads", "users/u1/canonical/head.glb")
+    asset = StoredAssetRef("heads", "canonical/users/u1/head.glb")
 
     uploaded = storage.put_object(asset, b"glb-bytes", content_type="model/gltf-binary")
     assert uploaded == asset
@@ -121,7 +129,12 @@ def assert_sdk_mapping() -> None:
     assert signed_upload.token == "upload-token"
     assert bucket.calls[-1][0] == "create_signed_upload_url"
     assert bucket.calls[-1][1]["path"] == asset.path
-    print("[PASS] signed upload SDK mapping")
+    assert bucket.calls[-1][1]["options"]["upsert"] is False
+
+    signed_upload_upsert = storage.create_signed_upload(asset, upsert=True)
+    assert signed_upload_upsert.asset == asset
+    assert bucket.calls[-1][1]["options"]["upsert"] is True
+    print("[PASS] signed upload SDK mapping preserves boolean upsert contract")
 
     filename = "head.glb"
     bucket.listing = [{"name": filename, "id": "object-1", "metadata": {"mimetype": "model/gltf-binary"}}]
