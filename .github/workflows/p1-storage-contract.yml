@@ -1,0 +1,24 @@
+name: P1 AssetStorage Contract
+
+on:
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  asset-storage-contract:
+    name: Validate durable AssetStorage contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Validate AssetStorage without external services
+        run: python3 api/scripts/validate_asset_storage.py

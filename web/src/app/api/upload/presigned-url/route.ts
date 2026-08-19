@@ -3,8 +3,14 @@ import type { NextRequest } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getVerifiedPrincipal } from '@/lib/server-auth';
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const CLIENT_PHOTOS_BUCKET = 'client-photos' as const;
+
+function normalizeImageMimeType(value: unknown): string {
+  const mimeType = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const filename = typeof body?.filename === 'string' ? body.filename : '';
-    const mimeType = typeof body?.mimeType === 'string' ? body.mimeType.toLowerCase() : '';
+    const mimeType = normalizeImageMimeType(body?.mimeType);
     const fileSize = Number(body?.fileSize ?? 0);
 
     if (!filename || !mimeType || !Number.isFinite(fileSize) || fileSize <= 0) {
@@ -32,11 +38,11 @@ export async function POST(request: NextRequest) {
     const ownerPrefix = principal.salonId
       ? `salons/${principal.salonId}`
       : `users/${principal.user.id}`;
-    const storagePath = `${ownerPrefix}/${crypto.randomUUID()}_${cleanFilename}`;
+    const storagePath = `temporary/${ownerPrefix}/${crypto.randomUUID()}_${cleanFilename}`;
 
     const supabaseAdmin = getServiceSupabase();
     const { data, error } = await supabaseAdmin.storage
-      .from('client-photos')
+      .from(CLIENT_PHOTOS_BUCKET)
       .createSignedUploadUrl(storagePath);
 
     if (error || !data) {
@@ -45,9 +51,13 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
+      storageRef: {
+        bucket: CLIENT_PHOTOS_BUCKET,
+        path: data.path,
+      },
       signedUrl: data.signedUrl,
       token: data.token,
-      path: data.path,
+      contentType: mimeType,
     });
   } catch (err: unknown) {
     console.error('[Upload Route]', err);

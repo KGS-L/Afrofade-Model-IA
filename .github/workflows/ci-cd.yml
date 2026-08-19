@@ -82,6 +82,18 @@ jobs:
         run: |
           python -m compileall -q api
 
+      - name: Validate canonical 3D contracts
+        run: |
+          python3 api/scripts/validate_canonical_contracts.py
+
+      - name: Validate persistent AI JobQueue contract
+        run: |
+          python3 api/scripts/validate_job_queue_contract.py
+
+      - name: Validate restart-safe AI worker lifecycle
+        run: |
+          python3 api/scripts/validate_worker_lifecycle.py
+
       - name: Check P0 security invariants
         run: |
           python3 scripts/check_p0_invariants.py
@@ -110,12 +122,19 @@ jobs:
           WEB_PORT=3005
           API_PORT=8005
           FASTAPI_ENV=production
+          SUPABASE_URL=https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_URL=https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role-key
           API_INTERNAL_SECRET=ci-internal-secret
           CRON_SECRET=ci-cron-secret
           API_ALLOWED_ORIGINS=http://127.0.0.1:3005
+          AI_WORKER_ENABLED=false
+          AI_WORKER_CLAIM_LIMIT=1
+          AI_WORKER_LEASE_SECONDS=300
+          AI_WORKER_HEARTBEAT_SECONDS=60
+          AI_WORKER_POLL_SECONDS=2
+          AI_WORKER_RECOVER_LIMIT=100
           PAYMENT_ENABLED_PROVIDERS=money_fusion,genius_pay
           MONEY_FUSION_API_URL=https://ci.moneyfusion.invalid/pay
           MONEY_FUSION_STATUS_URL=https://www.pay.moneyfusion.net/paiementNotif
@@ -132,7 +151,9 @@ jobs:
         run: |
           docker compose -f docker-compose.yml up -d
           for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:8005/health >/dev/null && curl -fsS http://127.0.0.1:3005/ >/dev/null; then
+            if curl -fsS http://127.0.0.1:8005/health >/dev/null \
+              && curl -fsS http://127.0.0.1:3005/ >/dev/null \
+              && docker compose -f docker-compose.yml ps --status running worker | grep -q afrofade-ai-worker; then
               exit 0
             fi
             sleep 2
@@ -218,7 +239,14 @@ jobs:
 
           require_value API_INTERNAL_SECRET
           require_value CRON_SECRET
+          require_value SUPABASE_URL
           require_value SUPABASE_SERVICE_ROLE_KEY
+
+          supabase_url=$(grep '^SUPABASE_URL=' .env | head -n1 | cut -d'=' -f2-)
+          if ! echo "$supabase_url" | grep -q '^https://'; then
+            echo "ERROR: SUPABASE_URL must use HTTPS in production"
+            exit 1
+          fi
 
           enabled_providers=$(grep '^PAYMENT_ENABLED_PROVIDERS=' .env | head -n1 | cut -d'=' -f2- | tr -d ' ')
           enabled_providers=${enabled_providers:-money_fusion}
