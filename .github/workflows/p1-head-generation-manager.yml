@@ -29,3 +29,6 @@ jobs:
 
       - name: Validate Story 7.5 durable head generation
         run: python3 api/scripts/validate_head_generation_manager.py
+
+      - name: Validate head asset repository ownership mapping
+        run: python3 api/scripts/validate_head_asset_repository.py
