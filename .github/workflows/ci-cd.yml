@@ -82,6 +82,10 @@ jobs:
         run: |
           python -m compileall -q api
 
+      - name: Validate canonical 3D contracts
+        run: |
+          python3 api/scripts/validate_canonical_contracts.py
+
       - name: Check P0 security invariants
         run: |
           python3 scripts/check_p0_invariants.py
