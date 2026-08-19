@@ -7,7 +7,6 @@ the generated-models volume until the user journey is migrated to async jobs.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import List, Dict, Any
 import json
 import logging
@@ -16,20 +15,10 @@ import time
 
 import trimesh
 
+from models.head_generation import ReconstructedHeadPayload
 from services.fitting.shared_identity_fitter import SharedIdentityFitter
 
 logger = logging.getLogger("afrofade.reconstruction")
-
-
-@dataclass(frozen=True)
-class ReconstructedHeadPayload:
-    glb_bytes: bytes
-    provider: str
-    processing_time_ms: int
-    vertices_count: int
-    polygon_count: int
-    converged: bool
-    fit_metadata: Dict[str, Any]
 
 
 class ReconstructionPipelineService:
