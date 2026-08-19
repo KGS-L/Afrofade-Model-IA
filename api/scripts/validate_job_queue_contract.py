@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provider-independent validation for BMAD Story 7.2 persistent job queue."""
+"""Provider-independent validation for BMAD Stories 7.2/7.3 durable JobQueue."""
 
 from __future__ import annotations
 
@@ -80,6 +80,18 @@ class FakeSession:
         return self.responses.pop(0)
 
 
+def running_job(**overrides: Any) -> dict[str, Any]:
+    return sample_job(
+        status="running",
+        attempts=1,
+        locked_at=NOW,
+        locked_by="worker-ci-1",
+        lease_expires_at=NOW,
+        started_at=NOW,
+        **overrides,
+    )
+
+
 def assert_migration_contract() -> None:
     migration_path = REPO_ROOT / "web" / "supabase" / "migrations" / "04_persistent_ai_jobs.sql"
     sql = migration_path.read_text(encoding="utf-8")
@@ -143,16 +155,7 @@ def assert_client_mapping() -> None:
     assert get_call["params"]["id"] == f"eq.{JOB_ID}"
     print("[PASS] get mapping")
 
-    session.push([
-        sample_job(
-            status="running",
-            attempts=1,
-            locked_at=NOW,
-            locked_by="worker-ci-1",
-            lease_expires_at=NOW,
-            started_at=NOW,
-        )
-    ])
+    session.push([running_job()])
     claimed = queue.claim(worker_id="worker-ci-1", limit=1, lease_seconds=300)
     assert len(claimed) == 1
     assert claimed[0].status == AIJobStatus.RUNNING
@@ -162,6 +165,54 @@ def assert_client_mapping() -> None:
     assert claim_call["url"].endswith("/rest/v1/rpc/claim_ai_jobs")
     assert claim_call["json"]["p_worker_id"] == "worker-ci-1"
     print("[PASS] atomic claim RPC mapping")
+
+    session.push([running_job()])
+    heartbeat = queue.heartbeat(job_id=JOB_ID, worker_id="worker-ci-1", lease_seconds=300)
+    assert heartbeat.status == AIJobStatus.RUNNING
+    heartbeat_call = session.calls[-1]
+    assert heartbeat_call["url"].endswith("/rest/v1/rpc/heartbeat_ai_job")
+    assert heartbeat_call["json"] == {
+        "p_job_id": str(JOB_ID),
+        "p_worker_id": "worker-ci-1",
+        "p_lease_seconds": 300,
+    }
+    print("[PASS] heartbeat RPC mapping")
+
+    session.push([running_job(status="completed", output_payload={"mesh": "ok"}, progress_percent=100, locked_at=None, locked_by=None, lease_expires_at=None, completed_at=NOW)])
+    completed = queue.complete(
+        job_id=JOB_ID,
+        worker_id="worker-ci-1",
+        output_payload={"mesh": "ok"},
+    )
+    assert completed.status == AIJobStatus.COMPLETED
+    complete_call = session.calls[-1]
+    assert complete_call["url"].endswith("/rest/v1/rpc/complete_ai_job")
+    assert complete_call["json"]["p_output_payload"] == {"mesh": "ok"}
+    print("[PASS] complete RPC mapping")
+
+    session.push([sample_job(status="queued", attempts=1, error_code="provider_timeout", error_message="retry")])
+    failed = queue.fail(
+        job_id=JOB_ID,
+        worker_id="worker-ci-1",
+        error_code="provider_timeout",
+        error_message="retry",
+        retryable=True,
+        retry_delay_seconds=45,
+    )
+    assert failed.status == AIJobStatus.QUEUED
+    fail_call = session.calls[-1]
+    assert fail_call["url"].endswith("/rest/v1/rpc/fail_ai_job")
+    assert fail_call["json"]["p_retryable"] is True
+    assert fail_call["json"]["p_retry_delay_seconds"] == 45
+    print("[PASS] fail/retry RPC mapping")
+
+    session.push([sample_job(status="queued", attempts=1, error_code="worker_lease_expired", error_message="expired")])
+    recovered = queue.recover_expired(limit=20)
+    assert len(recovered) == 1
+    recover_call = session.calls[-1]
+    assert recover_call["url"].endswith("/rest/v1/rpc/recover_expired_ai_jobs")
+    assert recover_call["json"]["p_limit"] == 20
+    print("[PASS] expired-lease recovery RPC mapping")
 
 
 def assert_fail_closed_configuration() -> None:
@@ -222,7 +273,7 @@ def main() -> None:
     assert_client_mapping()
     assert_fail_closed_configuration()
     assert_input_validation()
-    print("\nPersistent AI JobQueue contract: PASS")
+    print("\nDurable AI JobQueue contract: PASS")
 
 
 if __name__ == "__main__":
