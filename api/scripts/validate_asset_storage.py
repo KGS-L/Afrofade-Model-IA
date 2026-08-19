@@ -136,7 +136,7 @@ def assert_sdk_mapping() -> None:
 
 
 def assert_fail_closed_configuration() -> None:
-    old_url = os.environ.pop("SUPABASE_URL", None)
+    old_url = os.environ.pop("NEXT_PUBLIC_SUPABASE_URL", None)
     old_key = os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
     old_env = os.environ.get("FASTAPI_ENV")
     try:
@@ -153,7 +153,7 @@ def assert_fail_closed_configuration() -> None:
         )
     finally:
         if old_url is not None:
-            os.environ["SUPABASE_URL"] = old_url
+            os.environ["NEXT_PUBLIC_SUPABASE_URL"] = old_url
         if old_key is not None:
             os.environ["SUPABASE_SERVICE_ROLE_KEY"] = old_key
         if old_env is None:
