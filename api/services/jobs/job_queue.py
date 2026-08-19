@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 import requests
+from pydantic import ValidationError
 
 from models.jobs import AIJobRecord, AIJobType
 
@@ -153,14 +154,21 @@ class SupabasePostgresJobQueue(JobQueue):
             raise JobQueueError("Job queue returned invalid JSON") from exc
 
     @staticmethod
-    def _first_job(payload: Any) -> AIJobRecord | None:
+    def _validate_job(payload: Any) -> AIJobRecord:
+        if not isinstance(payload, dict):
+            raise JobQueueError("Job queue returned an unexpected job payload")
+        try:
+            return AIJobRecord.model_validate(payload)
+        except ValidationError as exc:
+            raise JobQueueError("Job queue returned a job payload that violates the AIJobRecord contract") from exc
+
+    @classmethod
+    def _first_job(cls, payload: Any) -> AIJobRecord | None:
         if isinstance(payload, list):
             if not payload:
                 return None
             payload = payload[0]
-        if not isinstance(payload, dict):
-            raise JobQueueError("Job queue returned an unexpected payload")
-        return AIJobRecord.model_validate(payload)
+        return cls._validate_job(payload)
 
     @classmethod
     def _required_job(cls, payload: Any, operation: str) -> AIJobRecord:
@@ -247,7 +255,7 @@ class SupabasePostgresJobQueue(JobQueue):
         )
         if not isinstance(payload, list):
             raise JobQueueError("claim_ai_jobs returned an unexpected payload")
-        return [AIJobRecord.model_validate(item) for item in payload]
+        return [self._validate_job(item) for item in payload]
 
     def heartbeat(
         self,
@@ -337,4 +345,4 @@ class SupabasePostgresJobQueue(JobQueue):
         )
         if not isinstance(payload, list):
             raise JobQueueError("recover_expired_ai_jobs returned an unexpected payload")
-        return [AIJobRecord.model_validate(item) for item in payload]
+        return [self._validate_job(item) for item in payload]
