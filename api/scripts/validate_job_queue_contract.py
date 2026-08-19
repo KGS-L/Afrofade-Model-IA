@@ -99,13 +99,15 @@ def assert_migration_contract() -> None:
         "GRANT EXECUTE ON FUNCTION enqueue_ai_job",
         "GRANT EXECUTE ON FUNCTION claim_ai_jobs",
         "TO service_role",
-        "REVOKE INSERT, UPDATE, DELETE ON ai_jobs FROM anon, authenticated",
+        "REVOKE ALL ON ai_jobs FROM anon",
+        "REVOKE INSERT, UPDATE, DELETE ON ai_jobs FROM authenticated",
+        "GRANT SELECT ON ai_jobs TO authenticated",
     ]
 
     missing = [fragment for fragment in required_fragments if fragment not in sql]
     if missing:
         raise AssertionError(f"Migration contract missing: {missing}")
-    print("[PASS] migration defines concurrency-safe idempotency, atomic claim, RLS and service-role boundary")
+    print("[PASS] migration defines concurrency-safe idempotency, atomic claim, RLS and explicit privileges")
 
 
 def assert_client_mapping() -> None:
