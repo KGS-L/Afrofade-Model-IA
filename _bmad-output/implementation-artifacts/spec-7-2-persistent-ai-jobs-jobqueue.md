@@ -1,6 +1,6 @@
 # Story 7.2 — Persistent `ai_jobs` Schema & JobQueue
 
-Status: review
+Status: done
 Epic: 7 — Durable 3D Head Pipeline
 Date: 2026-08-19
 
@@ -95,8 +95,12 @@ CI validates without requiring a live Supabase project:
 - queue validator passes in CI;
 - Python compile and P0/canonical invariants remain green;
 - code review has no open Critical/High/Medium finding;
-- story moves to `review`, then `done` only with the PR-level production Docker gate green.
+- production Docker build/start/smoke gate is green.
 
 ## Review
 
 See `_bmad-output/implementation-artifacts/review-7-2-persistent-ai-jobs-jobqueue.md`.
+
+## Completion Evidence
+
+Run #107 passed frontend install/audit/typecheck/build, Python compile, canonical-contract validation, persistent JobQueue validation, P0 invariants, production Docker Compose build, production stack startup and runtime smoke tests.
