@@ -1,13 +1,17 @@
 import os
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from functools import lru_cache
 from typing import List, Optional
+from uuid import UUID
 
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
+from models.jobs import AIJobType
 from routers.quality_check import router as quality_router
+from services.jobs.job_queue import JobQueueError, SupabasePostgresJobQueue
 from services.reconstructor import ReconstructionPipelineService
-from services.jobs.queue_manager import AsyncJobQueueManager
 
 app = FastAPI(
     title="Afrofade 3D AI Engine",
@@ -31,6 +35,7 @@ app.add_middleware(
 
 PUBLIC_PATHS = {"/", "/health"}
 
+
 @app.middleware("http")
 async def require_internal_api_key(request: Request, call_next):
     if request.url.path in PUBLIC_PATHS:
@@ -46,13 +51,25 @@ async def require_internal_api_key(request: Request, call_next):
 
     return await call_next(request)
 
+
 app.include_router(quality_router)
+
 
 class ReconstructionRequest(BaseModel):
     salon_id: str
     client_name: Optional[str] = "Client Afrofade"
     photos_urls: List[str]
     preserve_skin_texture: Optional[bool] = True
+
+
+class HeadJobRequest(BaseModel):
+    user_id: UUID
+    salon_id: UUID | None = None
+    request_id: str = Field(min_length=1, max_length=200)
+    client_name: str = Field(default="Client Afrofade", min_length=1, max_length=255)
+    photos_urls: List[str]
+    preserve_skin_texture: bool = True
+
 
 class ReconstructionResponse(BaseModel):
     status: str
@@ -63,6 +80,12 @@ class ReconstructionResponse(BaseModel):
     identity_preserved: bool
     message: str
 
+
+@lru_cache(maxsize=1)
+def get_persistent_job_queue() -> SupabasePostgresJobQueue:
+    return SupabasePostgresJobQueue.from_env()
+
+
 @app.get("/")
 def read_root():
     return {
@@ -70,6 +93,7 @@ def read_root():
         "status": "online",
         "features": ["3D Head Reconstruction", "Real-Time Quality Gatekeeper", "UV Texture Blending"]
     }
+
 
 @app.get("/health")
 def health_check():
@@ -79,9 +103,11 @@ def health_check():
         "version": "1.0.0"
     }
 
+
 @app.post("/v1/reconstruct", response_model=ReconstructionResponse)
 @app.post("/api/v1/reconstruct", response_model=ReconstructionResponse)
 def reconstruct_3d_head(request: ReconstructionRequest):
+    """Legacy synchronous reconstruction path; Story 7.5 will retire it from the user journey."""
     if len(request.photos_urls) < 3:
         raise HTTPException(
             status_code=400,
@@ -94,19 +120,57 @@ def reconstruct_3d_head(request: ReconstructionRequest):
         preserve_skin_texture=request.preserve_skin_texture if request.preserve_skin_texture is not None else True
     )
 
+
 @app.post("/api/v1/heads", status_code=202)
-def submit_head_reconstruction(request: ReconstructionRequest):
+def submit_head_reconstruction(request: HeadJobRequest):
     if len(request.photos_urls) < 1:
         raise HTTPException(status_code=400, detail="Au moins une photo est requise.")
+    if len(request.photos_urls) > 4:
+        raise HTTPException(status_code=400, detail="Maximum 4 photos sont autorisées.")
+    if not all(isinstance(url, str) and url.strip() for url in request.photos_urls):
+        raise HTTPException(status_code=400, detail="Les URLs de photos doivent être non vides.")
 
-    return AsyncJobQueueManager.submit_reconstruction_job(
-        photos_urls=request.photos_urls,
-        client_name=request.client_name or "Client Afrofade"
-    )
+    try:
+        queue = get_persistent_job_queue()
+        job = queue.enqueue(
+            job_type=AIJobType.HEAD_RECONSTRUCTION,
+            provider="flame_pytorch",
+            user_id=request.user_id,
+            salon_id=request.salon_id,
+            idempotency_key=f"head:{request.user_id}:{request.request_id.strip()}",
+            input_payload={
+                "photos_urls": [url.strip() for url in request.photos_urls],
+                "client_name": request.client_name.strip(),
+                "preserve_skin_texture": request.preserve_skin_texture,
+            },
+            max_attempts=3,
+        )
+    except JobQueueError as exc:
+        raise HTTPException(status_code=503, detail="La file de reconstruction 3D est indisponible.") from exc
+
+    return {
+        "job_id": str(job.id),
+        "status": job.status.value,
+        "attempts": job.attempts,
+        "max_attempts": job.max_attempts,
+        "created_at": job.created_at.isoformat(),
+    }
+
 
 @app.get("/api/v1/heads/{job_id}")
 def get_head_reconstruction_status(job_id: str):
-    job = AsyncJobQueueManager.get_job_status(job_id)
+    try:
+        parsed_job_id = UUID(job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Identifiant de job invalide.") from exc
+
+    try:
+        queue = get_persistent_job_queue()
+        job = queue.get(parsed_job_id)
+    except JobQueueError as exc:
+        raise HTTPException(status_code=503, detail="La file de reconstruction 3D est indisponible.") from exc
+
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} introuvable.")
-    return job
+
+    return job.model_dump(mode="json")
