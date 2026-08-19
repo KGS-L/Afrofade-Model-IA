@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedPrincipal } from '@/lib/server-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { isSupportedCountry } from '@/lib/countries';
 
 function cleanString(value: unknown, max = 120): string {
   if (typeof value !== 'string') return '';
@@ -19,11 +20,17 @@ export async function POST(req: NextRequest) {
   try {
     const principal = await getVerifiedPrincipal(req);
     if (!principal) return NextResponse.json({ error: 'Authentification requise.' }, { status: 401 });
+    if (!principal.profileConfigured) {
+      return NextResponse.json({ error: 'Finalisez d’abord votre profil.' }, { status: 409 });
+    }
     if (principal.role === 'admin') {
       return NextResponse.json({ error: 'Un administrateur ne peut pas être converti en salon.' }, { status: 403 });
     }
     if (principal.role === 'salon' && principal.salonId) {
       return NextResponse.json({ salonId: principal.salonId, alreadyConfigured: true });
+    }
+    if (principal.role !== 'customer') {
+      return NextResponse.json({ error: 'Seul un compte particulier peut créer un espace salon.' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -31,15 +38,17 @@ export async function POST(req: NextRequest) {
     const country = cleanString(body?.country, 100);
     const phone = cleanPhone(body?.phone);
 
-    if (!name || !country || !phone) {
-      return NextResponse.json(
-        { error: 'Nom du salon, pays et numéro de téléphone valide sont requis.' },
-        { status: 400 }
-      );
+    if (!name) {
+      return NextResponse.json({ error: 'Le nom du salon est requis.' }, { status: 400 });
+    }
+    if (!isSupportedCountry(country)) {
+      return NextResponse.json({ error: 'Sélectionnez un pays dans la liste.' }, { status: 400 });
+    }
+    if (!phone) {
+      return NextResponse.json({ error: 'Ajoutez un numéro de téléphone valide.' }, { status: 400 });
     }
 
     const supabaseAdmin = getServiceSupabase();
-
     const { data: salon, error: salonError } = await supabaseAdmin
       .from('salons')
       .insert({
@@ -65,7 +74,7 @@ export async function POST(req: NextRequest) {
           salon_id: salon.id,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'user_id' }
+        { onConflict: 'user_id' },
       );
 
     if (roleError) throw new Error(roleError.message);
