@@ -1,6 +1,6 @@
 # Story 7.1 — Canonical 3D Data Contracts
 
-Status: review
+Status: done
 Epic: 7 — Durable 3D Head Pipeline
 Date: 2026-08-19
 
@@ -76,8 +76,12 @@ CI executes a provider-independent Python contract validation script that:
 - canonical contract validation script passes in CI;
 - P0 invariants remain green;
 - BMAD code review has no open Critical/High/Medium finding;
-- PR-level production Docker gate remains green before story is marked `done`.
+- production Docker build/start/smoke gate is green.
 
 ## Review
 
 See `_bmad-output/implementation-artifacts/review-7-1-canonical-3d-data-contracts.md`.
+
+## Completion Evidence
+
+Run #107 passed frontend install/audit/typecheck/build, Python compile, canonical-contract validation, JobQueue validation, P0 invariants, production Docker Compose build, production stack startup and runtime smoke tests.
