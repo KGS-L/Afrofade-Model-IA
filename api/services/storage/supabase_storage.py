@@ -24,6 +24,8 @@ def validate_asset_ref(asset: StoredAssetRef) -> StoredAssetRef:
     if not path or path.startswith("/") or "\\" in path or "://" in path or "\x00" in path:
         raise AssetStorageError("Storage path must be a relative POSIX object path")
 
+    # Validate raw segments before PurePosixPath can normalize repeated separators
+    # or dot segments and silently change object identity.
     raw_parts = path.split("/")
     if any(part in {"", ".", ".."} for part in raw_parts):
         raise AssetStorageError("Storage path contains an invalid segment")
@@ -47,9 +49,11 @@ def _extract_field(payload: Any, *names: str) -> Any:
             for name in names:
                 if name in data:
                     return data[name]
+
     for name in names:
         if hasattr(payload, name):
             return getattr(payload, name)
+
     return None
 
 
@@ -70,15 +74,19 @@ def _as_metadata(payload: Any) -> dict[str, Any]:
 
 
 class SupabaseAssetStorage(AssetStorage):
+    """Server-only durable object storage backed by the official Supabase Python SDK."""
+
     def __init__(self, supabase_url: str, service_role_key: str, *, client: Any | None = None) -> None:
         base_url = supabase_url.strip().rstrip("/")
         key = service_role_key.strip()
+
         if not base_url.startswith(("https://", "http://")):
             raise AssetStorageError("SUPABASE_URL must be an HTTP(S) URL")
         if os.getenv("FASTAPI_ENV", "").strip().lower() == "production" and not base_url.startswith("https://"):
             raise AssetStorageError("SUPABASE_URL must use HTTPS in production")
         if not key:
             raise AssetStorageError("SUPABASE_SERVICE_ROLE_KEY is required")
+
         if client is None:
             try:
                 from supabase import create_client
@@ -88,11 +96,16 @@ class SupabaseAssetStorage(AssetStorage):
                 client = create_client(base_url, key)
             except Exception as exc:
                 raise AssetStorageError(f"Unable to initialize Supabase storage client: {exc}") from exc
+
         self._client = client
 
     @classmethod
     def from_env(cls) -> "SupabaseAssetStorage":
-        supabase_url = (os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL") or "").strip()
+        supabase_url = (
+            os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+            or os.getenv("SUPABASE_URL")
+            or ""
+        ).strip()
         service_role_key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
         if not supabase_url or not service_role_key:
             raise AssetStorageError(
@@ -107,12 +120,26 @@ class SupabaseAssetStorage(AssetStorage):
         except Exception as exc:
             raise AssetStorageError(f"Unable to access storage bucket {validated.bucket}: {exc}") from exc
 
-    def put_object(self, asset: StoredAssetRef, source: bytes | BinaryIO, *, content_type: str, upsert: bool = False) -> StoredAssetRef:
+    def put_object(
+        self,
+        asset: StoredAssetRef,
+        source: bytes | BinaryIO,
+        *,
+        content_type: str,
+        upsert: bool = False,
+    ) -> StoredAssetRef:
         validated, bucket = self._bucket(asset)
         if not content_type.strip():
             raise AssetStorageError("content_type is required")
         try:
-            bucket.upload(path=validated.path, file=source, file_options={"content-type": content_type.strip(), "upsert": "true" if upsert else "false"})
+            bucket.upload(
+                path=validated.path,
+                file=source,
+                file_options={
+                    "content-type": content_type.strip(),
+                    "upsert": "true" if upsert else "false",
+                },
+            )
         except Exception as exc:
             raise AssetStorageError(f"Unable to upload {validated.bucket}/{validated.path}: {exc}") from exc
         return validated
@@ -132,6 +159,7 @@ class SupabaseAssetStorage(AssetStorage):
             response = bucket.create_signed_url(validated.path, expires_in)
         except Exception as exc:
             raise AssetStorageError(f"Unable to sign read URL for {validated.bucket}/{validated.path}: {exc}") from exc
+
         signed_url = _extract_field(response, "signedURL", "signedUrl", "signed_url")
         if not isinstance(signed_url, str) or not signed_url.startswith(("https://", "http://")):
             raise AssetStorageError("Supabase returned an invalid signed read URL")
@@ -140,26 +168,40 @@ class SupabaseAssetStorage(AssetStorage):
     def create_signed_upload(self, asset: StoredAssetRef, *, upsert: bool = False) -> SignedUpload:
         validated, bucket = self._bucket(asset)
         try:
-            response = bucket.create_signed_upload_url(validated.path, options={"upsert": upsert})
+            response = bucket.create_signed_upload_url(
+                validated.path,
+                options={"upsert": upsert},
+            )
         except Exception as exc:
             raise AssetStorageError(f"Unable to sign upload URL for {validated.bucket}/{validated.path}: {exc}") from exc
+
         signed_url = _extract_field(response, "signedURL", "signedUrl", "signed_url")
         token = _extract_field(response, "token")
         if not isinstance(signed_url, str) or not signed_url.startswith(("https://", "http://")):
             raise AssetStorageError("Supabase returned an invalid signed upload URL")
         if not isinstance(token, str) or not token:
             raise AssetStorageError("Supabase returned an invalid signed upload token")
+
         return SignedUpload(asset=validated, signed_url=signed_url, token=token)
 
     def metadata(self, asset: StoredAssetRef) -> dict[str, Any] | None:
         validated, bucket = self._bucket(asset)
         parent, _, filename = validated.path.rpartition("/")
         try:
-            response = bucket.list(parent, {"limit": 100, "offset": 0, "search": filename})
+            response = bucket.list(
+                parent,
+                {
+                    "limit": 100,
+                    "offset": 0,
+                    "search": filename,
+                },
+            )
         except Exception as exc:
             raise AssetStorageError(f"Unable to inspect {validated.bucket}/{validated.path}: {exc}") from exc
+
         if not isinstance(response, list):
             raise AssetStorageError("Supabase returned an invalid storage listing")
+
         for item in response:
             metadata = _as_metadata(item)
             if metadata.get("name") == filename:
