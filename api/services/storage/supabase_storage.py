@@ -160,7 +160,7 @@ class SupabaseAssetStorage(AssetStorage):
         try:
             response = bucket.create_signed_upload_url(
                 validated.path,
-                options={"upsert": "true" if upsert else "false"},
+                options={"upsert": upsert},
             )
         except Exception as exc:
             raise AssetStorageError(f"Unable to sign upload URL for {validated.bucket}/{validated.path}: {exc}") from exc
