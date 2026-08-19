@@ -58,7 +58,7 @@ development_status:
   7-3-restart-safe-python-worker: done
   7-4-assetstorage-abstraction: done
   7-5-headgenerationmanager-real-flame: done
-  7-6-head-job-integration-tests: backlog
+  7-6-head-job-integration-tests: in-progress
   epic-7-retrospective: optional
 
   epic-8: backlog
