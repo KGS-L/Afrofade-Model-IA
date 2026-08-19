@@ -2,8 +2,14 @@
 """Provider-independent validation for Afrofade canonical 3D contracts."""
 
 from datetime import UTC, datetime
+from pathlib import Path
+import sys
 
 from pydantic import ValidationError
+
+API_ROOT = Path(__file__).resolve().parents[1]
+if str(API_ROOT) not in sys.path:
+    sys.path.insert(0, str(API_ROOT))
 
 from models.canonical_assets import CanonicalHairAsset, CanonicalHead, TryOnAsset
 
