@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
       recentSalonsResult,
       jobsResult,
       headsResult,
+      authUsersResult,
       providerStates,
     ] = await Promise.all([
       supabaseAdmin.from('salons').select('plan'),
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from('salons').select('id, name, country, plan, created_at').order('created_at', { ascending: false }).limit(10),
       supabaseAdmin.from('ai_jobs').select('status'),
       supabaseAdmin.from('head_assets').select('*', { count: 'exact', head: true }),
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       getPaymentProviderStates(supabaseAdmin),
     ]);
 
@@ -61,6 +63,7 @@ export async function GET(req: NextRequest) {
     ]) {
       if (result.error) throw new Error(result.error.message);
     }
+    if (authUsersResult.error) throw new Error(authUsersResult.error.message);
 
     if (jobsResult.error) {
       console.warn('[Admin Overview] ai_jobs metrics unavailable:', jobsResult.error.message);
@@ -120,7 +123,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       kpis: {
         salons: salonsResult.data?.length ?? 0,
-        users: rolesResult.data?.length ?? 0,
+        users: authUsersResult.data?.users?.length ?? 0,
         activeSubscriptions: activeSubscriptionsResult.count ?? 0,
         paidTransactions: payments.length,
         totalRevenueFcfa,
@@ -130,6 +133,10 @@ export async function GET(req: NextRequest) {
       },
       planDistribution,
       roleDistribution,
+      unconfiguredUsers: Math.max(
+        0,
+        (authUsersResult.data?.users?.length ?? 0) - (rolesResult.data?.length ?? 0),
+      ),
       jobs,
       aiMetricsAvailable: !jobsResult.error && !headsResult.error,
       paymentProviders: providerStates.map((state) => ({
