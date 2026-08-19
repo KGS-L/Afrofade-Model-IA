@@ -1,229 +1,436 @@
 ---
 stepsCompleted:
-  - "step-01-validate-prerequisites"
+  - "correct-course-post-p0"
+  - "prd-refresh-2026-08-19"
+  - "architecture-refresh-2026-08-19"
 inputDocuments:
-  - "_bmad-output/planning-artifacts/prds/prd-Afrofade-2026-08-18/prd.md"
-  - "_bmad-output/architecture/architecture-Afrofade-2026-08-17/ARCHITECTURE-SPINE.md"
-  - "_bmad-output/planning-artifacts/ux-designs/ux-Afrofade-2026-08-17/DESIGN.md"
-  - "_bmad-output/planning-artifacts/ux-designs/ux-Afrofade-2026-08-17/EXPERIENCE.md"
+  - "_bmad-output/planning-artifacts/change-proposal-2026-08-19-p0-to-p1.md"
+  - "_bmad-output/planning-artifacts/prds/prd-Afrofade-2026-08-19/prd.md"
+  - "_bmad-output/architecture/architecture-Afrofade-2026-08-19/ARCHITECTURE-SPINE.md"
 ---
 
-# Afrofade - Epic & Story Breakdown
+# Afrofade — Epic & Story Breakdown Post-P0
 
 ## Overview
 
-Ce document fournit le découpage complet des Epics et User Stories pour le projet Afrofade. Il décompose les exigences du PRD, les décisions d'architecture (Next.js + FastAPI + Supabase + Money Fusion) et la charte UX/UI crème/terracotta en stories directement implémentables.
+Ce découpage remplace la version pré-P0. Il reflète le produit réel B2B/B2C, les rôles `customer/salon/admin`, le commerce server-authoritative, la stack Next 16/React 19 et l'architecture `HeadGenerationManager + HairAssetGenerator + HairFitter`.
+
+Les stories P0 déjà implémentées restent représentées pour traçabilité, mais la prochaine tranche de Build est **Epic 3 — Durable 3D Head Pipeline**.
 
 ---
 
-## Requirements Inventory
+# Epic 1 — Identity, RBAC & Tenant Security
 
-### Functional Requirements
+**Goal:** rendre l'identité et l'isolation customer/salon/admin fiables de bout en bout.
 
-- **FR-1**: Alignment & Morphing 3D (FastAPI DECA/FLAME, `.glb` < 2 Mo en < 2,0s, retry automatique ×3)
-- **FR-2**: Normalisation des Teintes de Peau & Textures (rendu fidèle mélanine / teints foncés)
-- **FR-3**: Canvas WebGL Temps Réel (R3F, OrbitControls 360°, lighting, ≥ 45 FPS, cibles tactiles ≥ 44px)
-- **FR-4**: Superposition Dynamique des Coiffures Afro (Fades, Locks, Tresses, Afro, Barbe en < 500 ms)
-- **FR-5**: Glissière d'Ajustement Line-Up Art (slider 0-100% contours frontaux/temporaux)
-- **FR-6**: Catalogue Filtrable des Coiffures (catégories, vignettes visuels afro-africains)
-- **FR-7**: Déclencheur d'Upsell Prestation (bannière soin barbe/contours +2 000 FCFA)
-- **FR-8**: Authentification Simplifiée (Google OAuth + E-mail Code OTP 6 chiffres)
-- **FR-9**: Jauge de Complétion & Déblocage des Remises (-10%, -25%, -40% au déblocage 100% profil)
-- **FR-10**: Paliers d'Abonnement FCFA (PRO 2 200, VIP 4 900, EXTRA 7 500 FCFA/mois)
-- **FR-11**: Webhook de Paiement Mobile Money (GeniusPay/Money Fusion, Wave, Orange, MTN, Moov)
-- **FR-12**: Isolation Row Level Security (RLS) (`salon_id = auth.uid()`)
+## Story 1.1 — Session Supabase vérifiée côté serveur
 
-### NonFunctional Requirements
+As a user,
+I want my protected session to be validated against Supabase,
+So that a forged cookie/header cannot grant access.
 
-- **NFR-1**: Conformité Biométrique CEDEAO — Purge automatique à 30 jours des têtes temporaires + consentement préalable.
-- **NFR-2**: Résilience Réseau Salon — Exponential backoff retry ×3 sur les appels FastAPI.
-- **NFR-3**: Quotas & Stockage Supabase — Plafond 1 Go par salon VIP/Extra, compression Draco `.glb`.
-- **NFR-4**: Performance WebGL — Fluidité ≥ 45 FPS sur tablettes salon (iPad / Android 10").
+**AC:**
+- Given a missing/invalid access token, when a protected route is requested, then it returns 401/redirects to login.
+- Given a valid token, when the session endpoint runs, then identity is resolved server-side.
+- No hard-coded OTP/demo login exists in production code.
 
-### Additional Requirements (Architecture)
+**Status:** IMPLEMENTED P0.
 
-- **ARCH-1**: Monorepo Hybride (Next.js 14 App Router + FastAPI Python 3.11+).
-- **ARCH-2**: Shared JWT Bearer Secret entre Next.js et FastAPI.
-- **ARCH-3**: Schema PostgreSQL (`salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog`).
-- **ARCH-4**: Presigned URLs Supabase Storage pour upload direct des photos salon.
+## Story 1.2 — RBAC customer/salon/admin
 
-### UX Design Requirements (UX Contracts)
+As a platform operator,
+I want roles loaded from `user_profiles`,
+So that admin/salon privileges cannot be minted by the browser.
 
-- **UX-DR1**: Palette Crème (`#FAF6F1`), Terracotta (`#C7816F`), Ink (`#1F1B17`).
-- **UX-DR2**: Cibles tactiles ≥ 44px (tablettes salon).
-- **UX-DR3**: Wizard `/rituel` 4 étapes avec gating freemium (avatar flouté).
-- **UX-DR4**: Contrôles 3D en surimpression discrète sur le canvas.
-- **UX-DR5**: Conformité contrastes WCAG 2.1 AA 4.5:1.
+**AC:**
+- `user_profiles.role` supports `customer`, `salon`, `admin`.
+- `/admin` requires server-verified `admin`.
+- salon operations require a verified `salon_id`.
+- customer without salon cannot subscribe to a salon plan.
 
----
+**Status:** IMPLEMENTED P0, provisioning production à valider.
 
-## FR Coverage Map
+## Story 1.3 — Ownership & RLS end-to-end
 
-*(Sera complété à l'étape 2)*
+As a tenant,
+I want every private resource scoped to my identity,
+So that one account cannot read/write another account's data.
 
----
+**AC:**
+- uploads derive owner path server-side ;
+- heads/jobs/transactions enforce owner or salon scope ;
+- authenticated clients have only explicit RLS reads/writes ;
+- service-role mutations remain server-only.
 
-## Epic List
-
-1. **Epic 1**: Socle Technique, Authentification Salon & RLS Data Schema
-2. **Epic 2**: Moteur d'Inférence 3D FastAPI & Ingestion des Photos (DECA/FLAME)
-3. **Epic 3**: Studio 3D Canvas WebGL, Coiffures & Line-Up Art (R3F)
-4. **Epic 4**: Parcours Freemium `/rituel`, Gating & Complétion Profil Salon
-5. **Epic 5**: Facturation Mobile Money (Money Fusion / GeniusPay) & Dashboard Admin
+**Status:** PARTIAL — P1 tables must inherit the same rules.
 
 ---
 
-## Epic 1: Socle Technique, Authentification Salon & RLS Data Schema
+# Epic 2 — Commerce Platform B2B/B2C
 
-**Goal**: Établir la base de données Supabase, la sécurité RLS, les schémas PostgreSQL et le flux d'authentification Google/OTP.
+**Goal:** fournir un moteur commercial unique, vérifié et idempotent pour abonnements salons et crédits particuliers.
 
-### Story 1.1: Schéma de Base de Données PostgreSQL & Middleware de Sécurité Next.js
-As a Developer,
-I want to establish the PostgreSQL database schema (`salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog`) and Next.js middleware access control,
-So that Next.js securely handles all salon authentication, quota checks, and data isolation.
+## Story 2.1 — Checkout provider-neutral
 
-**Acceptance Criteria:**
-**Given** a PostgreSQL database (Supabase/Postgres)
-**When** the migration script runs
-**Then** tables `salons`, `subscriptions`, `clients_heads`, `hairstyles_catalog` are created
-**And** Next.js middleware/API routes verify `salon_id` on every protected request.
+As a buyer,
+I want to choose a supported payment provider,
+So that I can pay without the client deciding the price.
 
-### Story 1.2: Authentification Salon (Google OAuth & E-mail Code OTP)
-As a Salon Manager,
-I want to log in quickly using Google or E-mail + OTP code,
-So that I can access my salon dashboard without remembering complex passwords.
+**AC:**
+- input = provider + product IDs ;
+- server recalculates price ;
+- `payment_transactions` is persisted `pending` before provider call ;
+- unsupported/disabled provider fails closed.
 
-**Acceptance Criteria:**
-**Given** an unauthenticated salon user on `/connexion`
-**When** they choose Google or submit their e-mail for OTP
-**Then** Supabase Auth returns a valid session JWT
-**And** redirects to `/dashboard` or the saved `?next=` URL.
+**Status:** IMPLEMENTED P0.3.
 
----
+## Story 2.2 — Money Fusion authoritative verification
 
-## Epic 2: Moteur d'Inférence 3D FastAPI & Ingestion des Photos (DECA/FLAME)
+**AC:**
+- webhook uses `tokenPay` ;
+- server calls Money Fusion payment status endpoint ;
+- token/amount/status are compared to the internal transaction ;
+- duplicate notifications do not duplicate business effects.
 
-**Goal**: Connecter l'API FastAPI Python pour transformer les 3-4 photos du client en un maillage 3D `.glb` optimisé en < 2 secondes.
+**Status:** IMPLEMENTED, live connectivity deferred.
 
-### Story 2.1: Ingestion des Photos via Supabase Presigned URLs
-As a Barbier,
-I want to upload 3-4 client photos directly to Supabase Storage,
-So that the server doesn't get overloaded with heavy image payloads.
+## Story 2.3 — GeniusPay HMAC verification
 
-**Acceptance Criteria:**
-**Given** 3 to 4 client photos selected in the app
-**When** upload is triggered
-**Then** presigned URLs are requested from Next.js and uploaded directly to Supabase Storage bucket `client-photos`.
+**AC:**
+- raw payload HMAC-SHA256 verified constant-time ;
+- transaction is re-fetched by reference ;
+- amount/reference/status must match ;
+- provider disabled until secure HTTPS merchant endpoint/credentials validated.
 
-### Story 2.2: Endpoint FastAPI `/v1/reconstruct` & Export Draco `.glb`
-As an ML Engineer,
-I want the FastAPI service to process image URLs, fit the DECA/FLAME morphable model, and output a Draco-compressed `.glb` mesh in under 2 seconds,
-So that the client 3D head is ready for instant preview.
+**Status:** IMPLEMENTED, provider activation deferred.
 
-**Acceptance Criteria:**
-**Given** valid photo URLs sent to `POST /v1/reconstruct`
-**When** FastAPI executes inference
-**Then** a `.glb` mesh under 2 MB is returned
-**And** inter-service auth is verified via Shared JWT secret.
+## Story 2.4 — B2C wallet & credit ledger
 
-### Story 2.3: Résilience Réseau & Purge Biométrique à 30 jours
-As a Salon Manager,
-I want network retries on 3D generation and automatic 30-day purge of temporary client heads,
-So that internet drops don't break consultations and CEDEAO data privacy is respected.
+As a customer,
+I want a rechargeable wallet,
+So that I pay only for costly actions without monthly subscription.
 
-**Acceptance Criteria:**
-**Given** a network drop during 3D reconstruction
-**When** Next.js receives a timeout
-**Then** it retries up to 3 times with exponential backoff
-**And** a scheduled cron/edge function deletes unsaved `clients_heads` older than 30 days.
+**AC:**
+- packs 5/12/30 credits map to server catalog ;
+- purchase finalization credits wallet atomically ;
+- every delta has ledger entry/idempotency key ;
+- balance cannot be client-authored.
 
----
+**Status:** IMPLEMENTED purchase ledger; consumption endpoints remain to complete.
 
-## Epic 3: Studio 3D Canvas WebGL, Coiffures & Line-Up Art (R3F)
+## Story 2.5 — Credit consumption service
 
-**Goal**: Implémenter le viewer 3D interactif avec React Three Fiber, le catalogue de coupes afro et la glissière *Line-Up Art*.
+As a customer,
+I want credits deducted only when a billable action is accepted,
+So that failed jobs do not incorrectly consume balance.
 
-### Story 3.1: Viewer 3D React Three Fiber (R3F) & Contrôles Tactiles
-As a Barbier,
-I want to rotate and inspect the client's 3D head at 360° on a tablet,
-So that the client can examine their prospective haircut from every angle.
+**AC:**
+- reserve/commit/refund semantics or equivalent atomic pattern ;
+- `CREATE_HEAD` / `RECONSTRUCT_NEW_PHOTOS` cost 2 ;
+- `DOWNLOAD_HD` costs 1 ;
+- free actions never decrement balance ;
+- retry/idempotency prevents double charge.
 
-**Acceptance Criteria:**
-**Given** a loaded `.glb` head model in `Studio3DCanvas`
-**When** touched/dragged on mobile/tablet
-**Then** OrbitControls allow smooth 360° rotation and zoom maintaining ≥ 45 FPS.
-
-### Story 3.2: Application Dynamique des Coiffures Afro (< 500 ms)
-As a Barbier,
-I want to tap a hairstyle in the catalog and see it snap onto the 3D head,
-So that we can compare styles instantly.
-
-**Acceptance Criteria:**
-**Given** a 3D head canvas
-**When** a style (Fade, Locks, Tresses, Barbe) is selected from `HairstyleCatalog`
-**Then** the corresponding 3D hair asset snaps onto the head mesh within 500 ms.
-
-### Story 3.3: Glissière d'Ajustement Line-Up Art & Suggestion Upsell
-As a Barbier,
-I want to adjust hairline contours with a slider and trigger upsell suggestions,
-So that I can customize the haircut and increase average ticket size by +2 000 FCFA.
-
-**Acceptance Criteria:**
-**Given** an active 3D hairstyle
-**When** adjusting the Line-Up slider (0-100%)
-**Then** the hairline geometry updates in real-time
-**And** an upsell banner "+2 000 FCFA (Soin Barbe & Contours Razoir)" is displayed.
+**Status:** TODO.
 
 ---
 
-## Epic 4: Parcours Freemium `/rituel`, Gating & Complétion Profil Salon
+# Epic 3 — Durable 3D Head Pipeline
 
-**Goal**: Implémenter le wizard d'essai en 4 étapes avec avatar flouté et incitation aux remises premier abonnement (-10%, -25%, -40%).
+**Goal:** remplacer les jobs synchrones/in-memory et les outputs `/tmp` par un pipeline persistant, restart-safe et observable produisant `CanonicalHead`.
 
-### Story 4.1: Wizard `/rituel` 4 Étapes & Avatar 3D Flouté (Freemium)
-As a Prospect Salon,
-I want to test the 4-step Ritual workflow with a blurred preview before signing up,
-So that I can see the value of the tool before subscribing.
+## Story 3.1 — Canonical 3D data contracts
 
-**Acceptance Criteria:**
-**Given** an unauthenticated visitor on `/rituel`
-**When** completing steps 1 to 4
-**Then** step 2/3 displays a blurred avatar ("Avatar Verrouillé")
-**And** step 4 triggers a sign-up modal to reveal HD quality.
+As a 3D developer,
+I want explicit canonical contracts,
+So that FLAME/Hunyuan/hair fitting can evolve independently.
 
-### Story 4.2: Dashboard Salon, Jauge de Profil 100% & Calcul des Remises
-As a Salon Manager,
-I want to see my profile completion percentage and unlock subscription discounts,
-So that I am incentivized to fill out my salon details.
+**AC:**
+- define `CanonicalHead`, `CanonicalHairAsset`, `TryOnAsset` shared schemas ;
+- lock coordinate system `Y_UP_RIGHT_HANDED` and unit `meter` ;
+- version scalp anchor contract ;
+- validate provider output before publication.
 
-**Acceptance Criteria:**
-**Given** a logged-in salon on `/dashboard`
-**When** salon name, country, and WhatsApp phone are filled (100% completion)
-**Then** discount badges (-10% for 3 months, -25% for 6 months, -40% for 1 year) are unlocked for the first subscription.
+**Priority:** P1-1.
+
+## Story 3.2 — Persistent `ai_jobs` schema & JobQueue
+
+As an operator,
+I want jobs persisted in Postgres,
+So that work survives process restarts and can be retried safely.
+
+**AC:**
+- migration creates `ai_jobs` with job type/status/attempts/lease/timestamps/input/output/errors ;
+- supported states: queued/running/completed/failed/cancelled ;
+- claim uses transactional lock/`SKIP LOCKED` or equivalent ;
+- idempotency key supported ;
+- RLS/ownership rules applied.
+
+**Priority:** P1-2.
+
+## Story 3.3 — Restart-safe Python worker
+
+As an operator,
+I want a separate worker to claim queued jobs,
+So that FastAPI request latency is decoupled from 3D processing.
+
+**AC:**
+- FastAPI submission returns job ID before heavy work ;
+- worker claims one/more jobs safely ;
+- heartbeat/lease handles crashed worker ;
+- retry is bounded ;
+- structured failure persisted ;
+- process restart does not erase job state.
+
+**Priority:** P1-3.
+
+## Story 3.4 — AssetStorage abstraction
+
+As a developer,
+I want durable object storage behind an interface,
+So that generated assets are not tied to container filesystem paths.
+
+**AC:**
+- interface supports put/delete/signed upload/signed read/exists/metadata ;
+- Supabase Storage adapter implemented first ;
+- logical prefixes separate temporary photos, canonical heads, raw/canonical hair, exports ;
+- no production URL points to `/tmp` or developer path.
+
+**Priority:** P1-4.
+
+## Story 3.5 — `HeadGenerationManager` wired to real FLAME pipeline
+
+As a user,
+I want submitted photos to produce a real canonical head,
+So that the studio uses the actual reconstruction engine.
+
+**AC:**
+- fix provider import/class mismatch ;
+- FLAME provider invokes current reconstruction pipeline implementation ;
+- output is normalized and uploaded via `AssetStorage` ;
+- `head_assets` metadata persisted ;
+- job output references canonical asset ID/URL ;
+- fake success fallback impossible.
+
+**Priority:** P1-5.
+
+## Story 3.6 — Head job integration tests
+
+**AC:**
+- submission -> queued -> running -> completed tested ;
+- failure/retry tested ;
+- restart/lease recovery tested ;
+- unauthorized access rejected ;
+- generated asset metadata persisted ;
+- CI runs lifecycle tests without requiring live paid providers.
+
+**Priority:** P1-6.
 
 ---
 
-## Epic 5: Facturation Mobile Money (Money Fusion / GeniusPay) & Dashboard Admin
+# Epic 4 — Hair Asset Factory
 
-**Goal**: Intégrer les webhooks de paiement locaux (Wave, Orange Money, MTN, Moov) et les statistiques d'administration.
+**Goal:** transformer HairAssetGenerator en fabrique réelle de catalogue, avec génération une fois et réutilisation multiple.
 
-### Story 5.1: Webhook GeniusPay / Money Fusion & Gestion des Quotas
-As a System,
-I want to process Mobile Money payment webhooks and reset monthly quotas,
-So that salon subscriptions are renewed automatically without manual intervention.
+## Story 4.1 — Hair asset versioning schema
 
-**Acceptance Criteria:**
-**Given** a successful Mobile Money transaction via GeniusPay/Money Fusion
-**When** `POST /api/webhooks/payment` receives valid payload
-**Then** `subscriptions` status is updated to `active`
-**And** salon `quota_used` is reset to 0 on the 1st of the month.
+**AC:**
+- `hair_asset_versions` stores style/version/provider/raw/canonical/anchors/polycount/cost/status ;
+- published version identifiable ;
+- retired version remains auditable.
 
-### Story 5.2: Dashboard Administrateur (KPIs SaaS & MRR FCFA)
-As an Admin,
-I want to view total registered salons, active subscriptions, and MRR in FCFA on `/admin`,
-So that I can monitor the SaaS platform growth.
+## Story 4.2 — Fix scaffolding defects
 
-**Acceptance Criteria:**
-**Given** an authenticated admin user on `/admin`
-**When** viewing the dashboard
-**Then** KPIs for Registered Salons, Active Plans, Trial-to-Paid Conversion %, and Total MRR in FCFA are displayed.
+**AC:**
+- `ManualHairProvider.get_result` no longer references undefined `input_data` ;
+- provider interfaces return per-job result rather than constant fake IDs ;
+- scaffold/demo mode is explicit and cannot masquerade as provider success.
+
+## Story 4.3 — HairAssetNormalizer real pipeline
+
+**AC:**
+- normalize orientation/unit/scale ;
+- generate/version scalp anchors ;
+- enforce polygon budget/LOD policy ;
+- persist canonical mesh/preview/metadata ;
+- validation report produced.
+
+## Story 4.4 — TRELLIS.2 + Afrofade LoRA provider
+
+**AC:**
+- provider credentials server-only ;
+- async job mapped to internal job ;
+- provider cost/duration recorded ;
+- output stored raw then normalized ;
+- failure/retry policy explicit.
+
+## Story 4.5 — Hunyuan3D Multi-View provider
+
+**AC:**
+- accepts validated multi-view source set ;
+- provider job/result mapped to internal job ;
+- output enters same normalizer ;
+- provenance/version preserved.
+
+---
+
+# Epic 5 — Real-Time Hair Fitting & Studio
+
+**Goal:** rendre l'essayage rapide et indépendant des providers de génération.
+
+## Story 5.1 — HairFitter contract
+
+**AC:**
+- input = canonical head + canonical hair ;
+- output = transform/anchors and optional fitted mesh ;
+- fitting errors do not mutate catalog asset ;
+- deterministic cache key available.
+
+## Story 5.2 — Catalog swap <500ms target
+
+**AC:**
+- preloaded/cached styles switch without provider API call ;
+- measure p50/p95 swap time ;
+- fallback/loading state clear ;
+- R3F remains stable under repeated swaps.
+
+## Story 5.3 — Line-Up & export
+
+**AC:**
+- line-up control remains interactive ;
+- HD export can create billable B2C action ;
+- salon export follows plan permissions ;
+- resulting export references exact head/hair versions.
+
+---
+
+# Epic 6 — Consumer Credits Journey
+
+**Goal:** rendre l'espace `customer` réellement opérationnel de bout en bout.
+
+## Story 6.1 — Customer dashboard & wallet
+
+**AC:**
+- shows verified balance, purchases, head assets, recent looks ;
+- recharge opens unified checkout ;
+- no salon-only controls displayed.
+
+## Story 6.2 — Customer head creation with credit reservation
+
+**AC:**
+- checks/reserves 2 credits before job submission ;
+- successful job commits cost ;
+- technical failure refunds/releases reservation ;
+- duplicate submission cannot double charge.
+
+## Story 6.3 — Free hairstyle exploration
+
+**AC:**
+- customer can apply catalog assets to owned head without debit ;
+- ownership checked ;
+- published assets only.
+
+## Story 6.4 — HD download & share
+
+**AC:**
+- HD download costs 1 credit once per billable export request/idempotency key ;
+- share action free ;
+- downloadable asset belongs to user.
+
+---
+
+# Epic 7 — Salon Operations & Admin
+
+**Goal:** rendre les espaces salon/admin complets sur les flux opérationnels essentiels.
+
+## Story 7.1 — Salon dashboard server truth
+
+**AC:**
+- active plan/quota/client count sourced from DB ;
+- profile completion updates persisted server-side ;
+- client head lifecycle visible ;
+- payment state visible ;
+- no localStorage subscription authority.
+
+## Story 7.2 — Salon quota engine
+
+**AC:**
+- quota uses current plan limits 20/60/120 new heads/month ;
+- existing-head hairstyle try-ons do not consume new-head quota ;
+- concurrency safe increment ;
+- billing-cycle reset rule defined/tested.
+
+## Story 7.3 — Admin KPI dashboard
+
+**AC:**
+- total users/salons ;
+- active subscriptions by plan ;
+- MRR FCFA ;
+- conversion ;
+- provider payment success/fail ;
+- credit revenue/balance liabilities ;
+- 3D job success/p95.
+
+## Story 7.4 — Admin hair catalog workflow
+
+**AC:**
+- create generation job ;
+- review raw/normalized preview ;
+- publish/retire version ;
+- inspect generation cost/provenance.
+
+---
+
+# Epic 8 — Production Operations, Privacy & Compliance Controls
+
+**Goal:** maintenir sécurité, observabilité, rétention et capacité d'exploitation.
+
+## Story 8.1 — Biometric consent & retention policy
+
+**AC:**
+- consent recorded before facial capture where required by product policy ;
+- temporary photos/head assets have retention metadata ;
+- purge removes storage + DB references safely ;
+- permanent saves require explicit action/policy.
+
+## Story 8.2 — Job/payment observability
+
+**AC:**
+- structured IDs/timestamps/errors ;
+- dashboards/logs can correlate user -> payment/job -> output ;
+- provider costs captured when available ;
+- no secret values logged.
+
+## Story 8.3 — Backup/recovery & incident readiness
+
+**AC:**
+- database backup strategy documented/tested ;
+- asset recovery/retention documented ;
+- rollback path for migrations/deploy ;
+- production required secrets validated fail-closed.
+
+## Story 8.4 — CI E2E expansion
+
+**AC:**
+- auth ownership negative tests ;
+- job lifecycle tests ;
+- credit reserve/commit/refund tests ;
+- payment idempotence tests ;
+- smoke tests run against production Compose.
+
+---
+
+# Recommended Next Sprint
+
+**Sprint Goal:** rendre la reconstruction de tête réellement asynchrone, persistante et servie depuis object storage.
+
+Stories candidates, ordre strict :
+
+1. 3.1 Canonical 3D data contracts ;
+2. 3.2 Persistent `ai_jobs` schema & JobQueue ;
+3. 3.3 Restart-safe Python worker ;
+4. 3.4 AssetStorage abstraction ;
+5. 3.5 HeadGenerationManager -> FLAME real pipeline ;
+6. 3.6 Head job integration tests.
+
+Gate : ne pas commencer les providers TRELLIS/Hunyuan réels avant que 3.1–3.6 soient PASS.
