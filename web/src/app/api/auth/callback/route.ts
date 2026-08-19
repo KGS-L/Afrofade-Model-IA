@@ -33,10 +33,9 @@ export async function GET(request: NextRequest) {
       return response;
     }
     if (error) {
-      console.error('[Auth Callback] exchangeCodeForSession failed:', error.message);
+      console.warn('[Auth Callback] Code exchange handled by client SDK or failed:', error.message);
     }
   }
 
-  // Return user to login with error parameter if code exchange fails
-  return NextResponse.redirect(`${baseUrl}/connexion?error=auth_callback_failed`);
+  return NextResponse.redirect(`${baseUrl}/connexion?next=${encodeURIComponent(safeNext)}`);
 }

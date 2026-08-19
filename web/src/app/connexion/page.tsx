@@ -12,7 +12,13 @@ function ConnexionInner() {
   const params = useSearchParams();
   const requestedNext = params.get('next');
   const nextUrl = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/dashboard';
-  const { loginWithEmail, verifyEmailOtp, loginWithGoogle } = useAuth();
+  const { user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle } = useAuth();
+
+  React.useEffect(() => {
+    if (hydrated && user) {
+      router.replace(nextUrl);
+    }
+  }, [hydrated, user, nextUrl, router]);
 
   const [method, setMethod] = useState<'choix' | 'otp-envoye'>('choix');
   const [email, setEmail] = useState('');
