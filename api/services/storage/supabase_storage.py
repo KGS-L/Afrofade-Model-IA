@@ -24,6 +24,12 @@ def validate_asset_ref(asset: StoredAssetRef) -> StoredAssetRef:
     if not path or path.startswith("/") or "\\" in path or "://" in path or "\x00" in path:
         raise AssetStorageError("Storage path must be a relative POSIX object path")
 
+    # Validate raw segments before PurePosixPath can normalize repeated separators
+    # or dot segments and silently change object identity.
+    raw_parts = path.split("/")
+    if any(part in {"", ".", ".."} for part in raw_parts):
+        raise AssetStorageError("Storage path contains an invalid segment")
+
     parts = PurePosixPath(path).parts
     if not parts or any(part in {"", ".", ".."} for part in parts):
         raise AssetStorageError("Storage path contains an invalid segment")
