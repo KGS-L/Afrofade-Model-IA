@@ -11,426 +11,312 @@ inputDocuments:
 
 # Afrofade — Epic & Story Breakdown Post-P0
 
-## Overview
+## Historical continuity
 
-Ce découpage remplace la version pré-P0. Il reflète le produit réel B2B/B2C, les rôles `customer/salon/admin`, le commerce server-authoritative, la stack Next 16/React 19 et l'architecture `HeadGenerationManager + HairAssetGenerator + HairFitter`.
+Les Epics 1 à 5 de la phase initiale restent **historiquement terminés** dans `sprint-status.yaml`. Le Correct Course ne réutilise pas leurs numéros. Les nouvelles stories commencent à **Epic 6** afin de préserver la traçabilité BMAD et les anciens artifacts/specs.
 
-Les stories P0 déjà implémentées restent représentées pour traçabilité, mais la prochaine tranche de Build est **Epic 3 — Durable 3D Head Pipeline**.
-
----
-
-# Epic 1 — Identity, RBAC & Tenant Security
-
-**Goal:** rendre l'identité et l'isolation customer/salon/admin fiables de bout en bout.
-
-## Story 1.1 — Session Supabase vérifiée côté serveur
-
-As a user,
-I want my protected session to be validated against Supabase,
-So that a forged cookie/header cannot grant access.
-
-**AC:**
-- Given a missing/invalid access token, when a protected route is requested, then it returns 401/redirects to login.
-- Given a valid token, when the session endpoint runs, then identity is resolved server-side.
-- No hard-coded OTP/demo login exists in production code.
-
-**Status:** IMPLEMENTED P0.
-
-## Story 1.2 — RBAC customer/salon/admin
-
-As a platform operator,
-I want roles loaded from `user_profiles`,
-So that admin/salon privileges cannot be minted by the browser.
-
-**AC:**
-- `user_profiles.role` supports `customer`, `salon`, `admin`.
-- `/admin` requires server-verified `admin`.
-- salon operations require a verified `salon_id`.
-- customer without salon cannot subscribe to a salon plan.
-
-**Status:** IMPLEMENTED P0, provisioning production à valider.
-
-## Story 1.3 — Ownership & RLS end-to-end
-
-As a tenant,
-I want every private resource scoped to my identity,
-So that one account cannot read/write another account's data.
-
-**AC:**
-- uploads derive owner path server-side ;
-- heads/jobs/transactions enforce owner or salon scope ;
-- authenticated clients have only explicit RLS reads/writes ;
-- service-role mutations remain server-only.
-
-**Status:** PARTIAL — P1 tables must inherit the same rules.
+Les implémentations P0.1/P0.2/P0.3 sont considérées comme un hardening transversal de la baseline historique et sont documentées dans la PR sécurité + le Correct Course.
 
 ---
 
-# Epic 2 — Commerce Platform B2B/B2C
+# Epic 6 — Identity, Commerce & Tenant Hardening Completion
 
-**Goal:** fournir un moteur commercial unique, vérifié et idempotent pour abonnements salons et crédits particuliers.
+**Goal:** clôturer les derniers éléments post-P0 qui doivent rester server-authoritative et préparer les nouvelles tables P1 avec les mêmes garanties de sécurité.
 
-## Story 2.1 — Checkout provider-neutral
-
-As a buyer,
-I want to choose a supported payment provider,
-So that I can pay without the client deciding the price.
+## Story 6.1 — Ownership/RLS propagation to post-P0 tables
 
 **AC:**
-- input = provider + product IDs ;
-- server recalculates price ;
-- `payment_transactions` is persisted `pending` before provider call ;
-- unsupported/disabled provider fails closed.
+- `ai_jobs`, `head_assets`, `hair_asset_versions`, `try_on_exports` ont policies/ownership explicites ;
+- customer ne lit que ses propres assets/jobs ;
+- salon ne lit que ses clients/jobs ;
+- admin operations sont vérifiées server-side ;
+- service role reste server-only.
 
-**Status:** IMPLEMENTED P0.3.
-
-## Story 2.2 — Money Fusion authoritative verification
-
-**AC:**
-- webhook uses `tokenPay` ;
-- server calls Money Fusion payment status endpoint ;
-- token/amount/status are compared to the internal transaction ;
-- duplicate notifications do not duplicate business effects.
-
-**Status:** IMPLEMENTED, live connectivity deferred.
-
-## Story 2.3 — GeniusPay HMAC verification
-
-**AC:**
-- raw payload HMAC-SHA256 verified constant-time ;
-- transaction is re-fetched by reference ;
-- amount/reference/status must match ;
-- provider disabled until secure HTTPS merchant endpoint/credentials validated.
-
-**Status:** IMPLEMENTED, provider activation deferred.
-
-## Story 2.4 — B2C wallet & credit ledger
+## Story 6.2 — Credit consumption service
 
 As a customer,
-I want a rechargeable wallet,
-So that I pay only for costly actions without monthly subscription.
+I want billable actions to reserve/commit/refund credits atomically,
+So that technical failures or retries cannot double-charge me.
 
 **AC:**
-- packs 5/12/30 credits map to server catalog ;
-- purchase finalization credits wallet atomically ;
-- every delta has ledger entry/idempotency key ;
-- balance cannot be client-authored.
+- `CREATE_HEAD` et `RECONSTRUCT_NEW_PHOTOS` coûtent 2 crédits ;
+- `DOWNLOAD_HD` coûte 1 ;
+- free actions coûtent 0 ;
+- reserve/commit/refund ou mécanisme atomique équivalent ;
+- idempotency key obligatoire ;
+- failure before successful action releases/refunds reservation.
 
-**Status:** IMPLEMENTED purchase ledger; consumption endpoints remain to complete.
-
-## Story 2.5 — Credit consumption service
-
-As a customer,
-I want credits deducted only when a billable action is accepted,
-So that failed jobs do not incorrectly consume balance.
+## Story 6.3 — Provider rollout completion
 
 **AC:**
-- reserve/commit/refund semantics or equivalent atomic pattern ;
-- `CREATE_HEAD` / `RECONSTRUCT_NEW_PHOTOS` cost 2 ;
-- `DOWNLOAD_HD` costs 1 ;
-- free actions never decrement balance ;
-- retry/idempotency prevents double charge.
-
-**Status:** TODO.
+- Money Fusion live/sandbox URL réelle configurée hors Git ;
+- GeniusPay reste feature-gated tant que l'endpoint HTTPS marchand n'est pas validé ;
+- provider list n'affiche que les providers activés ;
+- payment E2E sandbox documented/tested when credentials are available.
 
 ---
 
-# Epic 3 — Durable 3D Head Pipeline
+# Epic 7 — Durable 3D Head Pipeline
 
 **Goal:** remplacer les jobs synchrones/in-memory et les outputs `/tmp` par un pipeline persistant, restart-safe et observable produisant `CanonicalHead`.
 
-## Story 3.1 — Canonical 3D data contracts
+## Story 7.1 — Canonical 3D data contracts
 
 As a 3D developer,
 I want explicit canonical contracts,
 So that FLAME/Hunyuan/hair fitting can evolve independently.
 
 **AC:**
-- define `CanonicalHead`, `CanonicalHairAsset`, `TryOnAsset` shared schemas ;
-- lock coordinate system `Y_UP_RIGHT_HANDED` and unit `meter` ;
-- version scalp anchor contract ;
-- validate provider output before publication.
+- define `CanonicalHead`, `CanonicalHairAsset`, `TryOnAsset` schemas in TypeScript and Python ;
+- coordinate system = `Y_UP_RIGHT_HANDED` ;
+- unit = `meter` ;
+- scalp anchor contract is versioned ;
+- provider output validation exists ;
+- schema round-trip/sample validation tested.
 
 **Priority:** P1-1.
 
-## Story 3.2 — Persistent `ai_jobs` schema & JobQueue
-
-As an operator,
-I want jobs persisted in Postgres,
-So that work survives process restarts and can be retried safely.
+## Story 7.2 — Persistent `ai_jobs` schema & JobQueue
 
 **AC:**
-- migration creates `ai_jobs` with job type/status/attempts/lease/timestamps/input/output/errors ;
-- supported states: queued/running/completed/failed/cancelled ;
-- claim uses transactional lock/`SKIP LOCKED` or equivalent ;
+- migration creates `ai_jobs` with type/status/attempts/lease/timestamps/input/output/errors ;
+- states = queued/running/completed/failed/cancelled ;
+- transactional claim with `FOR UPDATE SKIP LOCKED` or equivalent ;
 - idempotency key supported ;
-- RLS/ownership rules applied.
+- RLS/ownership from Story 6.1 applied.
 
 **Priority:** P1-2.
 
-## Story 3.3 — Restart-safe Python worker
-
-As an operator,
-I want a separate worker to claim queued jobs,
-So that FastAPI request latency is decoupled from 3D processing.
+## Story 7.3 — Restart-safe Python worker
 
 **AC:**
-- FastAPI submission returns job ID before heavy work ;
-- worker claims one/more jobs safely ;
-- heartbeat/lease handles crashed worker ;
-- retry is bounded ;
+- FastAPI submit returns durable job ID before heavy processing ;
+- worker claims jobs safely ;
+- heartbeat/lease recovers crashed worker ;
+- retry bounded ;
 - structured failure persisted ;
-- process restart does not erase job state.
+- restart does not erase state.
 
 **Priority:** P1-3.
 
-## Story 3.4 — AssetStorage abstraction
-
-As a developer,
-I want durable object storage behind an interface,
-So that generated assets are not tied to container filesystem paths.
+## Story 7.4 — AssetStorage abstraction
 
 **AC:**
 - interface supports put/delete/signed upload/signed read/exists/metadata ;
-- Supabase Storage adapter implemented first ;
-- logical prefixes separate temporary photos, canonical heads, raw/canonical hair, exports ;
-- no production URL points to `/tmp` or developer path.
+- Supabase Storage adapter first ;
+- prefixes separate temporary photos, canonical heads, raw/canonical hair, exports ;
+- no production URL points to `/tmp` or developer filesystem.
 
 **Priority:** P1-4.
 
-## Story 3.5 — `HeadGenerationManager` wired to real FLAME pipeline
-
-As a user,
-I want submitted photos to produce a real canonical head,
-So that the studio uses the actual reconstruction engine.
+## Story 7.5 — `HeadGenerationManager` -> real FLAME pipeline
 
 **AC:**
-- fix provider import/class mismatch ;
-- FLAME provider invokes current reconstruction pipeline implementation ;
-- output is normalized and uploaded via `AssetStorage` ;
+- fix current provider import/class mismatch ;
+- FLAME provider invokes current `ReconstructionPipelineService` path ;
+- output normalized and uploaded through `AssetStorage` ;
 - `head_assets` metadata persisted ;
-- job output references canonical asset ID/URL ;
-- fake success fallback impossible.
+- job output references canonical asset ;
+- fake success impossible.
 
 **Priority:** P1-5.
 
-## Story 3.6 — Head job integration tests
+## Story 7.6 — Head job integration tests
 
 **AC:**
-- submission -> queued -> running -> completed tested ;
+- queued -> running -> completed tested ;
 - failure/retry tested ;
-- restart/lease recovery tested ;
+- lease/recovery tested ;
 - unauthorized access rejected ;
-- generated asset metadata persisted ;
-- CI runs lifecycle tests without requiring live paid providers.
+- durable asset metadata asserted ;
+- CI runs lifecycle tests without paid 3D providers.
 
 **Priority:** P1-6.
 
 ---
 
-# Epic 4 — Hair Asset Factory
+# Epic 8 — Hair Asset Factory
 
-**Goal:** transformer HairAssetGenerator en fabrique réelle de catalogue, avec génération une fois et réutilisation multiple.
+**Goal:** transformer `HairAssetGenerator` en fabrique réelle de catalogue : génération une fois, normalisation, versioning et réutilisation multiple.
 
-## Story 4.1 — Hair asset versioning schema
+## Story 8.1 — Hair asset versioning schema
 
 **AC:**
 - `hair_asset_versions` stores style/version/provider/raw/canonical/anchors/polycount/cost/status ;
-- published version identifiable ;
-- retired version remains auditable.
+- one published version can be resolved ;
+- retired versions remain auditable.
 
-## Story 4.2 — Fix scaffolding defects
+## Story 8.2 — Fix provider scaffolding defects
 
 **AC:**
-- `ManualHairProvider.get_result` no longer references undefined `input_data` ;
-- provider interfaces return per-job result rather than constant fake IDs ;
-- scaffold/demo mode is explicit and cannot masquerade as provider success.
+- `ManualHairProvider.get_result` does not reference undefined `input_data` ;
+- provider jobs/results are per-request, not constant fake IDs ;
+- scaffold mode is explicit and cannot masquerade as provider success.
 
-## Story 4.3 — HairAssetNormalizer real pipeline
+## Story 8.3 — HairAssetNormalizer real pipeline
 
 **AC:**
 - normalize orientation/unit/scale ;
 - generate/version scalp anchors ;
-- enforce polygon budget/LOD policy ;
+- enforce polygon budget and LOD policy ;
 - persist canonical mesh/preview/metadata ;
-- validation report produced.
+- produce validation report.
 
-## Story 4.4 — TRELLIS.2 + Afrofade LoRA provider
+## Story 8.4 — TRELLIS.2 + Afrofade LoRA provider
 
 **AC:**
-- provider credentials server-only ;
-- async job mapped to internal job ;
+- credentials server-only ;
+- async provider job maps to internal `ai_job` ;
 - provider cost/duration recorded ;
-- output stored raw then normalized ;
-- failure/retry policy explicit.
+- raw output stored then normalized ;
+- failure/retry explicit.
 
-## Story 4.5 — Hunyuan3D Multi-View provider
+## Story 8.5 — Hunyuan3D Multi-View provider
 
 **AC:**
-- accepts validated multi-view source set ;
-- provider job/result mapped to internal job ;
-- output enters same normalizer ;
+- validated multi-view input ;
+- provider job/result maps to internal job ;
+- same normalizer used ;
 - provenance/version preserved.
 
 ---
 
-# Epic 5 — Real-Time Hair Fitting & Studio
+# Epic 9 — Real-Time Hair Fitting & Studio
 
-**Goal:** rendre l'essayage rapide et indépendant des providers de génération.
+**Goal:** rendre l'essayage rapide, mesurable et indépendant des APIs de génération du catalogue.
 
-## Story 5.1 — HairFitter contract
-
-**AC:**
-- input = canonical head + canonical hair ;
-- output = transform/anchors and optional fitted mesh ;
-- fitting errors do not mutate catalog asset ;
-- deterministic cache key available.
-
-## Story 5.2 — Catalog swap <500ms target
+## Story 9.1 — HairFitter contract
 
 **AC:**
-- preloaded/cached styles switch without provider API call ;
-- measure p50/p95 swap time ;
-- fallback/loading state clear ;
-- R3F remains stable under repeated swaps.
+- input = `CanonicalHead` + `CanonicalHairAsset` ;
+- output = transform/anchors + optional fitted mesh ;
+- deterministic cache key ;
+- catalog asset is immutable during fitting.
 
-## Story 5.3 — Line-Up & export
+## Story 9.2 — Catalog swap performance
 
 **AC:**
-- line-up control remains interactive ;
-- HD export can create billable B2C action ;
-- salon export follows plan permissions ;
-- resulting export references exact head/hair versions.
+- cached/preloaded style switch does not call a generation provider ;
+- target <500 ms measured p50/p95 ;
+- viewer handles repeated swaps without memory leak/crash ;
+- clear loading/degraded state.
+
+## Story 9.3 — Line-Up & durable export
+
+**AC:**
+- line-up remains interactive ;
+- export references exact head/hair versions ;
+- B2C HD export integrates credit consumption ;
+- salon export integrates plan permission.
 
 ---
 
-# Epic 6 — Consumer Credits Journey
+# Epic 10 — Consumer Credits Journey
 
-**Goal:** rendre l'espace `customer` réellement opérationnel de bout en bout.
+**Goal:** rendre l'espace `customer` opérationnel de bout en bout.
 
-## Story 6.1 — Customer dashboard & wallet
+## Story 10.1 — Customer dashboard & wallet
 
 **AC:**
-- shows verified balance, purchases, head assets, recent looks ;
+- verified balance/purchases/head assets/recent looks ;
 - recharge opens unified checkout ;
-- no salon-only controls displayed.
+- no salon-only controls.
 
-## Story 6.2 — Customer head creation with credit reservation
-
-**AC:**
-- checks/reserves 2 credits before job submission ;
-- successful job commits cost ;
-- technical failure refunds/releases reservation ;
-- duplicate submission cannot double charge.
-
-## Story 6.3 — Free hairstyle exploration
+## Story 10.2 — Customer head creation
 
 **AC:**
-- customer can apply catalog assets to owned head without debit ;
-- ownership checked ;
-- published assets only.
+- reserve 2 credits before accepted job ;
+- commit after successful generation ;
+- release/refund on technical failure ;
+- duplicate submit cannot double-charge.
 
-## Story 6.4 — HD download & share
+## Story 10.3 — Free hairstyle exploration
 
 **AC:**
-- HD download costs 1 credit once per billable export request/idempotency key ;
-- share action free ;
-- downloadable asset belongs to user.
+- published catalog styles can be tried on owned head for 0 credits ;
+- ownership verified ;
+- no hair generation provider called during normal try-on.
+
+## Story 10.4 — HD download & share
+
+**AC:**
+- HD export costs 1 credit per idempotent billable export ;
+- share remains free ;
+- asset ownership enforced.
 
 ---
 
-# Epic 7 — Salon Operations & Admin
+# Epic 11 — Salon/Admin Operations & Production Readiness
 
-**Goal:** rendre les espaces salon/admin complets sur les flux opérationnels essentiels.
+**Goal:** rendre les espaces salon/admin et l'exploitation production complets sur les flux critiques.
 
-## Story 7.1 — Salon dashboard server truth
+## Story 11.1 — Salon dashboard server truth
 
 **AC:**
-- active plan/quota/client count sourced from DB ;
-- profile completion updates persisted server-side ;
+- active plan/quota/client count from DB ;
+- profile completion persisted server-side ;
 - client head lifecycle visible ;
-- payment state visible ;
-- no localStorage subscription authority.
+- payment/job state visible ;
+- no localStorage commercial authority.
 
-## Story 7.2 — Salon quota engine
-
-**AC:**
-- quota uses current plan limits 20/60/120 new heads/month ;
-- existing-head hairstyle try-ons do not consume new-head quota ;
-- concurrency safe increment ;
-- billing-cycle reset rule defined/tested.
-
-## Story 7.3 — Admin KPI dashboard
+## Story 11.2 — Salon quota engine
 
 **AC:**
-- total users/salons ;
-- active subscriptions by plan ;
-- MRR FCFA ;
-- conversion ;
+- plan limits = 20/60/120 new heads/month ;
+- try-ons on existing heads do not consume new-head quota ;
+- concurrency-safe increment/reset ;
+- billing-cycle semantics tested.
+
+## Story 11.3 — Admin KPI & job dashboard
+
+**AC:**
+- users/salons ;
+- active subscriptions/MRR ;
 - provider payment success/fail ;
-- credit revenue/balance liabilities ;
-- 3D job success/p95.
+- credit revenue/liability ;
+- 3D job success/p95/errors.
 
-## Story 7.4 — Admin hair catalog workflow
+## Story 11.4 — Admin hair catalog workflow
 
 **AC:**
 - create generation job ;
-- review raw/normalized preview ;
+- review raw/normalized previews ;
 - publish/retire version ;
-- inspect generation cost/provenance.
+- inspect cost/provenance.
 
----
-
-# Epic 8 — Production Operations, Privacy & Compliance Controls
-
-**Goal:** maintenir sécurité, observabilité, rétention et capacité d'exploitation.
-
-## Story 8.1 — Biometric consent & retention policy
+## Story 11.5 — Privacy/retention/observability
 
 **AC:**
-- consent recorded before facial capture where required by product policy ;
-- temporary photos/head assets have retention metadata ;
-- purge removes storage + DB references safely ;
-- permanent saves require explicit action/policy.
+- biometric consent record where required by product policy ;
+- purge storage + DB references safely ;
+- structured job/payment IDs and errors ;
+- no secrets logged ;
+- backup/recovery/rollback documented.
 
-## Story 8.2 — Job/payment observability
-
-**AC:**
-- structured IDs/timestamps/errors ;
-- dashboards/logs can correlate user -> payment/job -> output ;
-- provider costs captured when available ;
-- no secret values logged.
-
-## Story 8.3 — Backup/recovery & incident readiness
-
-**AC:**
-- database backup strategy documented/tested ;
-- asset recovery/retention documented ;
-- rollback path for migrations/deploy ;
-- production required secrets validated fail-closed.
-
-## Story 8.4 — CI E2E expansion
+## Story 11.6 — CI E2E expansion
 
 **AC:**
 - auth ownership negative tests ;
 - job lifecycle tests ;
 - credit reserve/commit/refund tests ;
 - payment idempotence tests ;
-- smoke tests run against production Compose.
+- production Compose smoke tests remain green.
 
 ---
 
 # Recommended Next Sprint
 
-**Sprint Goal:** rendre la reconstruction de tête réellement asynchrone, persistante et servie depuis object storage.
+**Sprint:** P1 Durable 3D Infrastructure  
+**Epic:** 7  
+**Goal:** rendre la reconstruction de tête réellement asynchrone, persistante et servie depuis object storage.
 
-Stories candidates, ordre strict :
+Ordre strict :
 
-1. 3.1 Canonical 3D data contracts ;
-2. 3.2 Persistent `ai_jobs` schema & JobQueue ;
-3. 3.3 Restart-safe Python worker ;
-4. 3.4 AssetStorage abstraction ;
-5. 3.5 HeadGenerationManager -> FLAME real pipeline ;
-6. 3.6 Head job integration tests.
+1. 7.1 Canonical 3D data contracts ;
+2. 7.2 Persistent `ai_jobs` schema & JobQueue ;
+3. 7.3 Restart-safe Python worker ;
+4. 7.4 AssetStorage abstraction ;
+5. 7.5 HeadGenerationManager -> FLAME real pipeline ;
+6. 7.6 Head job integration tests.
 
-Gate : ne pas commencer les providers TRELLIS/Hunyuan réels avant que 3.1–3.6 soient PASS.
+**Gate:** ne pas commencer TRELLIS/Hunyuan réels avant que 7.1–7.6 soient PASS.
