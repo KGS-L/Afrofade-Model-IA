@@ -40,7 +40,7 @@ class CanonicalHairAsset(CanonicalModel):
     styleId: str = Field(min_length=1)
     version: int = Field(ge=1)
     provider: Literal["trellis2", "hunyuan_multiview", "manual"]
-    sourceJobId: str | None = None
+    sourceJobId: str | None = Field(default=None, min_length=1)
     meshUrl: AnyHttpUrl
     previewUrl: AnyHttpUrl
     coordinateSystem: CoordinateSystem = "Y_UP_RIGHT_HANDED"
@@ -64,7 +64,7 @@ class TryOnAsset(CanonicalModel):
     id: str = Field(min_length=1)
     headId: str = Field(min_length=1)
     hairAssetId: str = Field(min_length=1)
-    fitJobId: str | None = None
+    fitJobId: str | None = Field(default=None, min_length=1)
     transform: TryOnTransform
     fittedMeshUrl: AnyHttpUrl | None = None
     createdAt: datetime
