@@ -2,7 +2,7 @@
 
 Date: 2026-08-19
 Story: 7.4
-Review result: PASS WITH FIXES APPLIED — FINAL CI GATE PENDING
+Review result: PASS — FINAL CI GATES GREEN
 
 ## Scope reviewed
 
@@ -16,7 +16,7 @@ Review result: PASS WITH FIXES APPLIED — FINAL CI GATE PENDING
 - `web/src/lib/storage.ts`
 - `web/src/app/api/upload/presigned-url/route.ts`
 - `web/src/app/api/storage/signed-read/route.ts`
-- `web/supabase/migrations/06_private_asset_buckets.sql`
+- `web/supabase/migrations/07_private_asset_buckets.sql`
 - Python dependency and CI integration
 
 ## Findings fixed during review
@@ -54,7 +54,7 @@ Status: RESOLVED.
 
 The repository previously assumed Supabase Storage buckets existed. A fresh environment could therefore pass application builds but fail at runtime.
 
-Resolution: migration `06_private_asset_buckets.sql` provisions `client-photos`, `heads`, `hair-assets` and `tryons` as private buckets. Client-photo size/MIME policy is aligned with the upload route.
+Resolution: migration `07_private_asset_buckets.sql` provisions `client-photos`, `heads`, `hair-assets` and `tryons` as private buckets. Client-photo size/MIME policy is aligned with the upload route.
 
 Status: RESOLVED.
 
@@ -71,6 +71,18 @@ Resolution:
 
 Status: RESOLVED.
 
+### Fixed — post-merge migration numbering and CI validator drift
+
+After `main` gained `04_role_dashboards.sql`, the P1 migrations were renumbered to preserve deterministic ordering:
+
+- `05_persistent_ai_jobs.sql`;
+- `06_ai_job_worker_lifecycle.sql`;
+- `07_private_asset_buckets.sql`.
+
+The JobQueue, worker lifecycle and AssetStorage layout validators were updated to reference these canonical filenames.
+
+Status: RESOLVED.
+
 ## Acceptance criteria review
 
 - provider-neutral `StoredAssetRef`: PASS.
@@ -81,7 +93,10 @@ Status: RESOLVED.
 - owned signed-read route: PASS.
 - fail-closed server credentials/HTTPS: PASS.
 - reproducible private bucket provisioning: PASS.
-- provider-independent adapter/path/web validators: PASS at code-review level; final-head workflow completion still required before DONE.
+- provider-independent adapter/path/web validators: PASS.
+- `P1 AssetStorage Contract` workflow: PASS.
+- `P1 AssetStorage Layout` workflow: PASS.
+- main Next.js/FastAPI/Docker/security-smoke pipeline: PASS.
 
 ## Explicitly deferred to Story 7.5 / Epic 8
 
@@ -93,8 +108,10 @@ Status: RESOLVED.
 
 ## Review conclusion
 
-No open Critical/High/Medium code-review finding remains in Story 7.4 scope. Keep Story 7.4 non-DONE until the stabilized head passes:
+No open Critical/High/Medium code-review finding remains in Story 7.4 scope. Final-head CI passed all required gates on 2026-08-19:
 
-1. `P1 AssetStorage Contract`;
-2. `P1 AssetStorage Layout`;
-3. main production CI/Docker build/start/smoke gate.
+1. `P1 AssetStorage Contract` — PASS;
+2. `P1 AssetStorage Layout` — PASS;
+3. production CI/Docker build/start/P0 security smoke gate — PASS.
+
+Story 7.4 is DONE. Next BMAD build story: **7.5 — HeadGenerationManager real FLAME pipeline**.
