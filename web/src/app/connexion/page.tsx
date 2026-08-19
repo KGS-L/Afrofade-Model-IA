@@ -22,7 +22,7 @@ function ConnexionInner() {
 
   const [method, setMethod] = useState<'choix' | 'otp-envoye'>('choix');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '', '', '']);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -73,7 +73,7 @@ function ConnexionInner() {
     const nextOtp = [...otp];
     nextOtp[index] = digit;
     setOtp(nextOtp);
-    if (digit && index < 5) inputRefs.current[index + 1]?.focus();
+    if (digit && index < 7) inputRefs.current[index + 1]?.focus();
   };
 
   const onKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -225,7 +225,7 @@ function ConnexionInner() {
                     <Mail className="w-5 h-5" />
                   </div>
                   <p className="text-sm font-bold text-ink">Code envoyé à {email}</p>
-                  <p className="text-xs text-ink-soft">Saisissez les 6 chiffres du code reçu par e-mail.</p>
+                  <p className="text-xs text-ink-soft">Saisissez les 8 chiffres du code reçu par e-mail.</p>
                 </div>
 
                 <div className="flex justify-center gap-2" role="group" aria-label="Code OTP">
@@ -242,7 +242,7 @@ function ConnexionInner() {
                       value={digit}
                       onChange={(event) => onDigitChange(index, event.target.value)}
                       onKeyDown={(event) => onKeyDown(index, event)}
-                      className="w-11 h-12 text-center text-lg font-bold rounded-input border border-ink/15 bg-cream focus:outline-none focus:border-terracotta text-ink"
+                      className="w-9 h-11 text-center text-base font-bold rounded-input border border-ink/15 bg-cream focus:outline-none focus:border-terracotta text-ink"
                     />
                   ))}
                 </div>
