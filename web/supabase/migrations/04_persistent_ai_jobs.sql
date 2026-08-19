@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS ai_jobs (
     job_type VARCHAR(40) NOT NULL CHECK (
         job_type IN ('head_reconstruction', 'hair_generation', 'hair_normalization', 'hair_fit')
     ),
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    salon_id UUID REFERENCES salons(id) ON DELETE SET NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL DEFAULT 'queued' CHECK (
         status IN ('queued', 'running', 'completed', 'failed', 'cancelled')
     ),
