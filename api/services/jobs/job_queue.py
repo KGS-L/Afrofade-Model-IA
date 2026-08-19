@@ -113,12 +113,12 @@ class SupabasePostgresJobQueue(JobQueue):
 
     @classmethod
     def from_env(cls) -> "SupabasePostgresJobQueue":
-        supabase_url = (os.getenv("SUPABASE_URL") or "").strip()
+        supabase_url = (os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL") or "").strip()
         service_role_key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
 
         if not supabase_url or not service_role_key:
             raise JobQueueError(
-                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for the persistent job queue"
+                "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for the persistent job queue"
             )
 
         return cls(supabase_url, service_role_key)

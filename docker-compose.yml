@@ -47,7 +47,7 @@ services:
       - FASTAPI_ENV=${FASTAPI_ENV:-production}
       - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
       - API_ALLOWED_ORIGINS=${API_ALLOWED_ORIGINS:-https://afrofade.pro}
-      - SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     volumes:
       - afrofade-generated-models:/tmp/generated_models
@@ -63,7 +63,7 @@ services:
     command: ["python", "-m", "workers.job_worker"]
     environment:
       - FASTAPI_ENV=${FASTAPI_ENV:-production}
-      - SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - AI_WORKER_ENABLED=${AI_WORKER_ENABLED:-true}
       - AI_WORKER_ID=${AI_WORKER_ID:-}
