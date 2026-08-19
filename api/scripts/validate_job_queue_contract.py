@@ -94,7 +94,7 @@ def running_job(**overrides: Any) -> dict[str, Any]:
 
 
 def assert_migration_contract() -> None:
-    migration_path = REPO_ROOT / "web" / "supabase" / "migrations" / "04_persistent_ai_jobs.sql"
+    migration_path = REPO_ROOT / "web" / "supabase" / "migrations" / "05_persistent_ai_jobs.sql"
     sql = migration_path.read_text(encoding="utf-8")
 
     required_fragments = [
