@@ -6,17 +6,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FlameHairstyleAnchorSystem } from '@/lib/anchors/flame_anchors';
 
-/**
- * Composant de Rendu 3D Afrofade — Charge le VRAI modèle GLB FLAME 2023 Open
- * calculé par l'API Python PyTorch Autograd, avec bascule Clay Mode pour l'inspection géométrique.
- */
-
 const SKIN = '#5a3a26';
 const SKIN_DARK = '#3d2517';
 const HAIR_DEFAULT = '#1a110b';
 const CLAY_COLOR = '#9e9e9e';
 
-/** RNG déterministe (mulberry32) */
 function mulberry32(seed: number) {
   return () => {
     seed |= 0;
@@ -34,6 +28,7 @@ interface HeadModelProps {
   isAutoRotate?: boolean;
   modelUrl?: string;
   isClayMode?: boolean;
+  strictModel?: boolean;
 }
 
 export function HeadModel({
@@ -43,100 +38,103 @@ export function HeadModel({
   isAutoRotate = false,
   modelUrl,
   isClayMode = false,
+  strictModel = true,
 }: HeadModelProps) {
   const headGroupRef = useRef<THREE.Group>(null);
   const [loadedScene, setLoadedScene] = useState<THREE.Group | null>(null);
+  const [modelState, setModelState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
 
-  // Charge le VRAI fichier GLB s'il est fourni
   useEffect(() => {
     if (!modelUrl) {
       setLoadedScene(null);
+      setModelState('idle');
       return;
     }
 
+    let cancelled = false;
+    setLoadedScene(null);
+    setModelState('loading');
     const loader = new GLTFLoader();
     loader.load(
       modelUrl,
       (gltf) => {
+        if (cancelled) return;
         const scene = gltf.scene;
         scene.traverse((child) => {
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            if (isClayMode) {
-              mesh.material = new THREE.MeshStandardMaterial({
-                color: CLAY_COLOR,
-                roughness: 0.85,
-                metalness: 0.05,
-              });
-            }
+          if ((child as THREE.Mesh).isMesh && isClayMode) {
+            (child as THREE.Mesh).material = new THREE.MeshStandardMaterial({
+              color: CLAY_COLOR,
+              roughness: 0.85,
+              metalness: 0.05,
+            });
           }
         });
         setLoadedScene(scene);
+        setModelState('loaded');
       },
       undefined,
-      (err) => {
-        console.warn('Erreur chargement GLB réel, utilisation du fallback explicite :', err);
+      (error) => {
+        if (cancelled) return;
+        console.error('[HeadModel] Generated GLB could not be loaded:', error);
         setLoadedScene(null);
+        setModelState('error');
       }
     );
+
+    return () => {
+      cancelled = true;
+    };
   }, [modelUrl, isClayMode]);
 
   useFrame((_, delta) => {
-    if (isAutoRotate && headGroupRef.current) {
-      headGroupRef.current.rotation.y += delta * 0.3;
-    }
+    if (isAutoRotate && headGroupRef.current) headGroupRef.current.rotation.y += delta * 0.3;
   });
 
-  const hairColor = isClayMode ? '#555555' : (hairstyleColor || HAIR_DEFAULT);
+  const hairColor = isClayMode ? '#555555' : hairstyleColor || HAIR_DEFAULT;
   const isBald = hairstyleId === 'bald';
-  const hasBeard = hairstyleId.includes('barbe') || hairstyleId.includes('full');
+  const renderProceduralBase = !loadedScene && (!modelUrl || !strictModel);
+  const renderHair = !isBald && (!strictModel || !modelUrl || modelState === 'loaded');
 
-  /* Coiffure Afro par défaut */
   const afroClusters = useMemo(() => {
-    const rand = mulberry32(7);
+    const random = mulberry32(7);
     return Array.from({ length: 42 }).map(() => {
-      const theta = rand() * Math.PI * 2;
-      const phi = rand() * (Math.PI / 2.15);
-      const r = 0.98 + rand() * 0.1;
+      const theta = random() * Math.PI * 2;
+      const phi = random() * (Math.PI / 2.15);
+      const radius = 0.98 + random() * 0.1;
       return {
         pos: [
-          r * Math.sin(phi) * Math.cos(theta),
-          1.32 + r * Math.cos(phi) * 0.92,
-          r * Math.sin(phi) * Math.sin(theta) * 0.96,
+          radius * Math.sin(phi) * Math.cos(theta),
+          1.32 + radius * Math.cos(phi) * 0.92,
+          radius * Math.sin(phi) * Math.sin(theta) * 0.96,
         ] as [number, number, number],
-        radius: 0.16 + rand() * 0.13,
+        radius: 0.16 + random() * 0.13,
       };
     });
   }, []);
 
-  const anchorTransform = useMemo(() => {
-    return FlameHairstyleAnchorSystem.calculateHairstyleTransform(
+  const anchorTransform = useMemo(
+    () => FlameHairstyleAnchorSystem.calculateHairstyleTransform(
       { headWidth: 1.0, headDepth: 1.0, skullHeight: 1.0 },
       lineUpCutoff,
       hairstyleId
-    );
-  }, [lineUpCutoff, hairstyleId]);
+    ),
+    [lineUpCutoff, hairstyleId]
+  );
 
   return (
     <group ref={headGroupRef} position={[0, -0.55, 0]}>
-      {/* Si le vrai GLB FLAME 2023 est chargé, on l'affiche directement */}
       {loadedScene ? (
         <primitive object={loadedScene} scale={[1, 1, 1]} position={[0, 0, 0]} />
-      ) : (
-        /* Fallback procédural uniquement en cas d'absence de GLB */
+      ) : renderProceduralBase ? (
         <>
-          {/* Cou */}
           <mesh position={[0, 0.14, -0.04]}>
             <cylinderGeometry args={[0.3, 0.38, 0.85, 24]} />
             <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.6} />
           </mesh>
-          {/* Épaules */}
           <mesh position={[0, -0.34, 0]} scale={[1.6, 0.42, 0.9]}>
             <sphereGeometry args={[0.65, 32, 24]} />
             <meshStandardMaterial color={isClayMode ? '#777' : '#2b2b33'} roughness={0.85} />
           </mesh>
-
-          {/* Crâne FLAME de fallback */}
           <mesh position={[0, 1.02, 0]} scale={[1, 1.16, 1.02]}>
             <sphereGeometry args={[0.88, 64, 64]} />
             <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.52} metalness={0.04} />
@@ -145,28 +143,23 @@ export function HeadModel({
             <sphereGeometry args={[0.62, 48, 48]} />
             <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.52} metalness={0.04} />
           </mesh>
-
-          {/* Oreilles */}
           {[-1, 1].map((side) => (
             <mesh key={side} position={[side * 0.86, 1.02, 0.02]} scale={[0.45, 1, 0.75]}>
               <sphereGeometry args={[0.14, 24, 24]} />
               <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.55} />
             </mesh>
           ))}
-
-          {/* Nez */}
           <mesh position={[0, 0.94, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
             <coneGeometry args={[0.13, 0.34, 24]} />
             <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.45} />
           </mesh>
         </>
-      )}
+      ) : null}
 
-      {/* Coiffures ancrées canoniquement */}
-      {!isBald && (
+      {renderHair && (
         <group position={anchorTransform.position} scale={anchorTransform.scale} rotation={anchorTransform.rotation}>
-          {afroClusters.map((puff, i) => (
-            <mesh key={i} position={puff.pos}>
+          {afroClusters.map((puff, index) => (
+            <mesh key={index} position={puff.pos}>
               <sphereGeometry args={[puff.radius, 18, 18]} />
               <meshStandardMaterial color={hairColor} roughness={0.95} />
             </mesh>
@@ -177,7 +170,6 @@ export function HeadModel({
   );
 }
 
-/** Aperçu 3D compact pour la grille « Nos styles » */
 export const HairstylePreview3D: React.FC<{
   item: { id: string; color?: string };
   className?: string;
