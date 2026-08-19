@@ -1,6 +1,6 @@
 # Story 7.2 — Persistent `ai_jobs` Schema & JobQueue
 
-Status: in-progress
+Status: review
 Epic: 7 — Durable 3D Head Pipeline
 Date: 2026-08-19
 
@@ -31,7 +31,7 @@ Migration creates `ai_jobs` with at least:
 
 ### AC-7.2.2 — Idempotent enqueue
 
-A service-role RPC `enqueue_ai_job` creates a queued job or returns the existing compatible job for an existing idempotency key. Reusing an idempotency key for a different owner/job type/provider must fail rather than silently alias unrelated work.
+A service-role RPC `enqueue_ai_job` creates a queued job or returns the existing compatible job for an existing idempotency key. Reusing an idempotency key for a different owner/job type/provider must fail rather than silently alias unrelated work. Concurrent calls with the same compatible key resolve to the same durable job rather than surfacing a UNIQUE violation.
 
 ### AC-7.2.3 — Atomic claim
 
@@ -47,7 +47,7 @@ A service-role RPC `claim_ai_jobs`:
 
 ### AC-7.2.4 — RLS / ownership
 
-Authenticated users have read-only visibility to jobs they own. Salon members may read jobs for their verified `salon_id`. Admin users may read all jobs. Browser clients receive no direct INSERT/UPDATE/DELETE policy. Queue mutation RPCs are executable only by `service_role`.
+Authenticated users have read-only visibility to jobs they own. Salon members may read jobs for their verified `salon_id`. Admin users may read all jobs. `anon` receives no table access. Authenticated clients receive explicit `SELECT` only and no direct INSERT/UPDATE/DELETE. Queue mutation RPCs are executable only by `service_role`.
 
 ### AC-7.2.5 — Provider-neutral Python JobQueue
 
@@ -57,14 +57,15 @@ Python defines a `JobQueue` contract and a Supabase/PostgREST-backed implementat
 - get by job ID;
 - claim.
 
-Instantiation from environment is fail-closed when Supabase server credentials are absent.
+Instantiation from environment is fail-closed when Supabase server credentials are absent. Production refuses cleartext HTTP Supabase URLs.
 
 ### AC-7.2.6 — Provider-independent validation
 
 CI validates without requiring a live Supabase project:
 
+- migration contains concurrency-safe idempotent enqueue semantics;
 - migration contains transactional `FOR UPDATE SKIP LOCKED` claim semantics;
-- idempotency and RLS/service-role boundaries are present;
+- idempotency, RLS and explicit privilege/service-role boundaries are present;
 - fake HTTP session proves enqueue/get/claim request/response mapping;
 - invalid server configuration fails closed.
 
@@ -74,7 +75,10 @@ CI validates without requiring a live Supabase project:
 - `api/models/jobs.py`
 - `api/models/__init__.py`
 - `api/services/jobs/job_queue.py`
+- `api/services/jobs/__init__.py`
 - `api/scripts/validate_job_queue_contract.py`
+- `.env.example`
+- `docker-compose.yml`
 - `.github/workflows/ci-cd.yml`
 - `_bmad-output/implementation-artifacts/sprint-status.yaml`
 
@@ -92,3 +96,7 @@ CI validates without requiring a live Supabase project:
 - Python compile and P0/canonical invariants remain green;
 - code review has no open Critical/High/Medium finding;
 - story moves to `review`, then `done` only with the PR-level production Docker gate green.
+
+## Review
+
+See `_bmad-output/implementation-artifacts/review-7-2-persistent-ai-jobs-jobqueue.md`.
