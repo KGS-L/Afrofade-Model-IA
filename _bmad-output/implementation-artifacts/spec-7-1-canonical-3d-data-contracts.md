@@ -1,6 +1,6 @@
 # Story 7.1 — Canonical 3D Data Contracts
 
-Status: in-progress
+Status: review
 Epic: 7 — Durable 3D Head Pipeline
 Date: 2026-08-19
 
@@ -49,7 +49,8 @@ CI executes a provider-independent Python contract validation script that:
 
 - validates representative head/hair/try-on samples;
 - round-trips serialized data;
-- confirms invalid coordinate system/unit/local mesh path is rejected.
+- confirms invalid coordinate system/unit/local mesh path is rejected;
+- confirms empty optional job identifiers are rejected consistently across runtimes.
 
 ## File Plan
 
@@ -74,4 +75,9 @@ CI executes a provider-independent Python contract validation script that:
 - Python compile remains green;
 - canonical contract validation script passes in CI;
 - P0 invariants remain green;
-- story status moves to `review` after implementation.
+- BMAD code review has no open Critical/High/Medium finding;
+- PR-level production Docker gate remains green before story is marked `done`.
+
+## Review
+
+See `_bmad-output/implementation-artifacts/review-7-1-canonical-3d-data-contracts.md`.
