@@ -189,7 +189,7 @@ jobs:
           echo "Dossier cible sur le VPS : $TARGET_DIR"
           mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
           cp -a docker-compose.yml "$TARGET_DIR/"
-          if [ -f .env.pro ]; then cp -a .env.pro "$TARGET_DIR/"; fi
+          if [ -f .env.example ]; then cp -a .env.example "$TARGET_DIR/"; fi
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
           if [ -d web ]; then
@@ -200,11 +200,16 @@ jobs:
           fi
           cd "$TARGET_DIR"
 
-          if [ -f .env.pro ]; then
-            cp -a .env.pro "$TARGET_DIR/"
-            cp -a .env.pro "$TARGET_DIR/.env"
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          else
+            while IFS='=' read -r key value || [ -n "$key" ]; do
+              [[ "$key" =~ ^#.*$ ]] && continue
+              [[ -z "$key" ]] && continue
+              clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
+              if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
+            done < .env.example
           fi
-          cd "$TARGET_DIR"
 
           run_sudo() {
             if [ "$EUID" -eq 0 ]; then "$@"; elif [ -n "$VPS_SUDO_PASSWORD" ]; then echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"; else sudo -n "$@"; fi
