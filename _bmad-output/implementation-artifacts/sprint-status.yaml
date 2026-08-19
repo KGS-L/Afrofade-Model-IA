@@ -53,7 +53,7 @@ development_status:
   epic-6-retrospective: optional
 
   epic-7: in-progress
-  7-1-canonical-3d-data-contracts: ready-for-dev
+  7-1-canonical-3d-data-contracts: in-progress
   7-2-persistent-ai-jobs-schema-jobqueue: backlog
   7-3-restart-safe-python-worker: backlog
   7-4-assetstorage-abstraction: backlog
