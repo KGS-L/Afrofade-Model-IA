@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS head_assets (
     owner_type VARCHAR(20) NOT NULL CHECK (owner_type IN ('customer', 'salon_client')),
     owner_id UUID NOT NULL,
     provider VARCHAR(100) NOT NULL,
-    mesh_bucket VARCHAR(100) NOT NULL,
+    mesh_bucket VARCHAR(100) NOT NULL CHECK (mesh_bucket = 'heads'),
     mesh_path TEXT NOT NULL,
     coordinate_system VARCHAR(40) NOT NULL DEFAULT 'Y_UP_RIGHT_HANDED'
         CHECK (coordinate_system = 'Y_UP_RIGHT_HANDED'),
@@ -95,6 +95,7 @@ DECLARE
     job ai_jobs%ROWTYPE;
     derived_owner_type VARCHAR(20);
     derived_owner_id UUID;
+    expected_mesh_prefix TEXT;
 BEGIN
     SELECT * INTO job
     FROM ai_jobs
@@ -130,9 +131,20 @@ BEGIN
     IF job.salon_id IS NOT NULL THEN
         derived_owner_type := 'salon_client';
         derived_owner_id := job.salon_id;
+        expected_mesh_prefix := 'canonical/salons/' || job.salon_id::TEXT || '/';
     ELSE
         derived_owner_type := 'customer';
         derived_owner_id := job.user_id;
+        expected_mesh_prefix := 'canonical/users/' || job.user_id::TEXT || '/';
+    END IF;
+
+    IF p_mesh_bucket <> 'heads'
+       OR p_mesh_path NOT LIKE expected_mesh_prefix || '%'
+       OR position('//' IN p_mesh_path) > 0
+       OR position(chr(92) IN p_mesh_path) > 0
+       OR position('/../' IN '/' || p_mesh_path || '/') > 0
+       OR position('/./' IN '/' || p_mesh_path || '/') > 0 THEN
+        RAISE EXCEPTION 'head_asset_storage_owner_mismatch';
     END IF;
 
     INSERT INTO head_assets (
