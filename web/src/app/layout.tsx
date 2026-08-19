@@ -40,8 +40,10 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://afrofade.pro'),
+  metadataBase: new URL(siteUrl),
   title: {
     default: 'Afrofade — Studio Virtuel de Coiffure 3D & Essayage de Coupes',
     template: '%s — Afrofade',
@@ -105,7 +107,7 @@ export default function RootLayout({
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Afrofade',
-    url: 'https://afrofade.pro',
+    url: siteUrl,
     applicationCategory: 'LifestyleApplication',
     operatingSystem: 'All',
     description:

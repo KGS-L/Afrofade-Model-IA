@@ -190,7 +190,7 @@ jobs:
           echo "Dossier cible sur le VPS : $TARGET_DIR"
           mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
           cp -a docker-compose.yml "$TARGET_DIR/"
-          if [ -f .env.example ]; then cp -a .env.example "$TARGET_DIR/"; fi
+          if [ -f .env.pro ]; then cp -a .env.pro "$TARGET_DIR/"; fi
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
           if [ -d web ]; then
@@ -201,12 +201,12 @@ jobs:
           fi
           cd "$TARGET_DIR"
 
-          if [ -f .env.example ]; then
+          if [ -f .env.pro ]; then
             if [ ! -f .env ]; then
-              cp .env.example .env
+              cp .env.pro .env
             else
-              ENV_WEB_PORT=$(grep "^WEB_PORT=" .env.example | cut -d'=' -f2)
-              ENV_API_PORT=$(grep "^API_PORT=" .env.example | cut -d'=' -f2)
+              ENV_WEB_PORT=$(grep "^WEB_PORT=" .env.pro | cut -d'=' -f2)
+              ENV_API_PORT=$(grep "^API_PORT=" .env.pro | cut -d'=' -f2)
               if [ -n "$ENV_WEB_PORT" ]; then
                 if grep -q "^WEB_PORT=" .env; then sed -i "s/^WEB_PORT=.*/WEB_PORT=$ENV_WEB_PORT/" .env; else echo "WEB_PORT=$ENV_WEB_PORT" >> .env; fi
               fi
@@ -218,7 +218,7 @@ jobs:
                 [[ -z "$key" ]] && continue
                 clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
                 if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
-              done < .env.example
+              done < .env.pro
             fi
           fi
 
