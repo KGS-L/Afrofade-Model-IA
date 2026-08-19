@@ -6,12 +6,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Mapping
 import logging
 
+from models.head_generation import ReconstructedHeadPayload
 from models.jobs import AIJobRecord, AIJobType
-from services.heads.head_asset_repository import (
-    HeadAssetRepositoryError,
-    SupabaseHeadAssetRepository,
-)
-from services.reconstructor import ReconstructedHeadPayload, ReconstructionPipelineService
+from services.heads.head_asset_repository import SupabaseHeadAssetRepository
 from services.storage.asset_storage import AssetStorage, AssetStorageError
 from services.storage.paths import canonical_head_ref
 from services.storage.supabase_storage import SupabaseAssetStorage
@@ -51,6 +48,9 @@ class FlamePyTorchProvider(BaseHeadProvider):
         client_name: str = "Client Afrofade",
         preserve_skin_texture: bool = True,
     ) -> ReconstructedHeadPayload:
+        # Keep heavy PyTorch/MediaPipe imports behind the actual provider invocation.
+        from services.reconstructor import ReconstructionPipelineService
+
         return ReconstructionPipelineService.generate_3d_head_asset(
             photo_inputs,
             job_id=job_id,
@@ -120,7 +120,6 @@ class HeadGenerationManager:
                 if self.storage.exists(existing.mesh_ref):
                     return existing.to_job_output(reused_existing=True)
             except AssetStorageError:
-                # Storage inspection failures are transient and must not cause a fake success.
                 raise
 
         payload = job.input_payload
