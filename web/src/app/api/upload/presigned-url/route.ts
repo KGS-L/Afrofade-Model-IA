@@ -5,6 +5,7 @@ import { getVerifiedPrincipal } from '@/lib/server-auth';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const CLIENT_PHOTOS_BUCKET = 'client-photos' as const;
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const supabaseAdmin = getServiceSupabase();
     const { data, error } = await supabaseAdmin.storage
-      .from('client-photos')
+      .from(CLIENT_PHOTOS_BUCKET)
       .createSignedUploadUrl(storagePath);
 
     if (error || !data) {
@@ -45,9 +46,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
+      storageRef: {
+        bucket: CLIENT_PHOTOS_BUCKET,
+        path: data.path,
+      },
       signedUrl: data.signedUrl,
       token: data.token,
-      path: data.path,
     });
   } catch (err: unknown) {
     console.error('[Upload Route]', err);
