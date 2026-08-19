@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     if (profileType === 'customer') {
       const displayName = cleanString(body?.displayName, 120) || principal.user.user_metadata?.full_name || principal.user.user_metadata?.name || principal.user.email?.split('@')[0] || 'Utilisateur Afrofade';
-      const { error: roleError } = await supabaseAdmin.from('user_profiles').insert({ user_id: principal.user.id, role: 'customer', salon_id: null });
+      const { error: roleError } = await supabaseAdmin.from('user_profiles').upsert({ user_id: principal.user.id, role: 'customer', salon_id: null }, { onConflict: 'user_id' });
       if (roleError) throw new Error(roleError.message);
       const { error: profileError } = await supabaseAdmin.from('customer_profiles').upsert({ user_id: principal.user.id, display_name: displayName, phone, country, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
       if (profileError) {
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const { data: salon, error: salonError } = await supabaseAdmin.from('salons').insert({ name: salonName, country, phone, plan: 'PRO', quota_limit: 20, quota_used: 0 }).select('id').single();
     if (salonError || !salon) throw new Error(salonError?.message || 'Unable to create salon.');
     createdSalonId = salon.id;
-    const { error: roleError } = await supabaseAdmin.from('user_profiles').insert({ user_id: principal.user.id, role: 'salon', salon_id: salon.id });
+    const { error: roleError } = await supabaseAdmin.from('user_profiles').upsert({ user_id: principal.user.id, role: 'salon', salon_id: salon.id }, { onConflict: 'user_id' });
     if (roleError) throw new Error(roleError.message);
     return NextResponse.json({ role: 'salon', salonId: salon.id, redirectTo: '/dashboard' }, { status: 201 });
   } catch (error) {
