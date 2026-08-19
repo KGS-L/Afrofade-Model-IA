@@ -118,6 +118,7 @@ jobs:
           WEB_PORT=3005
           API_PORT=8005
           FASTAPI_ENV=production
+          SUPABASE_URL=https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_URL=https://placeholder-project.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role-key
@@ -224,7 +225,14 @@ jobs:
 
           require_value API_INTERNAL_SECRET
           require_value CRON_SECRET
+          require_value SUPABASE_URL
           require_value SUPABASE_SERVICE_ROLE_KEY
+
+          supabase_url=$(grep '^SUPABASE_URL=' .env | head -n1 | cut -d'=' -f2-)
+          if ! echo "$supabase_url" | grep -q '^https://'; then
+            echo "ERROR: SUPABASE_URL must use HTTPS in production"
+            exit 1
+          fi
 
           enabled_providers=$(grep '^PAYMENT_ENABLED_PROVIDERS=' .env | head -n1 | cut -d'=' -f2- | tr -d ' ')
           enabled_providers=${enabled_providers:-money_fusion}
