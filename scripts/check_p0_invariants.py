@@ -34,6 +34,8 @@ def main() -> int:
     migration02 = read("web/supabase/migrations/02_p0_security_commerce.sql")
     migration03 = read("web/supabase/migrations/03_dual_payment_providers.sql")
     migration04 = read("web/supabase/migrations/04_role_dashboards.sql")
+    migration09 = read("web/supabase/migrations/09_product_hardening.sql")
+    onboarding_api = read("web/src/app/api/onboarding/profile/route.ts")
     customer_api = read("web/src/app/api/account/overview/route.ts")
     salon_api = read("web/src/app/api/salon/dashboard/route.ts")
     salon_onboard = read("web/src/app/api/salon/onboard/route.ts")
@@ -42,6 +44,34 @@ def main() -> int:
     salon_page = read("web/src/app/dashboard/page.tsx")
     admin_page = read("web/src/app/admin/page.tsx")
 
+    payment_is_persisted_pending = (
+        "payment_transactions" in checkout
+        and ("status: 'pending'" in checkout or "status:'pending'" in checkout)
+        and ("provider," in checkout or "provider,purpose" in checkout)
+    )
+    payment_provider_gate = (
+        "PAYMENT_ENABLED_PROVIDERS" in provider_config
+        and "payment_provider_settings" in provider_config
+        and "effectiveEnabled" in provider_config
+        and "getOperationalPaymentProviders" in checkout
+    )
+    checkout_role_aware = (
+        ("purpose === 'credits' && principal.role !== 'customer'" in checkout or "purpose==='credits'&&principal.role!=='customer'" in checkout)
+        and ("principal.role !== 'salon'" in checkout or "principal.role!=='salon'" in checkout)
+    )
+    checkout_return_paths_match_role = (
+        "purpose === 'credits' ? '/account' : '/dashboard'" in checkout
+        or "purpose==='credits'?'/account':'/dashboard'" in checkout
+    )
+    explicit_new_user_onboarding = (
+        "handle_afrofade_auth_user_created" in migration09
+        and "RETURN NEW;" in migration09
+        and "VALUES (NEW.id, 'customer')" not in migration09
+        and "profileType === 'customer'" in onboarding_api
+        and "profileType === 'salon'" in onboarding_api
+        and "principal.profileConfigured" in onboarding_api
+    )
+
     checks = [
         require("No demo OTP bypass", "token === '123456'" not in auth and 'token === "123456"' not in auth, "hard-coded OTP bypass absent"),
         require("No client demo admin login", "loginAsAdmin" not in auth, "admin cannot be minted in client AuthProvider"),
@@ -49,8 +79,8 @@ def main() -> int:
         require("Unified checkout requires verified user", "getVerifiedPrincipal" in checkout, "checkout is authenticated server-side"),
         require("Checkout does not trust client amount", "body?.amountFcfa" not in checkout and "body.amountFcfa" not in checkout, "price comes from server catalog"),
         require("Checkout uses server product catalogs", "PLANS.find" in checkout and "B2C_CREDIT_PACKS.find" in checkout, "subscriptions and credits are priced from trusted constants"),
-        require("Payment is persisted pending", "payment_transactions" in checkout and "status: 'pending'" in checkout and "provider," in checkout, "provider session is linked to a pending DB transaction"),
-        require("Payment providers are feature-gated", "PAYMENT_ENABLED_PROVIDERS" in provider_config and "isPaymentProviderEnabled" in checkout, "providers can be rolled out without exposing unconfigured credentials"),
+        require("Payment is persisted pending", payment_is_persisted_pending, "provider session is linked to a pending DB transaction"),
+        require("Payment providers are feature-gated", payment_provider_gate, "DB admin switch and server allow-list must both allow a provider"),
         require("Legacy Money Fusion checkout is safe", "export { POST }" in legacy_checkout and "../../checkout/route" in legacy_checkout, "old route delegates to unified server-side checkout"),
         require("Money Fusion request matches supplied Web API", all(token in checkout + money_fusion for token in ["personal_Info", "numeroSend", "nomclient", "webhook_url"]), "required Money Fusion contract fields are present"),
         require("Money Fusion does not invent bearer auth", "Authorization" not in money_fusion and "MONEY_FUSION_API_URL" in money_fusion, "merchant dashboard API URL is used without undocumented auth headers"),
@@ -73,7 +103,7 @@ def main() -> int:
         require("FastAPI is not wildcard CORS", 'allow_origins=["*"]' not in api_main and "API_ALLOWED_ORIGINS" in api_main, "origins come from explicit configuration"),
         require("FastAPI business routes are protected", "API_INTERNAL_SECRET" in api_main and "require_internal_api_key" in api_main and "X-Internal-API-Key" in api_main, "inference endpoints require internal credential"),
         require("Role routes are isolated", all(token in middleware for token in ["/account", "principal.role !== 'customer'", "principal.role !== 'salon'", "principal.role !== 'admin'"]), "customer, salon and admin dashboards have server middleware boundaries"),
-        require("New auth users default safely", "handle_afrofade_auth_user_created" in migration04 and "VALUES (NEW.id, 'customer')" in migration04, "new accounts cannot self-mint salon/admin roles"),
+        require("New auth users default safely", explicit_new_user_onboarding, "new accounts remain unprivileged until explicit customer/salon onboarding"),
         require("Customer profile is persisted", "customer_profiles" in migration04 and "customer_profiles" in customer_api and ".upsert(" in customer_api, "customer name/phone/country live in Supabase"),
         require("Customer account is real", "credit_wallets" in customer_api and "credit_transactions" in customer_api and "payment_transactions" in customer_api and "B2C_CREDIT_PACKS" in customer_page, "customer dashboard reads wallet/ledger/payments and can buy server-priced packs"),
         require("Salon profile is persisted", ".from('salons')" in salon_api and ".update(" in salon_api and "profileCompletion" in salon_api, "salon profile edits are stored server-side"),
@@ -81,8 +111,8 @@ def main() -> int:
         require("Salon dashboard uses real data", "clients_heads" in salon_api and "subscriptions" in salon_api and "payment_transactions" in salon_api and "Stats mock" not in salon_page, "salon KPIs and histories come from Supabase"),
         require("Admin API enforces role", "principal.role !== 'admin'" in admin_api and "getVerifiedPrincipal" in admin_api, "admin analytics cannot be read by non-admins"),
         require("Admin dashboard has no fixtures", "const KPIS" not in admin_page and "RECENT_SALONS" not in admin_page and "/api/admin/overview" in admin_page, "admin UI consumes real server analytics"),
-        require("Checkout is role-aware", "purpose === 'credits' && principal.role !== 'customer'" in checkout and "principal.role !== 'salon'" in checkout, "B2C and salon purchases cannot cross role boundaries"),
-        require("Checkout return paths match role", "purpose === 'credits' ? '/account' : '/dashboard'" in checkout, "payment redirects land in the correct operational dashboard"),
+        require("Checkout is role-aware", checkout_role_aware, "B2C and salon purchases cannot cross role boundaries"),
+        require("Checkout return paths match role", checkout_return_paths_match_role, "payment redirects land in the correct operational dashboard"),
         require("Subscription discounts are server-verified", "discountEligible" in checkout and "previousPayment" in checkout and "salon?.country" in checkout, "client cannot unlock first-subscription discounts locally"),
     ]
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   BadgeCent,
+  Check,
   CreditCard,
   History,
   Images,
@@ -16,14 +17,23 @@ import {
   UserRound,
   Wallet,
 } from 'lucide-react';
+import { CountrySelect } from '@/components/CountrySelect';
+import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { useAuth } from '@/lib/auth';
 import { B2C_CREDIT_PACKS } from '@/lib/credits';
+import type { PaymentProvider } from '@/lib/payment-providers';
 import { formatFcfa } from '@/lib/plans';
 
 type AccountOverview = {
   profile: { displayName: string; phone: string; country: string };
   wallet: { balance: number; updatedAt: string | null };
-  ledger: Array<{ id: string; delta: number; reason: string; reference_id?: string | null; created_at: string }>;
+  ledger: Array<{
+    id: string;
+    delta: number;
+    reason: string;
+    reference_id?: string | null;
+    created_at: string;
+  }>;
   payments: Array<{
     id: string;
     provider: string;
@@ -44,9 +54,16 @@ type AccountOverview = {
   }>;
 };
 
+type Provider = {
+  provider: PaymentProvider;
+  displayName: string;
+  effectiveEnabled: boolean;
+};
+
 async function fetchOverview(): Promise<AccountOverview> {
   const response = await fetch('/api/account/overview', { cache: 'no-store' });
   const data = await response.json();
+  if (data.needsOnboarding) throw new Error('needs_onboarding');
   if (!response.ok) throw new Error(data.error || 'Impossible de charger votre espace.');
   return data as AccountOverview;
 }
@@ -56,14 +73,16 @@ export default function AccountPage() {
   const { user, hydrated, logout } = useAuth();
   const [overview, setOverview] = useState<AccountOverview | null>(null);
   const [profile, setProfile] = useState({ displayName: '', phone: '', country: '' });
+  const [salonForm, setSalonForm] = useState({ name: '', country: '', phone: '' });
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [provider, setProvider] = useState<PaymentProvider>('money_fusion');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [payingPack, setPayingPack] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [paymentSyncing, setPaymentSyncing] = useState(false);
-  const [salonForm, setSalonForm] = useState({ name: '', country: '', phone: '' });
   const [creatingSalon, setCreatingSalon] = useState(false);
+  const [payingPack, setPayingPack] = useState<string | null>(null);
+  const [paymentSyncing, setPaymentSyncing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const applyOverview = (data: AccountOverview) => {
     setOverview(data);
@@ -75,12 +94,28 @@ export default function AccountPage() {
     }));
   };
 
+  const loadProviders = async () => {
+    const response = await fetch('/api/v1/payments/providers', { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    const nextProviders = (data.providers || []) as Provider[];
+    setProviders(nextProviders);
+    if (nextProviders.length && !nextProviders.some((item) => item.provider === provider)) {
+      setProvider(nextProviders[0].provider);
+    }
+  };
+
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      applyOverview(await fetchOverview());
+      const [nextOverview] = await Promise.all([fetchOverview(), loadProviders()]);
+      applyOverview(nextOverview);
     } catch (loadError) {
+      if (loadError instanceof Error && loadError.message === 'needs_onboarding') {
+        router.replace('/onboarding');
+        return;
+      }
       setError(loadError instanceof Error ? loadError.message : 'Impossible de charger votre espace.');
     } finally {
       if (!silent) setLoading(false);
@@ -93,14 +128,25 @@ export default function AccountPage() {
       router.replace('/connexion?next=/account');
       return;
     }
-    if (user.role !== 'customer') return;
+    if (user.needsOnboarding) {
+      router.replace('/onboarding');
+      return;
+    }
+    if (user.role === 'salon') {
+      router.replace('/dashboard');
+      return;
+    }
+    if (user.role === 'admin') {
+      router.replace('/admin');
+      return;
+    }
     void load();
   }, [hydrated, user, router]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Provider redirects can arrive a few seconds before the verified webhook.
-  // Poll the real payment row/wallet until that transaction leaves pending.
+  // A provider can redirect before its verified webhook has credited the wallet.
+  // Keep the UI synchronized with server truth until this transaction leaves pending.
   useEffect(() => {
-    if (!hydrated || user?.role !== 'customer') return;
+    if (!hydrated || user?.role !== 'customer' || user.needsOnboarding) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') !== 'pending') return;
     const paymentId = params.get('payment_id');
@@ -109,6 +155,7 @@ export default function AccountPage() {
     setPaymentSyncing(true);
     let stopped = false;
     let attempts = 0;
+
     const poll = async () => {
       if (stopped) return;
       attempts += 1;
@@ -123,7 +170,7 @@ export default function AccountPage() {
           return;
         }
       } catch {
-        // transient webhook/provider delay; retry below
+        // Provider/webhook propagation can be transient; retry below.
       }
       if (attempts >= 15) {
         stopped = true;
@@ -137,11 +184,11 @@ export default function AccountPage() {
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [hydrated, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hydrated, user?.role, user?.needsOnboarding]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const paidCredits = useMemo(
     () => overview?.ledger.filter((item) => item.delta > 0).reduce((sum, item) => sum + item.delta, 0) ?? 0,
-    [overview]
+    [overview],
   );
 
   const saveProfile = async (event: React.FormEvent) => {
@@ -174,7 +221,7 @@ export default function AccountPage() {
       const response = await fetch('/api/v1/payments/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'money_fusion', purpose: 'credits', packId }),
+        body: JSON.stringify({ provider, purpose: 'credits', packId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Paiement indisponible.');
@@ -205,24 +252,37 @@ export default function AccountPage() {
     }
   };
 
-  if (!hydrated || !user || user.role !== 'customer' || loading) {
-    return <div className="min-h-screen bg-cream flex items-center justify-center"><RefreshCw className="w-6 h-6 animate-spin text-terracotta" /></div>;
-  }
+  if (!hydrated || !user || user.role !== 'customer' || loading) return <DashboardSkeleton />;
 
   return (
     <div className="min-h-screen bg-cream text-ink">
       <header className="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-ink/10">
         <div className="max-w-container mx-auto px-6 py-3 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2.5"><div className="w-9 h-9 rounded-card bg-terracotta flex items-center justify-center"><Scissors className="w-4 h-4 text-white" /></div><span className="font-display text-lg">Afro<span className="text-terracotta">fade</span></span></Link>
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] bg-terracotta-wash text-terracotta-dark px-3 py-1.5 rounded-pill"><UserRound className="w-3.5 h-3.5" /> Espace particulier</span>
-          <div className="ml-auto flex items-center gap-2"><Link href="/rituel" className="min-h-[44px] inline-flex items-center gap-2 px-4 rounded-pill bg-terracotta text-white text-sm font-bold"><Sparkles className="w-4 h-4" /> Tester un style</Link><button onClick={logout} className="w-11 h-11 rounded-pill border border-ink/15 flex items-center justify-center" aria-label="Se déconnecter"><LogOut className="w-4 h-4" /></button></div>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-card bg-terracotta flex items-center justify-center"><Scissors className="w-4 h-4 text-white" /></div>
+            <span className="font-display text-lg">Afro<span className="text-terracotta">fade</span></span>
+          </Link>
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.12em] bg-terracotta-wash text-terracotta-dark px-3 py-1.5 rounded-pill"><UserRound className="w-3.5 h-3.5" />Espace particulier</span>
+          <div className="ml-auto flex gap-2">
+            <Link href="/rituel" className="min-h-[44px] inline-flex items-center gap-2 px-4 rounded-pill bg-terracotta text-white text-sm font-bold"><Sparkles className="w-4 h-4" />Tester un style</Link>
+            <button onClick={logout} className="w-11 h-11 rounded-pill border border-ink/15 flex items-center justify-center" aria-label="Se déconnecter"><LogOut className="w-4 h-4" /></button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-container mx-auto px-6 py-10 space-y-8">
-        <div><p className="font-hand text-2xl text-terracotta">votre espace</p><h1 className="font-display text-3xl">Bonjour {profile.displayName || user.name}</h1><p className="text-sm text-ink-soft mt-1">Crédits, rendus, achats et profil sont lus directement depuis Supabase.</p></div>
+        <div>
+          <p className="font-hand text-2xl text-terracotta">votre espace</p>
+          <h1 className="font-display text-3xl">Bonjour {profile.displayName || user.name}</h1>
+          <p className="text-sm text-ink-soft mt-1">Crédits, rendus, achats et profil synchronisés avec Supabase.</p>
+        </div>
 
-        {paymentSyncing && <div className="rounded-input border border-terracotta/30 bg-terracotta-wash px-4 py-3 text-sm flex items-center gap-2"><RefreshCw className="w-4 h-4 animate-spin text-terracotta" /> Vérification du paiement auprès de Money Fusion…</div>}
+        {paymentSyncing && (
+          <div className="rounded-input border border-terracotta/30 bg-terracotta-wash px-4 py-3 text-sm flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-terracotta" />
+            Paiement reçu. Synchronisation du solde avec le prestataire…
+          </div>
+        )}
         {error && <div className="rounded-input border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -231,48 +291,92 @@ export default function AccountPage() {
             { label: 'Crédits reçus', value: paidCredits, icon: BadgeCent },
             { label: 'Rendus 3D', value: overview?.heads.length ?? 0, icon: Images },
             { label: 'Achats crédits', value: overview?.payments.length ?? 0, icon: CreditCard },
-          ].map((stat) => <div key={stat.label} className="bg-card rounded-card border border-ink/10 p-5 shadow-soft"><div className="text-xs font-bold text-ink-soft flex items-center gap-2"><stat.icon className="w-4 h-4 text-terracotta" /> {stat.label}</div><p className="font-display text-3xl mt-2">{stat.value}</p></div>)}
+          ].map((stat) => (
+            <div key={stat.label} className="bg-card rounded-card border border-ink/10 p-5 shadow-soft">
+              <div className="text-xs font-bold text-ink-soft flex items-center gap-2"><stat.icon className="w-4 h-4 text-terracotta" />{stat.label}</div>
+              <p className="font-display text-3xl mt-2">{stat.value}</p>
+            </div>
+          ))}
         </div>
 
         <section className="bg-card rounded-card border border-ink/10 p-6 sm:p-8 shadow-soft">
           <h2 className="font-display text-xl">Mon profil</h2>
+          <p className="text-xs text-ink-soft mt-1">Ces données servent aussi à préremplir les paiements.</p>
           <form onSubmit={saveProfile} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-            <input value={profile.displayName} onChange={(e) => setProfile({ ...profile, displayName: e.target.value })} placeholder="Nom" className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <input value={profile.country} onChange={(e) => setProfile({ ...profile, country: e.target.value })} placeholder="Pays" className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <input value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} placeholder="+226..." className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <div className="sm:col-span-3 flex items-center gap-3"><button disabled={saving} className="min-h-[46px] px-6 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>{saved && <span className="text-xs font-bold text-terracotta-dark">Profil enregistré ✓</span>}</div>
+            <input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="Nom" required className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
+            <CountrySelect value={profile.country} onChange={(country) => setProfile({ ...profile, country })} required className="w-full" />
+            <input value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} placeholder="+226..." className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
+            <div className="sm:col-span-3 flex items-center gap-3">
+              <button disabled={saving} className="min-h-[46px] px-6 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+              {saved && <span className="text-xs font-bold text-terracotta-dark inline-flex gap-1"><Check className="w-4 h-4" />Profil enregistré</span>}
+            </div>
           </form>
         </section>
 
         <section className="space-y-4">
-          <div><h2 className="font-display text-xl">Recharger mes crédits</h2><p className="text-xs text-ink-soft mt-1">Une reconstruction coûte 2 crédits. Un téléchargement HD coûte 1 crédit. Les prix sont imposés côté serveur.</p></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {B2C_CREDIT_PACKS.map((pack) => <div key={pack.id} className={`bg-card rounded-card border p-5 shadow-soft ${pack.popular ? 'border-terracotta' : 'border-ink/10'}`}><p className="text-xs uppercase tracking-[0.12em] font-bold text-ink-soft">{pack.name}</p><p className="font-display text-2xl mt-2">{pack.credits} crédits</p><p className="text-sm text-terracotta-dark font-bold mt-1">{formatFcfa(pack.amountFcfa)} FCFA</p><p className="text-xs text-ink-soft mt-3 min-h-[48px]">{pack.description}</p><button onClick={() => void buyCredits(pack.id)} disabled={Boolean(payingPack)} className="w-full min-h-[46px] mt-4 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{payingPack === pack.id ? 'Ouverture du paiement…' : 'Acheter'}</button></div>)}
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            <div><h2 className="font-display text-xl">Recharger mes crédits</h2><p className="text-xs text-ink-soft mt-1">Choisissez un prestataire activé par l’administration.</p></div>
+            <div className="flex gap-2 flex-wrap">
+              {providers.map((item) => (
+                <button key={item.provider} type="button" onClick={() => setProvider(item.provider)} className={`px-4 min-h-[40px] rounded-pill text-xs font-bold border ${provider === item.provider ? 'bg-night text-white border-night' : 'bg-card border-ink/15'}`}>{item.displayName}</button>
+              ))}
+            </div>
           </div>
+          {providers.length === 0 ? (
+            <div className="rounded-input border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">Aucun prestataire de paiement n’est actuellement disponible.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {B2C_CREDIT_PACKS.map((pack) => (
+                <div key={pack.id} className={`bg-card rounded-card border p-5 shadow-soft ${pack.popular ? 'border-terracotta' : 'border-ink/10'}`}>
+                  <p className="text-xs uppercase tracking-[.12em] font-bold text-ink-soft">{pack.name}</p>
+                  <p className="font-display text-2xl mt-2">{pack.credits} crédits</p>
+                  <p className="text-sm text-terracotta-dark font-bold mt-1">{formatFcfa(pack.amountFcfa)} FCFA</p>
+                  <p className="text-xs text-ink-soft mt-3 min-h-[48px]">{pack.description}</p>
+                  <button onClick={() => void buyCredits(pack.id)} disabled={Boolean(payingPack)} className="w-full min-h-[46px] mt-4 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{payingPack === pack.id ? 'Ouverture…' : 'Acheter'}</button>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
-            <h2 className="font-display text-lg flex items-center gap-2"><Images className="w-4 h-4 text-terracotta" /> Mes rendus 3D</h2>
-            <div className="mt-4 divide-y divide-ink/10">{(overview?.heads || []).length === 0 ? <p className="text-sm text-ink-soft py-4">Aucun rendu. Lancez votre premier rituel avec au moins 2 crédits.</p> : overview?.heads.map((head) => <div key={head.id} className="py-3 flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{head.client_name}</p><p className="text-xs text-ink-soft">Créé le {new Date(head.created_at).toLocaleDateString('fr-FR')} · expiration {new Date(head.expires_at).toLocaleDateString('fr-FR')}</p></div><a href={head.mesh_3d_url} className="text-xs font-bold text-terracotta hover:underline">Ouvrir le GLB</a></div>)}</div>
+            <h2 className="font-display text-lg flex items-center gap-2"><Images className="w-4 h-4 text-terracotta" />Mes rendus 3D</h2>
+            <div className="mt-4 divide-y divide-ink/10">
+              {!overview?.heads.length ? <p className="text-sm text-ink-soft py-4">Aucun rendu pour le moment.</p> : overview.heads.map((head) => (
+                <div key={head.id} className="py-3 flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{head.client_name}</p><p className="text-xs text-ink-soft">{new Date(head.created_at).toLocaleDateString('fr-FR')}</p></div><a href={head.mesh_3d_url} className="text-xs font-bold text-terracotta">Ouvrir</a></div>
+              ))}
+            </div>
           </section>
           <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
-            <h2 className="font-display text-lg flex items-center gap-2"><History className="w-4 h-4 text-terracotta" /> Mouvements de crédits</h2>
-            <div className="mt-4 divide-y divide-ink/10">{(overview?.ledger || []).length === 0 ? <p className="text-sm text-ink-soft py-4">Aucun mouvement.</p> : overview?.ledger.map((item) => <div key={item.id} className="py-3 flex items-center justify-between gap-3 text-sm"><div><p className="font-bold">{item.reason.replaceAll('_', ' ')}</p><p className="text-xs text-ink-soft">{new Date(item.created_at).toLocaleDateString('fr-FR')}</p></div><span className={`font-bold ${item.delta >= 0 ? 'text-terracotta-dark' : 'text-ink'}`}>{item.delta >= 0 ? '+' : ''}{item.delta}</span></div>)}</div>
+            <h2 className="font-display text-lg flex items-center gap-2"><History className="w-4 h-4 text-terracotta" />Mouvements de crédits</h2>
+            <div className="mt-4 divide-y divide-ink/10">
+              {!overview?.ledger.length ? <p className="text-sm text-ink-soft py-4">Aucun mouvement.</p> : overview.ledger.map((item) => (
+                <div key={item.id} className="py-3 flex justify-between gap-3 text-sm"><span>{item.reason.replaceAll('_', ' ')}</span><strong className={item.delta > 0 ? 'text-terracotta-dark' : ''}>{item.delta > 0 ? '+' : ''}{item.delta}</strong></div>
+              ))}
+            </div>
           </section>
         </div>
 
         <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
-          <h2 className="font-display text-lg flex items-center gap-2"><CreditCard className="w-4 h-4 text-terracotta" /> Paiements</h2>
-          <div className="mt-4 divide-y divide-ink/10">{(overview?.payments || []).length === 0 ? <p className="text-sm text-ink-soft py-4">Aucun paiement.</p> : overview?.payments.map((payment) => <div key={payment.id} className="py-3 flex items-center justify-between gap-3 text-sm"><div><p className="font-bold">{payment.product_id}</p><p className="text-xs text-ink-soft">{payment.provider} · {new Date(payment.created_at).toLocaleDateString('fr-FR')}</p></div><div className="text-right"><p className="font-bold">{formatFcfa(payment.amount_fcfa)} FCFA</p><p className="text-xs text-ink-soft">{payment.status}</p></div></div>)}</div>
+          <h2 className="font-display text-lg flex items-center gap-2"><CreditCard className="w-4 h-4 text-terracotta" />Historique des paiements</h2>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full text-xs">
+              <thead><tr className="text-left text-ink-soft border-b border-ink/10"><th className="py-2">Prestataire</th><th>Pack</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead>
+              <tbody>{overview?.payments.map((payment) => <tr key={payment.id} className="border-b border-ink/5"><td className="py-3">{payment.provider}</td><td>{payment.product_id}</td><td>{formatFcfa(payment.amount_fcfa)} FCFA</td><td>{payment.status}</td><td>{new Date(payment.created_at).toLocaleDateString('fr-FR')}</td></tr>)}</tbody>
+            </table>
+          </div>
         </section>
 
         <section className="bg-night text-white rounded-card p-6 sm:p-8 shadow-soft">
-          <div className="flex items-start gap-3"><Store className="w-5 h-5 text-terracotta mt-1" /><div><h2 className="font-display text-xl">Vous êtes professionnel ?</h2><p className="text-sm text-white/65 mt-1">Créez votre espace salon. Votre rôle est mis à jour côté serveur et vous serez redirigé vers le dashboard professionnel.</p></div></div>
+          <div className="flex items-start gap-3">
+            <Store className="w-5 h-5 text-terracotta mt-1" />
+            <div><h2 className="font-display text-xl">Vous devenez professionnel ?</h2><p className="text-sm text-white/65 mt-1">Un particulier existant peut toujours créer son espace salon. La conversion reste contrôlée côté serveur.</p></div>
+          </div>
           <form onSubmit={createSalon} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-            <input value={salonForm.name} onChange={(e) => setSalonForm({ ...salonForm, name: e.target.value })} placeholder="Nom du salon" className="min-h-[46px] rounded-input bg-white/10 border border-white/20 px-4 text-white placeholder:text-white/40" />
-            <input value={salonForm.country} onChange={(e) => setSalonForm({ ...salonForm, country: e.target.value })} placeholder="Pays" className="min-h-[46px] rounded-input bg-white/10 border border-white/20 px-4 text-white placeholder:text-white/40" />
-            <input value={salonForm.phone} onChange={(e) => setSalonForm({ ...salonForm, phone: e.target.value })} placeholder="Téléphone" className="min-h-[46px] rounded-input bg-white/10 border border-white/20 px-4 text-white placeholder:text-white/40" />
+            <input value={salonForm.name} onChange={(event) => setSalonForm({ ...salonForm, name: event.target.value })} placeholder="Nom du salon" required className="min-h-[46px] rounded-input bg-white/10 border border-white/20 px-4 text-white placeholder:text-white/40" />
+            <CountrySelect value={salonForm.country} onChange={(country) => setSalonForm({ ...salonForm, country })} required className="w-full" />
+            <input value={salonForm.phone} onChange={(event) => setSalonForm({ ...salonForm, phone: event.target.value })} placeholder="Téléphone" required className="min-h-[46px] rounded-input bg-white/10 border border-white/20 px-4 text-white placeholder:text-white/40" />
             <button disabled={creatingSalon} className="sm:col-span-3 justify-self-start min-h-[46px] px-6 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{creatingSalon ? 'Création…' : 'Créer mon espace salon'}</button>
           </form>
         </section>

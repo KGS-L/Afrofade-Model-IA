@@ -98,6 +98,10 @@ jobs:
         run: |
           python3 scripts/check_p0_invariants.py
 
+      - name: Check pre-7.6 product hardening invariants
+        run: |
+          python3 scripts/check_product_hardening.py
+
       - name: Check AI Model Downloader & Gatekeeper
         run: |
           python3 api/scripts/download_models.py
