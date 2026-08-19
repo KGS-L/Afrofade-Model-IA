@@ -5,6 +5,7 @@ import { getPaymentProviderStates } from '@/lib/payment-providers';
 
 type PlanKey = 'PRO' | 'VIP' | 'EXTRA';
 type RoleKey = 'customer' | 'salon' | 'admin';
+type JobKey = 'queued' | 'running' | 'failed' | 'completed';
 
 function isPlanKey(value: unknown): value is PlanKey {
   return value === 'PRO' || value === 'VIP' || value === 'EXTRA';
@@ -14,15 +15,33 @@ function isRoleKey(value: unknown): value is RoleKey {
   return value === 'customer' || value === 'salon' || value === 'admin';
 }
 
+function isJobKey(value: unknown): value is JobKey {
+  return value === 'queued' || value === 'running' || value === 'failed' || value === 'completed';
+}
+
 export async function GET(req: NextRequest) {
   try {
     const principal = await getVerifiedPrincipal(req);
     if (!principal) return NextResponse.json({ error: 'Authentification requise.' }, { status: 401 });
-    if (!principal.profileConfigured || principal.role !== 'admin') return NextResponse.json({ error: 'Accès administrateur requis.' }, { status: 403 });
+    if (!principal.profileConfigured || principal.role !== 'admin') {
+      return NextResponse.json({ error: 'Accès administrateur requis.' }, { status: 403 });
+    }
 
     const supabaseAdmin = getServiceSupabase();
     const now = new Date().toISOString();
-    const [salonsResult, rolesResult, activeSubscriptionsResult, paidPaymentsResult, recentSalonsResult, jobsResult, headsResult, providerStates] = await Promise.all([
+
+    // Core business KPIs are required for the admin console. P1 AI tables are
+    // deliberately optional here so a staged DB rollout cannot blank the whole dashboard.
+    const [
+      salonsResult,
+      rolesResult,
+      activeSubscriptionsResult,
+      paidPaymentsResult,
+      recentSalonsResult,
+      jobsResult,
+      headsResult,
+      providerStates,
+    ] = await Promise.all([
       supabaseAdmin.from('salons').select('plan'),
       supabaseAdmin.from('user_profiles').select('role'),
       supabaseAdmin.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active').gt('expires_at', now),
@@ -32,8 +51,22 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from('head_assets').select('*', { count: 'exact', head: true }),
       getPaymentProviderStates(supabaseAdmin),
     ]);
-    for (const result of [salonsResult, rolesResult, activeSubscriptionsResult, paidPaymentsResult, recentSalonsResult, jobsResult, headsResult]) {
+
+    for (const result of [
+      salonsResult,
+      rolesResult,
+      activeSubscriptionsResult,
+      paidPaymentsResult,
+      recentSalonsResult,
+    ]) {
       if (result.error) throw new Error(result.error.message);
+    }
+
+    if (jobsResult.error) {
+      console.warn('[Admin Overview] ai_jobs metrics unavailable:', jobsResult.error.message);
+    }
+    if (headsResult.error) {
+      console.warn('[Admin Overview] head_assets metrics unavailable:', headsResult.error.message);
     }
 
     const planDistribution: Record<PlanKey, number> = { PRO: 0, VIP: 0, EXTRA: 0 };
@@ -48,8 +81,13 @@ export async function GET(req: NextRequest) {
 
     const payments = paidPaymentsResult.data || [];
     const totalRevenueFcfa = payments.reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
-    const subscriptionRevenueFcfa = payments.filter((payment) => payment.purpose === 'subscription').reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
-    const creditRevenueFcfa = payments.filter((payment) => payment.purpose === 'credits').reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
+    const subscriptionRevenueFcfa = payments
+      .filter((payment) => payment.purpose === 'subscription')
+      .reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
+    const creditRevenueFcfa = payments
+      .filter((payment) => payment.purpose === 'credits')
+      .reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
+
     const providerMetrics = new Map<string, { paidTransactions: number; revenueFcfa: number }>();
     for (const payment of payments) {
       const current = providerMetrics.get(payment.provider) || { paidTransactions: 0, revenueFcfa: 0 };
@@ -62,14 +100,21 @@ export async function GET(req: NextRequest) {
     const recentIds = recentSalons.map((salon) => salon.id);
     let activeSalonIds = new Set<string>();
     if (recentIds.length) {
-      const { data, error } = await supabaseAdmin.from('subscriptions').select('salon_id').in('salon_id', recentIds).eq('status', 'active').gt('expires_at', now);
+      const { data, error } = await supabaseAdmin
+        .from('subscriptions')
+        .select('salon_id')
+        .in('salon_id', recentIds)
+        .eq('status', 'active')
+        .gt('expires_at', now);
       if (error) throw new Error(error.message);
       activeSalonIds = new Set((data || []).map((item) => item.salon_id));
     }
 
-    const jobs = { queued: 0, running: 0, failed: 0, completed: 0 };
-    for (const job of jobsResult.data || []) {
-      if (job.status in jobs) jobs[job.status as keyof typeof jobs] += 1;
+    const jobs: Record<JobKey, number> = { queued: 0, running: 0, failed: 0, completed: 0 };
+    if (!jobsResult.error) {
+      for (const job of jobsResult.data || []) {
+        if (isJobKey(job.status)) jobs[job.status] += 1;
+      }
     }
 
     return NextResponse.json({
@@ -81,11 +126,12 @@ export async function GET(req: NextRequest) {
         totalRevenueFcfa,
         subscriptionRevenueFcfa,
         creditRevenueFcfa,
-        canonicalHeads: headsResult.count ?? 0,
+        canonicalHeads: headsResult.error ? 0 : headsResult.count ?? 0,
       },
       planDistribution,
       roleDistribution,
       jobs,
+      aiMetricsAvailable: !jobsResult.error && !headsResult.error,
       paymentProviders: providerStates.map((state) => ({
         ...state,
         ...(providerMetrics.get(state.provider) || { paidTransactions: 0, revenueFcfa: 0 }),
