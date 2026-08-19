@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any
 
 from models.jobs import AIJobRecord, AIJobType
+from services.fitting.head_provider import HeadGenerationManager
 from services.jobs.worker import PermanentJobError
-from services.reconstructor import ReconstructionPipelineService
 
 
 def _json_safe(value: Any) -> Any:
@@ -25,20 +26,23 @@ def _json_safe(value: Any) -> Any:
     )
 
 
+@lru_cache(maxsize=1)
+def get_head_generation_manager() -> HeadGenerationManager:
+    return HeadGenerationManager()
+
+
 def handle_head_reconstruction(job: AIJobRecord) -> dict[str, Any]:
-    """Transitional adapter; Story 7.5 will replace this with HeadGenerationManager + AssetStorage."""
+    """Durable head path: HeadGenerationManager -> FLAME -> AssetStorage -> head_assets."""
 
     payload = job.input_payload
     photos_urls = payload.get("photos_urls")
-    if not isinstance(photos_urls, list) or not photos_urls or not all(isinstance(url, str) and url for url in photos_urls):
+    if not isinstance(photos_urls, list) or not photos_urls or not all(
+        isinstance(url, str) and url.strip() for url in photos_urls
+    ):
         raise PermanentJobError(
             "invalid_head_input",
             "head_reconstruction requires a non-empty photos_urls string array.",
         )
-
-    client_name = payload.get("client_name")
-    if not isinstance(client_name, str) or not client_name.strip():
-        client_name = "Client Afrofade"
 
     preserve_skin_texture = payload.get("preserve_skin_texture", True)
     if not isinstance(preserve_skin_texture, bool):
@@ -47,23 +51,18 @@ def handle_head_reconstruction(job: AIJobRecord) -> dict[str, Any]:
             "preserve_skin_texture must be a boolean.",
         )
 
-    result = ReconstructionPipelineService.process_3d_head_reconstruction(
-        photos_urls=photos_urls,
-        client_name=client_name.strip(),
-        preserve_skin_texture=preserve_skin_texture,
-    )
+    try:
+        result = get_head_generation_manager().generate_for_job(job)
+    except (ValueError, TypeError) as exc:
+        raise PermanentJobError("invalid_head_generation", str(exc)) from exc
 
     if not isinstance(result, dict):
         raise PermanentJobError(
-            "invalid_reconstruction_output",
-            "ReconstructionPipelineService must return a dict result.",
+            "invalid_head_generation_output",
+            "HeadGenerationManager must return a dict result.",
         )
 
-    return _json_safe({
-        **result,
-        "job_id": str(job.id),
-        "transitional_storage": True,
-    })
+    return _json_safe(result)
 
 
 DEFAULT_JOB_HANDLERS = {

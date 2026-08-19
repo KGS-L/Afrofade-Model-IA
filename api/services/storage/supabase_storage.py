@@ -24,6 +24,12 @@ def validate_asset_ref(asset: StoredAssetRef) -> StoredAssetRef:
     if not path or path.startswith("/") or "\\" in path or "://" in path or "\x00" in path:
         raise AssetStorageError("Storage path must be a relative POSIX object path")
 
+    # Validate raw segments before PurePosixPath can normalize repeated separators
+    # or dot segments and silently change object identity.
+    raw_parts = path.split("/")
+    if any(part in {"", ".", ".."} for part in raw_parts):
+        raise AssetStorageError("Storage path contains an invalid segment")
+
     parts = PurePosixPath(path).parts
     if not parts or any(part in {"", ".", ".."} for part in parts):
         raise AssetStorageError("Storage path contains an invalid segment")
@@ -95,11 +101,15 @@ class SupabaseAssetStorage(AssetStorage):
 
     @classmethod
     def from_env(cls) -> "SupabaseAssetStorage":
-        supabase_url = (os.getenv("NEXT_PUBLIC_SUPABASE_URL") or os.getenv("SUPABASE_URL") or "").strip()
+        supabase_url = (
+            os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+            or os.getenv("SUPABASE_URL")
+            or ""
+        ).strip()
         service_role_key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
         if not supabase_url or not service_role_key:
             raise AssetStorageError(
-                "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for durable asset storage"
+                "NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY are required for durable asset storage"
             )
         return cls(supabase_url, service_role_key)
 
@@ -160,7 +170,7 @@ class SupabaseAssetStorage(AssetStorage):
         try:
             response = bucket.create_signed_upload_url(
                 validated.path,
-                options={"upsert": "true" if upsert else "false"},
+                options={"upsert": upsert},
             )
         except Exception as exc:
             raise AssetStorageError(f"Unable to sign upload URL for {validated.bucket}/{validated.path}: {exc}") from exc
