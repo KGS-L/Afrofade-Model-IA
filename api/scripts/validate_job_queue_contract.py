@@ -87,6 +87,8 @@ def assert_migration_contract() -> None:
     required_fragments = [
         "CREATE TABLE IF NOT EXISTS ai_jobs",
         "idempotency_key TEXT NOT NULL UNIQUE",
+        "ON CONFLICT (idempotency_key) DO NOTHING",
+        "idempotency_key_conflict",
         "FOR UPDATE SKIP LOCKED",
         "status = 'running'",
         "attempts = job.attempts + 1",
@@ -103,7 +105,7 @@ def assert_migration_contract() -> None:
     missing = [fragment for fragment in required_fragments if fragment not in sql]
     if missing:
         raise AssertionError(f"Migration contract missing: {missing}")
-    print("[PASS] migration defines durable queue, atomic claim, RLS and service-role boundary")
+    print("[PASS] migration defines concurrency-safe idempotency, atomic claim, RLS and service-role boundary")
 
 
 def assert_client_mapping() -> None:
