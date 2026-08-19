@@ -1,11 +1,13 @@
 import os
+import re
 from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from models.jobs import AIJobType
@@ -16,7 +18,7 @@ from services.reconstructor import ReconstructionPipelineService
 app = FastAPI(
     title="Afrofade 3D AI Engine",
     description="Microservice de reconstruction 3D tête-au-cou et fitting de coiffures afro",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 allowed_origins = [
@@ -29,11 +31,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "X-Internal-API-Key"],
 )
 
 PUBLIC_PATHS = {"/", "/health"}
+GENERATED_MODELS_DIR = Path("/tmp/generated_models")
+GENERATED_MODEL_PATTERN = re.compile(r"^recon_[0-9]+\.glb$")
 
 
 @app.middleware("http")
@@ -43,7 +47,10 @@ async def require_internal_api_key(request: Request, call_next):
 
     expected_secret = os.getenv("API_INTERNAL_SECRET")
     if not expected_secret:
-        return JSONResponse(status_code=503, content={"detail": "API internal authentication is not configured."})
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "API internal authentication is not configured."},
+        )
 
     supplied_secret = request.headers.get("X-Internal-API-Key")
     if supplied_secret != expected_secret:
@@ -73,6 +80,7 @@ class HeadJobRequest(BaseModel):
 
 class ReconstructionResponse(BaseModel):
     status: str
+    job_id: str
     mesh_3d_url: str
     processing_time_ms: int
     vertices_count: int
@@ -91,7 +99,11 @@ def read_root():
     return {
         "message": "Bienvenue sur l'API Afrofade 3D Engine",
         "status": "online",
-        "features": ["3D Head Reconstruction", "Real-Time Quality Gatekeeper", "UV Texture Blending"]
+        "features": [
+            "3D Head Reconstruction",
+            "Real-Time Quality Gatekeeper",
+            "UV Texture Blending",
+        ],
     }
 
 
@@ -100,8 +112,40 @@ def health_check():
     return {
         "status": "ok",
         "service": "afrofade-api-3d",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
+
+
+@app.get("/api/v1/models/{filename}")
+def get_generated_model(filename: str):
+    """Temporary compatibility route until Story 7.5 moves FLAME output to AssetStorage."""
+    if not GENERATED_MODEL_PATTERN.fullmatch(filename):
+        raise HTTPException(status_code=400, detail="Invalid generated model filename.")
+
+    model_path = GENERATED_MODELS_DIR / filename
+    if not model_path.is_file():
+        raise HTTPException(status_code=404, detail="Generated model not found.")
+
+    return FileResponse(
+        path=model_path,
+        media_type="model/gltf-binary",
+        filename=filename,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+@app.delete("/api/v1/models/{filename}")
+def delete_generated_model(filename: str):
+    """Temporary compatibility cleanup until Story 7.5 owns durable asset deletion."""
+    if not GENERATED_MODEL_PATTERN.fullmatch(filename):
+        raise HTTPException(status_code=400, detail="Invalid generated model filename.")
+
+    model_path = GENERATED_MODELS_DIR / filename
+    if model_path.is_file():
+        model_path.unlink()
+        return {"deleted": True, "filename": filename}
+
+    return {"deleted": False, "filename": filename}
 
 
 @app.post("/v1/reconstruct", response_model=ReconstructionResponse)
@@ -111,13 +155,17 @@ def reconstruct_3d_head(request: ReconstructionRequest):
     if len(request.photos_urls) < 3:
         raise HTTPException(
             status_code=400,
-            detail="Au moins 3 photos sous des angles différents (face, profil gauche, profil droit) sont requises."
+            detail="Au moins 3 photos sous des angles différents (face, profil gauche, profil droit) sont requises.",
         )
 
     return ReconstructionPipelineService.process_3d_head_reconstruction(
         photos_urls=request.photos_urls,
         client_name=request.client_name or "Client Afrofade",
-        preserve_skin_texture=request.preserve_skin_texture if request.preserve_skin_texture is not None else True
+        preserve_skin_texture=(
+            request.preserve_skin_texture
+            if request.preserve_skin_texture is not None
+            else True
+        ),
     )
 
 
@@ -146,7 +194,10 @@ def submit_head_reconstruction(request: HeadJobRequest):
             max_attempts=3,
         )
     except JobQueueError as exc:
-        raise HTTPException(status_code=503, detail="La file de reconstruction 3D est indisponible.") from exc
+        raise HTTPException(
+            status_code=503,
+            detail="La file de reconstruction 3D est indisponible.",
+        ) from exc
 
     return {
         "job_id": str(job.id),
@@ -168,7 +219,10 @@ def get_head_reconstruction_status(job_id: str):
         queue = get_persistent_job_queue()
         job = queue.get(parsed_job_id)
     except JobQueueError as exc:
-        raise HTTPException(status_code=503, detail="La file de reconstruction 3D est indisponible.") from exc
+        raise HTTPException(
+            status_code=503,
+            detail="La file de reconstruction 3D est indisponible.",
+        ) from exc
 
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} introuvable.")
