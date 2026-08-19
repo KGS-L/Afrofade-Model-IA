@@ -235,6 +235,8 @@ jobs:
             fi
           }
 
+          bash scripts/ensure-internal-secrets.sh .env
+
           require_value API_INTERNAL_SECRET
           require_value CRON_SECRET
           require_value SUPABASE_URL
