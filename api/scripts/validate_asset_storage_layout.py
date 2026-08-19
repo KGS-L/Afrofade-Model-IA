@@ -47,7 +47,7 @@ def assert_path_builders() -> None:
 
 def assert_bucket_migration() -> None:
     migration = (
-        REPO_ROOT / "web" / "supabase" / "migrations" / "06_private_asset_buckets.sql"
+        REPO_ROOT / "web" / "supabase" / "migrations" / "07_private_asset_buckets.sql"
     ).read_text(encoding="utf-8")
 
     for bucket in ("client-photos", "heads", "hair-assets", "tryons"):
