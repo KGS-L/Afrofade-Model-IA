@@ -18,11 +18,19 @@ function principalOwnsAsset(
     return principal.role === 'admin';
   }
 
-  const prefixes = [`users/${principal.user.id}/`];
-  if (principal.salonId) prefixes.push(`salons/${principal.salonId}/`);
+  const ownerPrefixes = [`users/${principal.user.id}/`];
+  if (principal.salonId) ownerPrefixes.push(`salons/${principal.salonId}/`);
 
-  if (asset.bucket === 'client-photos' || asset.bucket === 'heads' || asset.bucket === 'tryons') {
-    return prefixes.some((prefix) => asset.path.startsWith(prefix));
+  if (asset.bucket === 'client-photos') {
+    return ownerPrefixes.some((prefix) => asset.path.startsWith(`temporary/${prefix}`));
+  }
+
+  if (asset.bucket === 'heads') {
+    return ownerPrefixes.some((prefix) => asset.path.startsWith(`canonical/${prefix}`));
+  }
+
+  if (asset.bucket === 'tryons') {
+    return ownerPrefixes.some((prefix) => asset.path.startsWith(`exports/${prefix}`));
   }
 
   return false;
