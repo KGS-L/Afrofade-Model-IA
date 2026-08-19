@@ -86,6 +86,10 @@ jobs:
         run: |
           python3 api/scripts/validate_canonical_contracts.py
 
+      - name: Validate persistent AI JobQueue contract
+        run: |
+          python3 api/scripts/validate_job_queue_contract.py
+
       - name: Check P0 security invariants
         run: |
           python3 scripts/check_p0_invariants.py
