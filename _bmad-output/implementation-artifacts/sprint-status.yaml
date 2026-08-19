@@ -53,9 +53,9 @@ development_status:
   epic-6-retrospective: optional
 
   epic-7: in-progress
-  7-1-canonical-3d-data-contracts: review
-  7-2-persistent-ai-jobs-schema-jobqueue: review
-  7-3-restart-safe-python-worker: backlog
+  7-1-canonical-3d-data-contracts: done
+  7-2-persistent-ai-jobs-schema-jobqueue: done
+  7-3-restart-safe-python-worker: in-progress
   7-4-assetstorage-abstraction: backlog
   7-5-headgenerationmanager-real-flame: backlog
   7-6-head-job-integration-tests: backlog
