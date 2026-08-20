@@ -10,20 +10,23 @@ CREATE TABLE IF NOT EXISTS hair_asset_versions (
     ),
     source_job_id UUID REFERENCES ai_jobs(id) ON DELETE SET NULL,
 
+    -- A version is created as soon as a provider raw artifact exists. Canonical
+    -- fields stay nullable while the version is draft so normalization failures
+    -- remain auditable instead of losing provider provenance.
     raw_bucket VARCHAR(100) NOT NULL DEFAULT 'hair-assets' CHECK (raw_bucket = 'hair-assets'),
     raw_path TEXT NOT NULL,
-    canonical_bucket VARCHAR(100) NOT NULL DEFAULT 'hair-assets' CHECK (canonical_bucket = 'hair-assets'),
-    canonical_path TEXT NOT NULL,
-    preview_bucket VARCHAR(100) NOT NULL DEFAULT 'hair-assets' CHECK (preview_bucket = 'hair-assets'),
-    preview_path TEXT NOT NULL,
-    anchor_map_bucket VARCHAR(100) NOT NULL DEFAULT 'hair-assets' CHECK (anchor_map_bucket = 'hair-assets'),
-    anchor_map_path TEXT NOT NULL,
+    canonical_bucket VARCHAR(100) CHECK (canonical_bucket IS NULL OR canonical_bucket = 'hair-assets'),
+    canonical_path TEXT,
+    preview_bucket VARCHAR(100) CHECK (preview_bucket IS NULL OR preview_bucket = 'hair-assets'),
+    preview_path TEXT,
+    anchor_map_bucket VARCHAR(100) CHECK (anchor_map_bucket IS NULL OR anchor_map_bucket = 'hair-assets'),
+    anchor_map_path TEXT,
 
     coordinate_system VARCHAR(40) NOT NULL DEFAULT 'Y_UP_RIGHT_HANDED'
         CHECK (coordinate_system = 'Y_UP_RIGHT_HANDED'),
     unit VARCHAR(20) NOT NULL DEFAULT 'meter' CHECK (unit = 'meter'),
-    scalp_anchor_version VARCHAR(100) NOT NULL,
-    polygon_count INT NOT NULL CHECK (polygon_count >= 0),
+    scalp_anchor_version VARCHAR(100),
+    polygon_count INT CHECK (polygon_count IS NULL OR polygon_count >= 0),
     lods JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(lods) = 'array'),
     generation_cost_fcfa INT CHECK (generation_cost_fcfa IS NULL OR generation_cost_fcfa >= 0),
     provider_metadata JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(provider_metadata) = 'object'),
@@ -46,32 +49,65 @@ CREATE TABLE IF NOT EXISTS hair_asset_versions (
         AND position('/../' IN '/' || raw_path || '/') = 0
         AND position('/./' IN '/' || raw_path || '/') = 0
     ),
+    CONSTRAINT hair_asset_versions_canonical_ref_complete CHECK (
+        (canonical_bucket IS NULL AND canonical_path IS NULL)
+        OR (canonical_bucket IS NOT NULL AND canonical_path IS NOT NULL)
+    ),
+    CONSTRAINT hair_asset_versions_preview_ref_complete CHECK (
+        (preview_bucket IS NULL AND preview_path IS NULL)
+        OR (preview_bucket IS NOT NULL AND preview_path IS NOT NULL)
+    ),
+    CONSTRAINT hair_asset_versions_anchor_ref_complete CHECK (
+        (anchor_map_bucket IS NULL AND anchor_map_path IS NULL)
+        OR (anchor_map_bucket IS NOT NULL AND anchor_map_path IS NOT NULL)
+    ),
     CONSTRAINT hair_asset_versions_canonical_path_contract CHECK (
-        canonical_path LIKE ('canonical/styles/' || style_id || '/v' || version::TEXT || '/%')
-        AND canonical_path NOT LIKE '/%'
-        AND position('//' IN canonical_path) = 0
-        AND position(chr(92) IN canonical_path) = 0
-        AND position('/../' IN '/' || canonical_path || '/') = 0
-        AND position('/./' IN '/' || canonical_path || '/') = 0
+        canonical_path IS NULL OR (
+            canonical_path LIKE ('canonical/styles/' || style_id || '/v' || version::TEXT || '/%')
+            AND canonical_path NOT LIKE '/%'
+            AND position('//' IN canonical_path) = 0
+            AND position(chr(92) IN canonical_path) = 0
+            AND position('/../' IN '/' || canonical_path || '/') = 0
+            AND position('/./' IN '/' || canonical_path || '/') = 0
+        )
     ),
     CONSTRAINT hair_asset_versions_preview_path_contract CHECK (
-        preview_path LIKE ('canonical/styles/' || style_id || '/v' || version::TEXT || '/%')
-        AND preview_path NOT LIKE '/%'
-        AND position('//' IN preview_path) = 0
-        AND position(chr(92) IN preview_path) = 0
-        AND position('/../' IN '/' || preview_path || '/') = 0
-        AND position('/./' IN '/' || preview_path || '/') = 0
+        preview_path IS NULL OR (
+            preview_path LIKE ('canonical/styles/' || style_id || '/v' || version::TEXT || '/%')
+            AND preview_path NOT LIKE '/%'
+            AND position('//' IN preview_path) = 0
+            AND position(chr(92) IN preview_path) = 0
+            AND position('/../' IN '/' || preview_path || '/') = 0
+            AND position('/./' IN '/' || preview_path || '/') = 0
+        )
     ),
     CONSTRAINT hair_asset_versions_anchor_path_contract CHECK (
-        anchor_map_path LIKE ('canonical/styles/' || style_id || '/v' || version::TEXT || '/%')
-        AND anchor_map_path NOT LIKE '/%'
-        AND position('//' IN anchor_map_path) = 0
-        AND position(chr(92) IN anchor_map_path) = 0
-        AND position('/../' IN '/' || anchor_map_path || '/') = 0
-        AND position('/./' IN '/' || anchor_map_path || '/') = 0
+        anchor_map_path IS NULL OR (
+            anchor_map_path LIKE ('canonical/styles/' || style_id || '/v' || version::TEXT || '/%')
+            AND anchor_map_path NOT LIKE '/%'
+            AND position('//' IN anchor_map_path) = 0
+            AND position(chr(92) IN anchor_map_path) = 0
+            AND position('/../' IN '/' || anchor_map_path || '/') = 0
+            AND position('/./' IN '/' || anchor_map_path || '/') = 0
+        )
+    ),
+    -- A draft can be raw-only. Validation is the gate that proves the provider
+    -- output has been normalized into the complete CanonicalHairAsset contract.
+    CONSTRAINT hair_asset_versions_validated_payload_complete CHECK (
+        status NOT IN ('validated', 'published') OR (
+            canonical_bucket IS NOT NULL
+            AND canonical_path IS NOT NULL
+            AND preview_bucket IS NOT NULL
+            AND preview_path IS NOT NULL
+            AND anchor_map_bucket IS NOT NULL
+            AND anchor_map_path IS NOT NULL
+            AND scalp_anchor_version IS NOT NULL
+            AND btrim(scalp_anchor_version) <> ''
+            AND polygon_count IS NOT NULL
+        )
     ),
     CONSTRAINT hair_asset_versions_status_timestamps CHECK (
-        (status <> 'published' OR published_at IS NOT NULL)
+        (status <> 'published' OR (published_at IS NOT NULL AND retired_at IS NULL))
         AND (status <> 'retired' OR retired_at IS NOT NULL)
     )
 );
@@ -149,7 +185,8 @@ BEGIN
            OR NEW.provider_metadata IS DISTINCT FROM OLD.provider_metadata
            OR NEW.validation_report IS DISTINCT FROM OLD.validation_report
            OR NEW.created_at IS DISTINCT FROM OLD.created_at
-           OR NEW.published_at IS DISTINCT FROM OLD.published_at THEN
+           OR NEW.published_at IS DISTINCT FROM OLD.published_at
+           OR NEW.retired_at IS DISTINCT FROM OLD.retired_at THEN
             RAISE EXCEPTION 'published_hair_asset_version_payload_is_immutable';
         END IF;
         IF NEW.status NOT IN ('published', 'retired') THEN
@@ -163,6 +200,7 @@ BEGIN
 
     IF NEW.status = 'published' AND OLD.status <> 'published' THEN
         NEW.published_at := COALESCE(NEW.published_at, NOW());
+        NEW.retired_at := NULL;
     END IF;
     IF NEW.status = 'retired' AND OLD.status <> 'retired' THEN
         NEW.retired_at := COALESCE(NEW.retired_at, NOW());
