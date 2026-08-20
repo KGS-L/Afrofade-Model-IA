@@ -1,24 +1,5 @@
-"""Provider-neutral hair generation and canonicalization boundaries for Afrofade."""
+"""Provider-neutral hair generation boundaries for Afrofade."""
 
-from services.hair.hair_asset_repository import (
-    HairAssetRepositoryError,
-    HairAssetVersionRecord,
-    HairAssetVersionRepository,
-    SupabaseHairAssetVersionRepository,
-)
-from services.hair.normalizer import (
-    ANCHOR_MAP_SCHEMA_VERSION,
-    CANONICAL_COORDINATE_SYSTEM,
-    CANONICAL_UNIT,
-    HAIR_NORMALIZATION_POLICY_VERSION,
-    SCALP_ANCHOR_VERSION,
-    VALIDATION_REPORT_SCHEMA_VERSION,
-    HairAssetNormalizationError,
-    HairAssetNormalizationPolicy,
-    HairAssetNormalizationRequest,
-    HairAssetNormalizationResult,
-    HairAssetNormalizer,
-)
 from services.hair.providers import (
     BaseHairProvider,
     HairProviderDisabledError,
@@ -39,19 +20,7 @@ from services.hair.providers import (
 )
 
 __all__ = [
-    "ANCHOR_MAP_SCHEMA_VERSION",
     "BaseHairProvider",
-    "CANONICAL_COORDINATE_SYSTEM",
-    "CANONICAL_UNIT",
-    "HAIR_NORMALIZATION_POLICY_VERSION",
-    "HairAssetNormalizationError",
-    "HairAssetNormalizationPolicy",
-    "HairAssetNormalizationRequest",
-    "HairAssetNormalizationResult",
-    "HairAssetNormalizer",
-    "HairAssetRepositoryError",
-    "HairAssetVersionRecord",
-    "HairAssetVersionRepository",
     "HairProviderDisabledError",
     "HairProviderJob",
     "HairProviderJobNotFoundError",
@@ -63,10 +32,7 @@ __all__ = [
     "ManualHairProvider",
     "MeshyHairProvider",
     "ProviderResolution",
-    "SCALP_ANCHOR_VERSION",
-    "SupabaseHairAssetVersionRepository",
     "Trellis2HairProvider",
-    "VALIDATION_REPORT_SCHEMA_VERSION",
     "build_scaffold_registry",
     "get_production_provider",
     "resolve_provider_name",
