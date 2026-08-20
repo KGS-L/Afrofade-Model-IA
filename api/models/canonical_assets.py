@@ -39,7 +39,7 @@ class CanonicalHairAsset(CanonicalModel):
     id: str = Field(min_length=1)
     styleId: str = Field(min_length=1)
     version: int = Field(ge=1)
-    provider: Literal["trellis2", "hunyuan_multiview", "manual"]
+    provider: Literal["trellis2", "hunyuan_multiview", "meshy", "manual"]
     sourceJobId: str | None = Field(default=None, min_length=1)
     meshUrl: AnyHttpUrl
     previewUrl: AnyHttpUrl
