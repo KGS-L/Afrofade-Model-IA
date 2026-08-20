@@ -37,12 +37,12 @@ def assert_schema_contract() -> None:
             "source_job_id UUID REFERENCES ai_jobs(id) ON DELETE SET NULL",
             "raw_bucket VARCHAR(100) NOT NULL DEFAULT 'hair-assets'",
             "raw_path TEXT NOT NULL",
-            "canonical_bucket VARCHAR(100) NOT NULL DEFAULT 'hair-assets'",
-            "canonical_path TEXT NOT NULL",
-            "preview_path TEXT NOT NULL",
-            "anchor_map_path TEXT NOT NULL",
-            "scalp_anchor_version VARCHAR(100) NOT NULL",
-            "polygon_count INT NOT NULL CHECK (polygon_count >= 0)",
+            "canonical_bucket VARCHAR(100) CHECK",
+            "canonical_path TEXT",
+            "preview_path TEXT",
+            "anchor_map_path TEXT",
+            "scalp_anchor_version VARCHAR(100)",
+            "polygon_count INT CHECK (polygon_count IS NULL OR polygon_count >= 0)",
             "generation_cost_fcfa INT",
             "status IN ('draft', 'validated', 'published', 'retired')",
             "UNIQUE (style_id, version)",
@@ -50,6 +50,29 @@ def assert_schema_contract() -> None:
         "hair asset version schema",
     )
     print("[PASS] hair_asset_versions stores style/version/provider/raw/canonical/anchors/polycount/cost/status")
+
+
+def assert_raw_only_draft_contract() -> None:
+    sql = MIGRATION.read_text(encoding="utf-8")
+    require_fragments(
+        sql,
+        [
+            "CONSTRAINT hair_asset_versions_canonical_ref_complete CHECK",
+            "CONSTRAINT hair_asset_versions_preview_ref_complete CHECK",
+            "CONSTRAINT hair_asset_versions_anchor_ref_complete CHECK",
+            "CONSTRAINT hair_asset_versions_validated_payload_complete CHECK",
+            "status NOT IN ('validated', 'published') OR (",
+            "canonical_path IS NOT NULL",
+            "preview_path IS NOT NULL",
+            "anchor_map_path IS NOT NULL",
+            "scalp_anchor_version IS NOT NULL",
+            "polygon_count IS NOT NULL",
+        ],
+        "raw-only draft/normalization gate",
+    )
+    if "canonical_path TEXT NOT NULL" in sql or "polygon_count INT NOT NULL" in sql:
+        raise AssertionError("Draft hair asset versions must be able to persist raw provider output before normalization")
+    print("[PASS] drafts may be raw-only; validated/published versions require complete canonical output")
 
 
 def assert_storage_path_contract() -> None:
@@ -63,6 +86,7 @@ def assert_storage_path_contract() -> None:
             "position(chr(92) IN raw_path) = 0",
             "position('/../' IN '/' || raw_path || '/') = 0",
             "position('/./' IN '/' || raw_path || '/') = 0",
+            "canonical_path IS NULL OR (",
             "position('//' IN canonical_path) = 0",
             "position(chr(92) IN canonical_path) = 0",
         ],
@@ -116,6 +140,7 @@ def assert_retired_versions_are_auditable_and_immutable() -> None:
             "retired_hair_asset_version_is_immutable",
             "published_hair_asset_version_payload_is_immutable",
             "published_hair_asset_version_invalid_transition",
+            "NEW.retired_at IS DISTINCT FROM OLD.retired_at",
             "retired_at TIMESTAMPTZ",
             "hair_asset_versions_admin_select_all",
             "profile.role = 'admin'",
@@ -181,6 +206,7 @@ def assert_provider_contract_includes_experimental_meshy() -> None:
 
 def main() -> None:
     assert_schema_contract()
+    assert_raw_only_draft_contract()
     assert_storage_path_contract()
     assert_single_published_resolver()
     assert_publish_retires_previous()
