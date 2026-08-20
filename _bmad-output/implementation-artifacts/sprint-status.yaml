@@ -52,13 +52,13 @@ development_status:
   6-3-provider-rollout-completion: backlog
   epic-6-retrospective: optional
 
-  epic-7: in-progress
+  epic-7: done
   7-1-canonical-3d-data-contracts: done
   7-2-persistent-ai-jobs-schema-jobqueue: done
   7-3-restart-safe-python-worker: done
   7-4-assetstorage-abstraction: done
   7-5-headgenerationmanager-real-flame: done
-  7-6-head-job-integration-tests: backlog
+  7-6-head-job-integration-tests: done
   epic-7-retrospective: optional
 
   epic-8: backlog
@@ -104,5 +104,5 @@ action_items:
     epic: 7
     action: "Complete Epic 7 before enabling paid hair-generation providers."
     owner: "Architecture/Dev"
-    status: in-progress
+    status: done
     ref: "_bmad-output/planning-artifacts/change-proposal-2026-08-19-p0-to-p1.md"
