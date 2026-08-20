@@ -1,0 +1,26 @@
+name: P1 Provider Scaffolding Safety
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-provider-scaffolding:
+    name: Validate fail-closed hair provider scaffolds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Validate Story 8.2 provider scaffolding
+        run: python3 api/scripts/validate_provider_scaffolding.py
