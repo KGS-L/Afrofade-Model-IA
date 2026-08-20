@@ -1,6 +1,6 @@
 # BMAD Story 8.2 — Fix Provider Scaffolding Defects
 
-Status: in-progress
+Status: done
 Epic: 8 — Hair Asset Factory
 Priority: P1
 
@@ -38,3 +38,7 @@ Make all temporary hair-generation providers explicit, request-scoped and fail-c
 `python3 api/scripts/validate_provider_scaffolding.py`
 
 CI gate: `.github/workflows/p1-provider-scaffolding.yml`
+
+## Closure
+
+Validated on implementation head `5957ae9e14f9507ce841a12ced0537a1880f7e93` with the dedicated Story 8.2 gate, all prior P1 gates, Next.js/FastAPI validation, production Docker build/startup and P0 runtime smoke tests passing.
