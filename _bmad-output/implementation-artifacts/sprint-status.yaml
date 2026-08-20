@@ -2,7 +2,7 @@
 # Historical epics 1-5 remain complete. Post-P0 Correct Course continues at Epic 6+.
 
 generated: '2026-08-18'
-last_updated: '2026-08-19'
+last_updated: '2026-08-20'
 project: Afrofade
 project_key: NOKEY
 tracking_system: file-system
@@ -61,8 +61,8 @@ development_status:
   7-6-head-job-integration-tests: done
   epic-7-retrospective: optional
 
-  epic-8: backlog
-  8-1-hair-asset-versioning-schema: backlog
+  epic-8: in-progress
+  8-1-hair-asset-versioning-schema: done
   8-2-fix-provider-scaffolding-defects: backlog
   8-3-hairassetnormalizer-real-pipeline: backlog
   8-4-trellis2-afrofade-lora-provider: backlog
