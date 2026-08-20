@@ -1,6 +1,6 @@
 # BMAD Story 8.1 — Hair Asset Versioning Schema
 
-Status: in-progress
+Status: done
 Epic: 8 — Hair Asset Factory
 Priority: P1
 
