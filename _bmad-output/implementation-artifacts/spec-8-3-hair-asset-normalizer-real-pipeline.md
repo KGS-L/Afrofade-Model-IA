@@ -1,6 +1,6 @@
 # BMAD Story 8.3 — HairAssetNormalizer Real Pipeline
 
-Status: in-progress
+Status: done
 Epic: 8 — Hair Asset Factory
 Priority: P1
 
@@ -63,3 +63,18 @@ Story 8.3 LODs use deterministic face subsampling so the canonical master remain
 `python3 api/scripts/validate_hair_asset_normalizer.py`
 
 Dedicated CI gate: `.github/workflows/p1-hair-asset-normalizer.yml`.
+
+## Final validation evidence
+
+Validated implementation head before BMAD-only closure: `2d08a4036612573640c1b84c6a4f9fe1f9fdad88`.
+
+- P1 Hair Asset Normalizer #2 / run `32342842945`: PASS.
+- P1 Provider Scaffolding Safety #5 / run `32342842983`: PASS.
+- P1 Hair Asset Versioning #11 / run `32342842925`: PASS.
+- P1 AssetStorage Contract #52 / run `32342842950`: PASS.
+- P1 AssetStorage Layout #48 / run `32342842966`: PASS.
+- P1 Durable Head Generation #45 / run `32342842927`: PASS.
+- P1 Head Job Integration #15 / run `32342842930`: PASS.
+- Afrofade CI/CD Pipeline #213 / run `32342843008`: PASS, including Next.js, FastAPI, production Docker build/start and P0 runtime smoke tests.
+
+Story 8.3 is DONE. Epic 8 remains IN PROGRESS. Next story: 8.4 — TRELLIS.2 + Afrofade LoRA provider.
