@@ -35,10 +35,10 @@ def assert_path_builders() -> None:
     assert head.path == f"canonical/salons/{SALON_ID}/head-001/head.glb"
 
     raw_hair = raw_hair_asset_ref("locks-short", 2, "source.glb")
-    assert raw_hair.path == "raw/locks-short/v2/source.glb"
+    assert raw_hair.path == "raw/styles/locks-short/v2/source.glb"
 
     canonical_hair = canonical_hair_asset_ref("locks-short", 2, "canonical.glb")
-    assert canonical_hair.path == "canonical/locks-short/v2/canonical.glb"
+    assert canonical_hair.path == "canonical/styles/locks-short/v2/canonical.glb"
 
     export = tryon_export_ref("export-001", "look.png", user_id=USER_ID)
     assert export.path == f"exports/users/{USER_ID}/export-001/look.png"

@@ -57,7 +57,7 @@ def raw_hair_asset_ref(style_id: str, version: int, filename: str) -> StoredAsse
     if version < 1:
         raise AssetStorageError("Hair asset version must be at least 1")
     return validate_asset_ref(
-        StoredAssetRef("hair-assets", f"raw/{safe_style}/v{version}/{safe_filename}")
+        StoredAssetRef("hair-assets", f"raw/styles/{safe_style}/v{version}/{safe_filename}")
     )
 
 
@@ -67,7 +67,7 @@ def canonical_hair_asset_ref(style_id: str, version: int, filename: str) -> Stor
     if version < 1:
         raise AssetStorageError("Hair asset version must be at least 1")
     return validate_asset_ref(
-        StoredAssetRef("hair-assets", f"canonical/{safe_style}/v{version}/{safe_filename}")
+        StoredAssetRef("hair-assets", f"canonical/styles/{safe_style}/v{version}/{safe_filename}")
     )
 
 
