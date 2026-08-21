@@ -205,3 +205,84 @@ Authorization must be capability/entitlement based rather than inferred only fro
 ### Pricing consequence
 
 D04 does not set final prices. Pricing for `Professional`, `Salon` and `Multi-location/Business` plans remains a separate product decision informed by competitive research and willingness-to-pay validation.
+
+---
+
+## D05 — Booking targets a service-provider context, with optional professional assignment
+
+**Status:** ACCEPTED
+
+Afrofade must support both salon-based and independent-professional bookings without forcing a single booking model onto both cases.
+
+### Salon booking
+
+A customer may book a concrete salon location and either:
+
+- choose a specific eligible professional when the salon exposes staff choice; or
+- choose `any available professional`, allowing the salon to assign an eligible team member.
+
+The salon remains the commercial/operational provider context for salon-originated bookings. The assigned professional is a participant in that booking, not the owner of the salon's customer relationship by default.
+
+### Independent professional booking
+
+A professional operating independently with an active eligible personal entitlement may receive direct bookings without a salon entity.
+
+The professional is then the service-provider context for that booking.
+
+### Canonical booking model
+
+A booking should therefore support a provider context rather than a mandatory `salon_id` or mandatory `professional_id` alone.
+
+Conceptually:
+
+```text
+Booking
+  +-- customer_id
+  +-- provider_type: salon | independent_professional
+  +-- salon_id: nullable
+  +-- professional_id: nullable / assignable
+  +-- service_id
+  +-- hairstyle_id: optional
+  +-- try_on_asset_id: optional
+  +-- starts_at / ends_at
+  +-- price snapshot
+  +-- status
+```
+
+Invariants:
+
+- `provider_type = salon` requires a concrete salon/location;
+- `provider_type = independent_professional` requires an eligible professional and no salon dependency;
+- a salon booking may initially have no professional assignment when `any available professional` is selected;
+- assignment must respect service skill eligibility, membership, availability and salon permissions;
+- a saved Afrofade look/try-on can be attached to the booking as the visual service brief.
+
+### Product consequence
+
+Customer UX can support both:
+
+```text
+Book this salon
+  -> choose professional
+  OR
+  -> first available qualified professional
+```
+
+and:
+
+```text
+Book this independent professional
+```
+
+### Marketplace consequence
+
+Search/ranking may expose salons, independent professionals, or both, but booking conversion always preserves the concrete provider context and service location/zone.
+
+### Architecture consequence
+
+Availability must be modeled at both levels:
+
+- salon/location operating hours and capacity;
+- professional working schedule/availability.
+
+Booking resolution must intersect service duration, salon hours, professional eligibility, existing appointments and future capacity rules instead of storing only a free-form requested datetime.
