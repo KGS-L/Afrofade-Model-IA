@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ salonId: string }> }) {
   try {
-    const { slug } = await params; const supabase = getServiceSupabase();
+    const { salonId } = await params; const slug = salonId; const supabase = getServiceSupabase();
     const { data: salon, error } = await supabase.from('salons').select('id,slug,name,headline,description,logo_url,verification_status,listing_status,address_line1,address_line2,city,neighborhood,public_phone,country,booking_confirmation_mode').eq('slug',slug).eq('verification_status','verified').eq('listing_status','published').maybeSingle();
     if (error && error.code !== 'PGRST116') throw new Error(error.message); if (!salon) return NextResponse.json({ error: 'Salon introuvable.' }, { status: 404 });
     const { data: entitled, error: entitlementError } = await supabase.rpc('marketplace_salon_subscription_active',{p_salon_id:salon.id}); if (entitlementError) throw new Error(entitlementError.message); if (!entitled) return NextResponse.json({ error: 'Salon introuvable.' }, { status: 404 });
