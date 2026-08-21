@@ -46,8 +46,9 @@ development_status:
   epic-5-retrospective: done
 
   # Post-P0 Correct Course
-  epic-6: backlog
-  6-1-ownership-rls-propagation-post-p0: backlog
+  epic-6: in-progress
+  6-0-docker-postgres-minio-nextauth-migration: done
+  6-1-ownership-rls-propagation-post-p0: done
   6-2-credit-consumption-service: backlog
   6-3-provider-rollout-completion: backlog
   epic-6-retrospective: optional

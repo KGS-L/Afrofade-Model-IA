@@ -4,7 +4,7 @@
  * Noms exacts attendus : 'PRO' | 'VIP' | 'EXTRA'.
  */
 
-export type PlanName = 'PRO' | 'VIP' | 'EXTRA';
+export type PlanName = 'PRO' | 'VIP' | 'EXTRA' | 'PROFESSIONAL_PRO';
 
 export interface PlanInfo {
   name: PlanName;
@@ -14,6 +14,21 @@ export interface PlanInfo {
   popular: boolean;
   features: string[];
 }
+
+export const PROFESSIONAL_PRO_PLAN: PlanInfo = {
+  name: 'PROFESSIONAL_PRO',
+  price: '3 500 FCFA',
+  amount: 3500,
+  desc: 'Pour les coiffeurs & barbiers professionnels indépendants',
+  popular: false,
+  features: [
+    'Profil professionnel vérifié & référencé Marketplace',
+    'Prise de rendez-vous directe clients',
+    'Portfolio de réalisations & styles illimité',
+    'Visibilité géolocalisée auprès des clients',
+    'Support technique prioritaire',
+  ],
+};
 
 export const PLANS: PlanInfo[] = [
   {
@@ -64,6 +79,7 @@ export const PLANS: PlanInfo[] = [
     ],
   },
 ];
+
 
 /** 4900 → « 4 900 » */
 export function formatFcfa(amount: number): string {

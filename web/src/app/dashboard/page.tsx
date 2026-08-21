@@ -16,10 +16,13 @@ import {
   Store,
 } from 'lucide-react';
 import { CountrySelect } from '@/components/CountrySelect';
+import { NationalitySelect } from '@/components/NationalitySelect';
+import { PhoneInput } from '@/components/PhoneInput';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { useAuth } from '@/lib/auth';
 import type { PaymentProvider } from '@/lib/payment-providers';
 import { PLANS, TERMS, TermId, formatFcfa, monthlyPrice } from '@/lib/plans';
+import { parsePhone, getDialCodeForCountry, getNationalityForCountry } from '@/lib/countries';
 
 type SalonDashboard = {
   salon: {
@@ -27,6 +30,7 @@ type SalonDashboard = {
     name: string;
     phone: string;
     country: string;
+    nationality?: string;
     plan: 'PRO' | 'VIP' | 'EXTRA';
     quotaLimit: number;
     quotaUsed: number;
@@ -55,7 +59,7 @@ type SalonDashboard = {
     id: string;
     provider: string;
     product_id: string;
-    term_id: string | null;
+    term_id?: string | null;
     amount_fcfa: number;
     status: string;
     created_at: string;
@@ -66,21 +70,28 @@ type SalonDashboard = {
 type Provider = {
   provider: PaymentProvider;
   displayName: string;
+  effectiveEnabled: boolean;
 };
 
-async function fetchSalonDashboard(): Promise<SalonDashboard> {
+async function fetchDashboard(): Promise<SalonDashboard> {
   const response = await fetch('/api/salon/dashboard', { cache: 'no-store' });
-  const payload = await response.json();
-  if (payload.needsOnboarding) throw new Error('needs_onboarding');
-  if (!response.ok) throw new Error(payload.error || 'Impossible de charger le tableau de bord.');
-  return payload as SalonDashboard;
+  const data = await response.json();
+  if (data.needsOnboarding) throw new Error('needs_onboarding');
+  if (!response.ok) throw new Error(data.error || 'Impossible de charger le tableau de bord salon.');
+  return data as SalonDashboard;
 }
 
-export default function DashboardPage() {
+export default function SalonDashboardPage() {
   const router = useRouter();
   const { user, hydrated, logout } = useAuth();
   const [data, setData] = useState<SalonDashboard | null>(null);
-  const [form, setForm] = useState({ name: '', country: '', phone: '' });
+  const [form, setForm] = useState({
+    name: '',
+    country: 'Burkina Faso',
+    nationality: 'Burkinabè',
+    dialCode: '+226',
+    phoneRaw: '',
+  });
   const [providers, setProviders] = useState<Provider[]>([]);
   const [provider, setProvider] = useState<PaymentProvider>('money_fusion');
   const [term, setTerm] = useState<TermId>('3mois');
@@ -93,10 +104,13 @@ export default function DashboardPage() {
 
   const applyDashboard = (payload: SalonDashboard) => {
     setData(payload);
+    const parsed = parsePhone(payload.salon.phone || '');
     setForm({
-      name: payload.salon.name,
-      country: payload.salon.country,
-      phone: payload.salon.phone,
+      name: payload.salon.name || '',
+      country: payload.salon.country || 'Burkina Faso',
+      nationality: payload.salon.nationality || getNationalityForCountry(payload.salon.country || 'Burkina Faso'),
+      dialCode: parsed.dialCode,
+      phoneRaw: parsed.numberOnly,
     });
   };
 
@@ -115,7 +129,7 @@ export default function DashboardPage() {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const [payload] = await Promise.all([fetchSalonDashboard(), loadProviders()]);
+      const [payload] = await Promise.all([fetchDashboard(), loadProviders()]);
       applyDashboard(payload);
     } catch (loadError) {
       if (loadError instanceof Error && loadError.message === 'needs_onboarding') {
@@ -166,9 +180,9 @@ export default function DashboardPage() {
       if (stopped) return;
       attempts += 1;
       try {
-        const next = await fetchSalonDashboard();
+        const next = await fetchDashboard();
         applyDashboard(next);
-        const payment = next.payments.find((item) => item.id === paymentId);
+        const payment = next.payments.find((item: { id: string; status: string }) => item.id === paymentId);
         if ((payment && payment.status !== 'pending') || next.subscription) {
           stopped = true;
           setPaymentSyncing(false);
@@ -197,11 +211,19 @@ export default function DashboardPage() {
     setSaving(true);
     setSaved(false);
     setError(null);
+
+    const fullPhone = `${form.dialCode}${form.phoneRaw.replace(/\s+/g, '')}`;
+
     try {
       const response = await fetch('/api/salon/dashboard', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          country: form.country,
+          nationality: form.nationality,
+          phone: fullPhone,
+        }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Enregistrement impossible.');
@@ -285,11 +307,45 @@ export default function DashboardPage() {
 
         <section className="bg-card rounded-card border border-ink/10 p-6 sm:p-8 shadow-soft space-y-5">
           <div><h2 className="font-display text-xl">Profil du salon</h2><p className="text-xs text-ink-soft mt-1">Un profil complet est nécessaire pour bénéficier des offres et paiements.</p></div>
-          <form onSubmit={saveProfile} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required placeholder="Nom du salon" className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <CountrySelect value={form.country} onChange={(country) => setForm({ ...form, country })} required className="w-full" />
-            <input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} required placeholder="+226..." className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <div className="sm:col-span-3 flex items-center gap-3">
+          <form onSubmit={saveProfile} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label className="block text-xs font-bold">Nom du salon
+                <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required placeholder="Nom du salon" className="mt-1.5 w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 font-normal" />
+              </label>
+              <label className="block text-xs font-bold">Pays d'implantation
+                <CountrySelect
+                  value={form.country}
+                  onChange={(country) => {
+                    const dialCode = getDialCodeForCountry(country);
+                    const nationality = getNationalityForCountry(country);
+                    setForm((prev) => ({ ...prev, country, dialCode, nationality }));
+                  }}
+                  required
+                  className="mt-1.5 w-full font-normal"
+                />
+              </label>
+              <label className="block text-xs font-bold">Nationalité du responsable
+                <NationalitySelect
+                  value={form.nationality}
+                  onChange={(nationality) => setForm({ ...form, nationality })}
+                  required
+                  className="mt-1.5 w-full font-normal"
+                />
+              </label>
+            </div>
+
+            <label className="block text-xs font-bold">Téléphone (Indicatif + Numéro sans indicatif)
+              <PhoneInput
+                dialCode={form.dialCode}
+                onDialCodeChange={(dialCode) => setForm({ ...form, dialCode })}
+                phoneNumber={form.phoneRaw}
+                onPhoneNumberChange={(phoneRaw) => setForm({ ...form, phoneRaw })}
+                required
+                className="mt-1.5"
+              />
+            </label>
+
+            <div className="flex items-center gap-3 pt-2">
               <button disabled={saving} className="min-h-[46px] px-6 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
               {saved && <span className="text-xs font-bold text-terracotta-dark flex items-center gap-1"><Check className="w-4 h-4" />Enregistré</span>}
             </div>

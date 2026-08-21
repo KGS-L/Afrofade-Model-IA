@@ -1,12 +1,17 @@
+"""
+Afrofade — AssetStorage Abstract Interface & Helpers (BMAD Story 7.4)
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, Optional
+import os
 
 
 class AssetStorageError(RuntimeError):
-    """Raised when durable object storage cannot satisfy an operation."""
+    """Raised when an object storage operation fails."""
 
 
 @dataclass(frozen=True)
@@ -23,6 +28,8 @@ class SignedUpload:
 
 
 class AssetStorage(ABC):
+    """Abstract interface for server-authoritative object storage."""
+
     @abstractmethod
     def put_object(
         self,
@@ -47,13 +54,30 @@ class AssetStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def metadata(self, asset: StoredAssetRef) -> dict[str, Any] | None:
+        raise NotImplementedError
+
+    @abstractmethod
     def exists(self, asset: StoredAssetRef) -> bool:
         raise NotImplementedError
 
     @abstractmethod
-    def metadata(self, asset: StoredAssetRef) -> dict[str, Any] | None:
+    def read_object(self, asset: StoredAssetRef, *, max_bytes: int) -> bytes:
         raise NotImplementedError
 
-    def read_object(self, asset: StoredAssetRef, *, max_bytes: int) -> bytes:
-        """Read a durable object without allowing unbounded materialisation."""
-        raise AssetStorageError("Bounded object reads are not implemented by this backend")
+
+class AssetStorageService:
+    DEFAULT_BUCKET = "3d-assets"
+
+    @classmethod
+    def get_path(cls, folder: str, filename: str) -> str:
+        valid_folders = {"heads", "hair", "temp_photos", "exports"}
+        if folder not in valid_folders:
+            raise ValueError(f"Invalid storage folder: {folder}. Must be one of {valid_folders}")
+        return f"{folder}/{filename}"
+
+    @classmethod
+    def build_local_or_public_url(cls, folder: str, filename: str) -> str:
+        path = cls.get_path(folder, filename)
+        supabase_url = os.getenv("SUPABASE_URL", "http://localhost:54321")
+        return f"{supabase_url}/storage/v1/object/public/{cls.DEFAULT_BUCKET}/{path}"

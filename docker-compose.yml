@@ -1,37 +1,39 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: afrofade-db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-afrofade} -d ${POSTGRES_DB:-afrofade_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - afrofade-network
+
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-https://afrofade.pro}
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.afrofade.pro}
     container_name: afrofade-web
     restart: always
+    env_file:
+      - .env
     ports:
       - "127.0.0.1:${WEB_PORT:-3005}:3000"
-    environment:
-      - NODE_ENV=production
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-https://afrofade.pro}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.afrofade.pro}
-      - API_INTERNAL_URL=${API_INTERNAL_URL:-http://api:8000}
-      - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - CRON_SECRET=${CRON_SECRET}
-      - PAYMENT_ENABLED_PROVIDERS=${PAYMENT_ENABLED_PROVIDERS:-money_fusion}
-      - MONEY_FUSION_API_URL=${MONEY_FUSION_API_URL}
-      - MONEY_FUSION_STATUS_URL=${MONEY_FUSION_STATUS_URL:-https://www.pay.moneyfusion.net/paiementNotif}
-      - GENIUS_PAY_BASE_URL=${GENIUS_PAY_BASE_URL}
-      - GENIUS_PAY_API_KEY=${GENIUS_PAY_API_KEY}
-      - GENIUS_PAY_API_SECRET=${GENIUS_PAY_API_SECRET}
-      - GENIUS_PAY_WEBHOOK_SECRET=${GENIUS_PAY_WEBHOOK_SECRET}
     networks:
       - afrofade-network
     depends_on:
+      - db
       - api
 
   api:
@@ -40,19 +42,16 @@ services:
       dockerfile: Dockerfile
     container_name: afrofade-api-3d
     restart: always
+    env_file:
+      - .env
     ports:
       - "127.0.0.1:${API_PORT:-8005}:8000"
-    environment:
-      - PORT=8000
-      - FASTAPI_ENV=${FASTAPI_ENV:-production}
-      - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
-      - API_ALLOWED_ORIGINS=${API_ALLOWED_ORIGINS:-https://afrofade.pro}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     volumes:
       - afrofade-generated-models:/tmp/generated_models
     networks:
       - afrofade-network
+    depends_on:
+      - db
 
   worker:
     build:
@@ -61,25 +60,19 @@ services:
     container_name: afrofade-ai-worker
     restart: always
     command: ["python", "-m", "workers.job_worker"]
-    environment:
-      - FASTAPI_ENV=${FASTAPI_ENV:-production}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - AI_WORKER_ENABLED=${AI_WORKER_ENABLED:-true}
-      - AI_WORKER_ID=${AI_WORKER_ID:-}
-      - AI_WORKER_CLAIM_LIMIT=${AI_WORKER_CLAIM_LIMIT:-1}
-      - AI_WORKER_LEASE_SECONDS=${AI_WORKER_LEASE_SECONDS:-300}
-      - AI_WORKER_HEARTBEAT_SECONDS=${AI_WORKER_HEARTBEAT_SECONDS:-60}
-      - AI_WORKER_POLL_SECONDS=${AI_WORKER_POLL_SECONDS:-2}
-      - AI_WORKER_RECOVER_LIMIT=${AI_WORKER_RECOVER_LIMIT:-100}
+    env_file:
+      - .env
     volumes:
       - afrofade-generated-models:/tmp/generated_models
     networks:
       - afrofade-network
+    depends_on:
+      - db
 
 networks:
   afrofade-network:
     driver: bridge
 
 volumes:
+  postgres-data:
   afrofade-generated-models:
