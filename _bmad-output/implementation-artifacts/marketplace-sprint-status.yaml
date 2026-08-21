@@ -4,8 +4,8 @@
 track: marketplace
 created: 2026-08-21
 updated: 2026-08-21
-status: in-review
-current_story: "cross-epic-review-12-to-17"
+status: merged-and-validated
+current_story: "main-integration-validated"
 ux_authority: "_bmad-output/planning-artifacts/ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md"
 ux_backlog_amendment: "_bmad-output/planning-artifacts/epics-marketplace-ux-v2-amendments-2026-08-21.md"
 cross_epic_review: "_bmad-output/implementation-artifacts/MARKETPLACE-V2-CROSS-EPIC-REVIEW-2026-08-21.md"
@@ -117,19 +117,19 @@ epics:
 
 release_gates:
   M1:
-    status: review_pending_ci
+    status: passed
     requires: ["12.*", "13.*"]
   M2:
-    status: review_pending_ci
+    status: passed
     requires: ["14.*"]
   M3:
-    status: review_pending_ci
+    status: passed
     requires: ["15.*"]
   M4:
-    status: review_pending_ci
+    status: passed
     requires: ["16.*"]
   M5:
-    status: review_pending_ci
+    status: passed
     requires: ["17.1", "17.2", "17.3"]
 
 notes:
