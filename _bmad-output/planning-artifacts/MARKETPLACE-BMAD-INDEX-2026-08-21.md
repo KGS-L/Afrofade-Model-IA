@@ -2,6 +2,7 @@
 title: "Afrofade Marketplace — BMAD Planning Index"
 status: ready-to-execute-after-merge
 created: 2026-08-21
+updated: 2026-08-21
 ---
 
 # Afrofade Marketplace — BMAD Planning Index
@@ -15,44 +16,54 @@ Use this file as the entry point for the 2026-08-21 product expansion.
    - what is preserved;
    - approved Correct Course.
 
-2. `competitive-landscape-2026-08-21-africa.md`
-   - regional/current competitors;
-   - what is not differentiating;
+2. `competitive-research-2026-08-21-afrofade-marketplace-booking-careers.md`
+   - deep competitive research: Burkina, West Africa, Africa and concept analogs.
+
+3. `competitive-landscape-2026-08-21-africa.md`
+   - concise strategic synthesis;
+   - current status note on GlamAfric;
    - Afrofade differentiation thesis.
 
-3. `brainstorming-decisions-2026-08-21-marketplace-booking-careers.md`
+4. `brainstorming-decisions-2026-08-21-marketplace-booking-careers.md`
    - decisions D01-D07.
 
-4. `product-decisions-d08-d15-2026-08-21-marketplace.md`
-   - decisions D08-D15;
-   - monetization, geo, ranking, careers, notifications, trust, booking, scope.
+5. `brainstorming-decision-D08-geolocation-2026-08-21.md`
+   - canonical D08: geolocation/local discovery/privacy.
 
-5. `prds/prd-Afrofade-2026-08-21-marketplace/prd.md`
+6. `product-decisions-d09-d15-2026-08-21-marketplace.md`
+   - decisions D09-D15;
+   - monetization, ranking, careers, notifications, trust, booking and phased scope.
+
+7. `prds/prd-Afrofade-2026-08-21-marketplace/prd.md`
    - canonical marketplace-aware product requirements.
 
-6. `architecture/ARCHITECTURE-AFROFADE-MARKETPLACE-2026-08-21.md`
+8. `architecture/ARCHITECTURE-AFROFADE-MARKETPLACE-2026-08-21.md`
    - domain/data/security/API architecture;
    - migrations 12-18;
    - booking concurrency/RLS invariants.
 
-7. `ux-designs/UX-AFROFADE-MARKETPLACE-2026-08-21.md`
+9. `ux-designs/UX-AFROFADE-MARKETPLACE-2026-08-21.md`
    - navigation and screen behavior;
    - onboarding, discover, booking, professional and salon workspaces, careers.
 
-8. `epics-marketplace-2026-08-21.md`
-   - Epics 12-17;
-   - implementation stories and acceptance criteria.
+10. `epics-marketplace-2026-08-21.md`
+    - Epics 12-17;
+    - implementation stories and acceptance criteria.
 
-9. `EXECUTION-MARKETPLACE-2026-08-21.md`
-   - exact story order;
-   - branch/spec/test/review workflow;
-   - implementation gates and no-merge rule.
+11. `EXECUTION-MARKETPLACE-2026-08-21.md`
+    - exact story order;
+    - branch/spec/test/review workflow;
+    - implementation gates and no-merge rule.
 
-10. `_bmad-output/implementation-artifacts/readiness-2026-08-21-marketplace.md`
+12. `_bmad-output/implementation-artifacts/readiness-2026-08-21-marketplace.md`
     - implementation readiness result.
 
-11. `_bmad-output/implementation-artifacts/marketplace-sprint-status.yaml`
+13. `_bmad-output/implementation-artifacts/marketplace-sprint-status.yaml`
     - live marketplace story status during implementation.
+
+## Deprecated redirect
+
+`product-decisions-d08-d15-2026-08-21-marketplace.md` is intentionally retained only as a redirect because D08 had already been assigned to geolocation. Do not use it as decision authority.
 
 ## Existing artifacts that remain authoritative for unaffected areas
 
