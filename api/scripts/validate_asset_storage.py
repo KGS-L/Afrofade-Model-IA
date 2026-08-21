@@ -15,6 +15,7 @@ if str(API_ROOT) not in sys.path:
 
 from services.storage.asset_storage import AssetStorageError, StoredAssetRef
 from services.storage.supabase_storage import SupabaseAssetStorage, validate_asset_ref
+import services.storage.supabase_storage as storage_module
 
 
 class FakeBucket:
@@ -146,6 +147,23 @@ def assert_sdk_mapping() -> None:
     storage.delete_object(asset)
     assert bucket.calls[-1] == ("remove", [asset.path])
     print("[PASS] delete SDK mapping")
+
+    class ReadResponse:
+        def __init__(self, chunks): self.chunks=chunks; self.closed=False
+        def raise_for_status(self): pass
+        def iter_content(self, _): yield from self.chunks
+        def close(self): self.closed=True
+    original_get=storage_module.requests.get
+    try:
+        response=ReadResponse([b"abc",b"def"]); storage_module.requests.get=lambda *a,**k:response
+        assert storage.read_object(asset,max_bytes=6)==b"abcdef" and response.closed
+        response=ReadResponse([b"abcdefg"]); storage_module.requests.get=lambda *a,**k:response
+        expect_asset_error("bounded read rejects oversize",lambda:storage.read_object(asset,max_bytes=6)); assert response.closed
+        expect_asset_error("bounded read rejects invalid limit",lambda:storage.read_object(asset,max_bytes=0))
+        storage_module.requests.get=lambda *a,**k:(_ for _ in ()).throw(storage_module.requests.ConnectionError("offline"))
+        expect_asset_error("bounded read maps transport failure",lambda:storage.read_object(asset,max_bytes=6))
+    finally: storage_module.requests.get=original_get
+    print("[PASS] bounded storage read success and close")
 
 
 def assert_fail_closed_configuration() -> None:

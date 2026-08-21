@@ -70,6 +70,10 @@ class HairAssetVersionRepository(Protocol):
     ) -> HairAssetVersionRecord:
         ...
 
+    def create_draft(self, *, style_id: str, version: int, provider: str,
+                     source_job_id: UUID, raw_ref: StoredAssetRef,
+                     generation_cost_fcfa: int, provider_metadata: dict[str, Any]) -> HairAssetVersionRecord: ...
+
 
 def _parse_uuid(value: Any, field: str, *, optional: bool = False) -> UUID | None:
     if optional and value is None:
@@ -223,6 +227,22 @@ class SupabaseHairAssetVersionRepository:
         if not payload:
             return None
         return _parse_record(payload[0])
+
+    def create_draft(self, *, style_id: str, version: int, provider: str,
+                     source_job_id: UUID, raw_ref: StoredAssetRef,
+                     generation_cost_fcfa: int, provider_metadata: dict[str, Any]) -> HairAssetVersionRecord:
+        if provider != "trellis2": raise HairAssetRepositoryError("draft provider must be trellis2")
+        payload = self._request("POST", f"{self._rest_url}/rpc/create_trellis2_hair_asset_draft",
+            headers=self._headers(), json={"p_style_id":style_id,"p_version":version,
+                "p_source_job_id":str(source_job_id),"p_raw_bucket":raw_ref.bucket,
+                "p_raw_path":raw_ref.path,"p_generation_cost_fcfa":generation_cost_fcfa,
+                "p_provider_metadata":provider_metadata})
+        if not isinstance(payload, list) or len(payload) != 1: raise HairAssetRepositoryError("draft RPC returned invalid payload")
+        record = _parse_record(payload[0])
+        if record is None: raise HairAssetRepositoryError("draft idempotent resolution failed")
+        if record.source_job_id != source_job_id or record.raw_ref != raw_ref:
+            raise HairAssetRepositoryError("hair_asset_draft_identity_conflict")
+        return record
 
     def persist_normalization(
         self,

@@ -257,6 +257,30 @@ class SupabasePostgresJobQueue(JobQueue):
             raise JobQueueError("claim_ai_jobs returned an unexpected payload")
         return [self._validate_job(item) for item in payload]
 
+    def checkpoint_trellis2(self, *, job_id: UUID, worker_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+        payload = self._request("POST", "rpc/checkpoint_trellis2_job", json={
+            "p_job_id": str(job_id), "p_worker_id": worker_id, "p_patch": patch})
+        if not isinstance(payload, list) or len(payload) != 1 or not isinstance(payload[0], dict):
+            raise JobQueueError("checkpoint_trellis2_job returned an invalid payload")
+        return payload[0]
+
+    def get_trellis2_checkpoint(self, provider_request_id: str) -> dict[str, Any] | None:
+        payload = self._request("GET", "trellis2_job_checkpoints", params={
+            "provider_request_id": f"eq.{provider_request_id}", "select": "*", "limit": "1"})
+        if not isinstance(payload, list): raise JobQueueError("Invalid checkpoint response")
+        return payload[0] if payload else None
+
+    def get_trellis2_checkpoint_for_job(self, job_id: UUID) -> dict[str, Any] | None:
+        payload = self._request("GET", "trellis2_job_checkpoints", params={
+            "job_id": f"eq.{job_id}", "select": "*", "limit": "1"})
+        if not isinstance(payload, list): raise JobQueueError("Invalid checkpoint response")
+        return payload[0] if payload else None
+
+    def accept_trellis2_webhook(self, job_id: UUID, provider_request_id: str, payload_data: dict[str, Any]) -> bool:
+        payload = self._request("POST", "rpc/accept_trellis2_webhook", json={
+            "p_job_id": str(job_id), "p_provider_request_id": provider_request_id, "p_payload": payload_data})
+        return payload is True or payload == [True]
+
     def heartbeat(
         self,
         *,
