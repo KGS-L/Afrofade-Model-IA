@@ -17,7 +17,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_hair_taxonomy_slug_ci ON public.hair_taxon
 CREATE INDEX IF NOT EXISTS idx_hair_taxonomy_parent ON public.hair_taxonomy(parent_id);
 CREATE INDEX IF NOT EXISTS idx_hair_taxonomy_active ON public.hair_taxonomy(active, kind);
 
--- Explicitly bridge immutable legacy/3D style identifiers to normalized taxonomy.
 CREATE TABLE IF NOT EXISTS public.hair_style_taxonomy_bridge (
     legacy_style_id VARCHAR(100) PRIMARY KEY REFERENCES public.hairstyles_catalog(id) ON DELETE RESTRICT,
     taxonomy_id UUID NOT NULL REFERENCES public.hair_taxonomy(id) ON DELETE RESTRICT,
@@ -89,7 +88,6 @@ DROP TRIGGER IF EXISTS trg_salon_service_professional_context ON public.salon_se
 CREATE TRIGGER trg_salon_service_professional_context BEFORE INSERT OR UPDATE ON public.salon_service_professionals
 FOR EACH ROW EXECUTE FUNCTION public.enforce_salon_service_professional_context();
 
--- Public taxonomy is safe. Skills/services stay private until public projections in 13.5.
 ALTER TABLE public.hair_taxonomy ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hair_style_taxonomy_bridge ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.professional_skills ENABLE ROW LEVEL SECURITY;
@@ -107,17 +105,19 @@ GRANT SELECT ON public.hair_taxonomy, public.hair_style_taxonomy_bridge TO anon,
 GRANT ALL ON public.hair_taxonomy, public.hair_style_taxonomy_bridge, public.professional_skills, public.marketplace_services, public.service_taxonomy_links, public.salon_service_professionals TO service_role;
 REVOKE ALL ON FUNCTION public.enforce_salon_service_professional_context() FROM PUBLIC;
 
--- Idempotent normalized seed. IDs remain stable because slugs are the external identity.
-INSERT INTO public.hair_taxonomy(slug,kind,label_fr,aliases,sort_order) VALUES
- ('barber-fades','category','Barber & Fades',ARRAY['barber','fade','dégradé'],10),
- ('braids','category','Tresses',ARRAY['tresses','braids','nattes'],20),
- ('locks-locs','category','Locks & Locs',ARRAY['locks','locs','dreadlocks'],30),
- ('afro-twists','category','Afro & Twists',ARRAY['afro','twists','vanilles'],40),
- ('hair-styling','category','Coiffure',ARRAY['coiffure','styling'],50),
- ('beard','category','Barbe',ARRAY['barbe','beard'],60)
-ON CONFLICT (LOWER(slug)) DO NOTHING;
+-- Idempotent category seed without relying on expression-index conflict inference.
+INSERT INTO public.hair_taxonomy(slug,kind,label_fr,aliases,sort_order)
+SELECT seed.slug,'category',seed.label_fr,seed.aliases,seed.sort_order
+FROM (VALUES
+ ('barber-fades','Barber & Fades',ARRAY['barber','fade','dégradé']::TEXT[],10),
+ ('braids','Tresses',ARRAY['tresses','braids','nattes']::TEXT[],20),
+ ('locks-locs','Locks & Locs',ARRAY['locks','locs','dreadlocks']::TEXT[],30),
+ ('afro-twists','Afro & Twists',ARRAY['afro','twists','vanilles']::TEXT[],40),
+ ('hair-styling','Coiffure',ARRAY['coiffure','styling']::TEXT[],50),
+ ('beard','Barbe',ARRAY['barbe','beard']::TEXT[],60)
+) AS seed(slug,label_fr,aliases,sort_order)
+WHERE NOT EXISTS (SELECT 1 FROM public.hair_taxonomy existing WHERE lower(existing.slug)=lower(seed.slug));
 
--- PostgreSQL cannot target expression-index conflict with ON CONFLICT(column), so child seeds use WHERE lookup + anti-join.
 INSERT INTO public.hair_taxonomy(slug,kind,parent_id,label_fr,aliases,sort_order)
 SELECT seed.slug,'style',parent.id,seed.label_fr,seed.aliases,seed.sort_order
 FROM (VALUES
@@ -132,7 +132,6 @@ FROM (VALUES
 JOIN public.hair_taxonomy parent ON lower(parent.slug)=lower(seed.parent_slug)
 WHERE NOT EXISTS (SELECT 1 FROM public.hair_taxonomy existing WHERE lower(existing.slug)=lower(seed.slug));
 
--- Map existing legacy catalog IDs that are known today. Future IDs can be added without touching hair_asset_versions.
 INSERT INTO public.hair_style_taxonomy_bridge(legacy_style_id,taxonomy_id)
 SELECT legacy.id, tax.id
 FROM (VALUES
