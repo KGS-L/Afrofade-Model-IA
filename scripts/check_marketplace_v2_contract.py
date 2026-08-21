@@ -29,7 +29,8 @@ required=[
  '26_marketplace_professional_portfolio.sql','27_marketplace_geospatial_privacy.sql','28_marketplace_public_discovery.sql',
  '40_marketplace_booking_foundation.sql','41_booking_operations_notifications.sql','42_booking_visual_briefs.sql',
  '50_marketplace_trust_reviews.sql','51_trust_aware_marketplace_ranking.sql','52_marketplace_admin_moderation_fix.sql',
- '60_hair_careers_marketplace.sql','70_marketplace_funnel_telemetry.sql','71_marketplace_payment_readiness.sql','72_sponsored_listing_guardrails.sql'
+ '60_hair_careers_marketplace.sql','70_marketplace_funnel_telemetry.sql','71_marketplace_payment_readiness.sql','72_sponsored_listing_guardrails.sql',
+ '73_marketplace_payment_abstraction.sql'
 ]
 for name in required:
  if not (MIG/name).exists(): fail(f'missing migration {name}')
@@ -57,6 +58,9 @@ must('web/supabase/migrations/60_hair_careers_marketplace.sql','prepare_hire_mem
 must('web/supabase/migrations/70_marketplace_funnel_telemetry.sql','Do not store raw IP')
 payment=must('web/supabase/migrations/71_marketplace_payment_readiness.sql',"'service_online_payments',FALSE")
 must('web/supabase/migrations/72_sponsored_listing_guardrails.sql',"'Sponsorisé'")
+must('web/supabase/migrations/73_marketplace_payment_abstraction.sql','platform_fee_amount')
+must('web/supabase/migrations/73_marketplace_payment_abstraction.sql','calculate_marketplace_booking_split')
+must('web/supabase/migrations/73_marketplace_payment_abstraction.sql','marketplace_sponsored_listings')
 if "'sponsored_listings',FALSE" not in payment: fail('sponsored listings must default disabled')
 if "payment_mode VARCHAR(24) NOT NULL DEFAULT 'pay_at_provider'" not in payment: fail('service payment MVP must default pay_at_provider')
 

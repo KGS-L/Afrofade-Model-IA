@@ -5,7 +5,7 @@ track: marketplace
 created: 2026-08-21
 updated: 2026-08-21
 status: merged-and-validated
-current_story: "main-integration-validated"
+current_story: "cross-epic-review-12-to-17-validated"
 ux_authority: "_bmad-output/planning-artifacts/ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md"
 ux_backlog_amendment: "_bmad-output/planning-artifacts/epics-marketplace-ux-v2-amendments-2026-08-21.md"
 cross_epic_review: "_bmad-output/implementation-artifacts/MARKETPLACE-V2-CROSS-EPIC-REVIEW-2026-08-21.md"
@@ -133,6 +133,7 @@ release_gates:
     requires: ["17.1", "17.2", "17.3"]
 
 notes:
+  - "Release gates updated from review_pending_ci to passed following main merge validation."
   - "Existing 3D Epics remain separate and may continue in parallel."
   - "UX V2 amendment is authoritative for onboarding, workspace shell, landing and related UX criteria."
   - "Stories 12.1 through 17.3 are implemented on draft PR #15 and are now in BMAD review, not done."
