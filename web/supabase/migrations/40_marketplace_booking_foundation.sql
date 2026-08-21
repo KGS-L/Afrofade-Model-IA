@@ -1,0 +1,2 @@
+-- Placeholder reserved for BMAD Epic 14 booking foundation.
+-- Full booking migration is moved here from the temporary 28-series filename in the next normalization commit.
