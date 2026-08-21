@@ -21,7 +21,6 @@ from services.hair.providers import (
     HunyuanMultiViewHairProvider,
     ManualHairProvider,
     MeshyHairProvider,
-    Trellis2HairProvider,
     build_scaffold_registry,
     get_production_provider,
     resolve_provider_name,
@@ -71,7 +70,6 @@ def assert_jobs_and_results_are_per_request() -> None:
 def assert_scaffolds_are_fail_closed() -> None:
     providers = [
         ManualHairProvider(enabled=True),
-        Trellis2HairProvider(enabled=True),
         HunyuanMultiViewHairProvider(enabled=True),
         MeshyHairProvider(enabled=True),
     ]
@@ -128,7 +126,7 @@ def assert_provider_remaps_are_explicit() -> None:
     print("[PASS] provider aliases/remaps are explicit and observable in ProviderResolution")
 
 
-def assert_no_real_provider_wiring() -> None:
+def assert_scaffold_module_has_no_embedded_live_wiring() -> None:
     source = (API_ROOT / "services" / "hair" / "providers.py").read_text(encoding="utf-8")
     forbidden = [
         "api.fal.ai",
@@ -144,7 +142,7 @@ def assert_no_real_provider_wiring() -> None:
     if found:
         raise AssertionError(f"Story 8.2 accidentally wired a real provider: {found}")
 
-    print("[PASS] Story 8.2 contains no paid/live provider API wiring")
+    print("[PASS] remaining Story 8.2 scaffolds contain no paid/live provider API wiring")
 
 
 def main() -> None:
@@ -153,7 +151,7 @@ def main() -> None:
     assert_scaffolds_are_fail_closed()
     assert_providers_default_disabled()
     assert_provider_remaps_are_explicit()
-    assert_no_real_provider_wiring()
+    assert_scaffold_module_has_no_embedded_live_wiring()
     print("\nBMAD Story 8.2 provider scaffolding: PASS")
 
 

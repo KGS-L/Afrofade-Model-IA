@@ -198,10 +198,6 @@ class ManualHairProvider(_InMemoryScaffoldHairProvider):
         )
 
 
-class Trellis2HairProvider(_InMemoryScaffoldHairProvider):
-    provider_name = "trellis2"
-
-
 class HunyuanMultiViewHairProvider(_InMemoryScaffoldHairProvider):
     provider_name = "hunyuan_multiview"
 
@@ -254,9 +250,7 @@ def build_scaffold_registry(
         "manual": ManualHairProvider(
             enabled=_env_enabled(source, PROVIDER_ENABLE_FLAGS["manual"])
         ),
-        "trellis2": Trellis2HairProvider(
-            enabled=_env_enabled(source, PROVIDER_ENABLE_FLAGS["trellis2"])
-        ),
+        "trellis2": Trellis2HairProvider.from_env(source),
         "hunyuan_multiview": HunyuanMultiViewHairProvider(
             enabled=_env_enabled(source, PROVIDER_ENABLE_FLAGS["hunyuan_multiview"])
         ),
@@ -284,3 +278,7 @@ def get_production_provider(
             f"hair_provider_not_live:{resolution.resolved}:{provider.mode.value}"
         )
     return provider, resolution
+
+
+# Story 8.4 keeps the public import stable while replacing only this scaffold.
+from services.hair.trellis2_provider import Trellis2HairProvider  # noqa: E402

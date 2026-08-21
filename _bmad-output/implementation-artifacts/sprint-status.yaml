@@ -65,7 +65,7 @@ development_status:
   8-1-hair-asset-versioning-schema: done
   8-2-fix-provider-scaffolding-defects: done
   8-3-hairassetnormalizer-real-pipeline: done
-  8-4-trellis2-afrofade-lora-provider: backlog
+  8-4-trellis2-afrofade-lora-provider: done
   8-5-hunyuan3d-multiview-provider: backlog
   epic-8-retrospective: optional
 

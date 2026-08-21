@@ -53,3 +53,7 @@ class AssetStorage(ABC):
     @abstractmethod
     def metadata(self, asset: StoredAssetRef) -> dict[str, Any] | None:
         raise NotImplementedError
+
+    def read_object(self, asset: StoredAssetRef, *, max_bytes: int) -> bytes:
+        """Read a durable object without allowing unbounded materialisation."""
+        raise AssetStorageError("Bounded object reads are not implemented by this backend")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import PurePosixPath
 from typing import Any, BinaryIO
+import requests
 
 from services.storage.asset_storage import (
     AssetStorage,
@@ -210,3 +211,27 @@ class SupabaseAssetStorage(AssetStorage):
 
     def exists(self, asset: StoredAssetRef) -> bool:
         return self.metadata(asset) is not None
+
+    def read_object(self, asset: StoredAssetRef, *, max_bytes: int) -> bytes:
+        if max_bytes < 1:
+            raise AssetStorageError("max_bytes must be positive")
+        validated = validate_asset_ref(asset)
+        response = None
+        try:
+            response = requests.get(self.create_signed_read(validated, expires_in=60), stream=True, timeout=30)
+            response.raise_for_status()
+            chunks: list[bytes] = []
+            size = 0
+            for chunk in response.iter_content(64 * 1024):
+                size += len(chunk)
+                if size > max_bytes:
+                    raise AssetStorageError("Stored object exceeds the configured read limit")
+                chunks.append(chunk)
+            return b"".join(chunks)
+        except AssetStorageError:
+            raise
+        except requests.RequestException as exc:
+            raise AssetStorageError(f"Unable to download {validated.bucket}/{validated.path}: {exc}") from exc
+        finally:
+            if response is not None:
+                response.close()

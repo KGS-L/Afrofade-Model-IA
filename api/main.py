@@ -14,6 +14,7 @@ from models.jobs import AIJobType
 from routers.quality_check import router as quality_router
 from services.jobs.job_queue import JobQueueError, SupabasePostgresJobQueue
 from services.reconstructor import ReconstructionPipelineService
+from services.hair.fal_webhook import FalWebhookError, verify_fal_webhook
 
 app = FastAPI(
     title="Afrofade 3D AI Engine",
@@ -42,7 +43,7 @@ GENERATED_MODEL_PATTERN = re.compile(r"^recon_[0-9]+\.glb$")
 
 @app.middleware("http")
 async def require_internal_api_key(request: Request, call_next):
-    if request.url.path in PUBLIC_PATHS:
+    if request.url.path in PUBLIC_PATHS or request.url.path.startswith("/webhooks/fal/trellis2/"):
         return await call_next(request)
 
     expected_secret = os.getenv("API_INTERNAL_SECRET")
@@ -92,6 +93,26 @@ class ReconstructionResponse(BaseModel):
 @lru_cache(maxsize=1)
 def get_persistent_job_queue() -> SupabasePostgresJobQueue:
     return SupabasePostgresJobQueue.from_env()
+
+@app.post("/webhooks/fal/trellis2/{job_id}", status_code=200)
+async def fal_trellis2_webhook(job_id: UUID, request: Request):
+    try: max_body=int(os.getenv("FAL_WEBHOOK_MAX_BYTES","1048576"))
+    except ValueError as exc: raise HTTPException(status_code=503,detail="Webhook size configuration invalid") from exc
+    content_length=request.headers.get("content-length")
+    if content_length is None: raise HTTPException(status_code=411,detail="Content-Length required")
+    try: declared=int(content_length)
+    except ValueError as exc: raise HTTPException(status_code=400,detail="Invalid Content-Length") from exc
+    if declared < 0 or declared > max_body: raise HTTPException(status_code=413,detail="Webhook payload too large")
+    raw = await request.body()
+    if len(raw) > max_body or len(raw) != declared: raise HTTPException(status_code=413,detail="Webhook payload size mismatch")
+    try: payload = verify_fal_webhook(raw, request.headers)
+    except FalWebhookError as exc: raise HTTPException(status_code=401, detail=str(exc)) from exc
+    try: accepted = get_persistent_job_queue().accept_trellis2_webhook(job_id, payload["request_id"], payload)
+    except JobQueueError as exc:
+        if any(code in str(exc) for code in ("fal_request_id_conflict","fal_webhook_replay_conflict","fal_webhook_identity_invalid")):
+            raise HTTPException(status_code=409,detail="Webhook identity conflict") from exc
+        raise HTTPException(status_code=503, detail="Webhook persistence unavailable") from exc
+    return {"accepted": accepted}
 
 
 @app.get("/")
