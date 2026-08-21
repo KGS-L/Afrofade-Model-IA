@@ -19,33 +19,8 @@ def test_docker_compose_config():
     assert compose_path.exists(), "docker-compose.yml must exist at project root"
     content = compose_path.read_text()
     assert "postgres:16-alpine" in content, "docker-compose.yml must include postgres:16-alpine"
-    assert "minio/minio" in content, "docker-compose.yml must include minio/minio"
-    print("[PASS] docker-compose.yml includes postgres:16-alpine and minio/minio services")
-
-
-def test_minio_s3_storage_adapter():
-    storage = S3AssetStorage()
-    ref = StoredAssetRef(bucket="canonical", path="heads/head-001/head.glb")
-    data = b"gLTF-binary-head-data"
-
-    # Put object
-    storage.put_object(ref, data, content_type="model/gltf-binary")
-    assert storage.exists(ref)
-
-    # Metadata
-    meta = storage.metadata(ref)
-    assert meta is not None
-    assert meta["size_bytes"] == len(data)
-
-    # Read object
-    read_back = storage.read_object(ref, max_bytes=1000)
-    assert read_back == data
-
-    # Signed read
-    signed_url = storage.create_signed_read(ref, expires_in=600)
-    assert "http://minio:9000/canonical/heads/head-001/head.glb" in signed_url
-
-    print("[PASS] S3AssetStorage MinIO adapter supports put, read, metadata and signed URLs")
+    assert "CLOUDINARY_CLOUD_NAME" in content, "docker-compose.yml must include CLOUDINARY_CLOUD_NAME"
+    print("[PASS] docker-compose.yml includes postgres:16-alpine and CLOUDINARY_CLOUD_NAME services")
 
 
 def test_nextauth_jwt_verifier():
@@ -73,7 +48,6 @@ def test_nextauth_jwt_verifier():
 
 def main():
     test_docker_compose_config()
-    test_minio_s3_storage_adapter()
     test_nextauth_jwt_verifier()
     print("\nBMAD Story 6.0 Self-Hosted Docker Infrastructure: PASS")
 

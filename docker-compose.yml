@@ -19,27 +19,6 @@ services:
     networks:
       - afrofade-network
 
-  minio:
-    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
-    container_name: afrofade-minio
-    restart: always
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_secret}
-    ports:
-      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - afrofade-network
-
   web:
     build:
       context: ./web
@@ -74,7 +53,6 @@ services:
       - afrofade-network
     depends_on:
       - db
-      - minio
       - api
 
   api:
@@ -91,16 +69,16 @@ services:
       - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
       - API_ALLOWED_ORIGINS=${API_ALLOWED_ORIGINS:-https://afrofade.pro}
       - DATABASE_URL=${DATABASE_URL:-postgresql://afrofade:afrofade_secret_pass@db:5432/afrofade_db}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin_secret}
+      - ASSET_STORAGE_PROVIDER=${ASSET_STORAGE_PROVIDER:-cloudinary}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-afrofade}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
     volumes:
       - afrofade-generated-models:/tmp/generated_models
     networks:
       - afrofade-network
     depends_on:
       - db
-      - minio
 
   worker:
     build:
@@ -112,9 +90,10 @@ services:
     environment:
       - FASTAPI_ENV=${FASTAPI_ENV:-production}
       - DATABASE_URL=${DATABASE_URL:-postgresql://afrofade:afrofade_secret_pass@db:5432/afrofade_db}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
-      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin_secret}
+      - ASSET_STORAGE_PROVIDER=${ASSET_STORAGE_PROVIDER:-cloudinary}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-afrofade}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
       - AI_WORKER_ENABLED=${AI_WORKER_ENABLED:-true}
       - AI_WORKER_ID=${AI_WORKER_ID:-}
       - AI_WORKER_CLAIM_LIMIT=${AI_WORKER_CLAIM_LIMIT:-1}
@@ -128,7 +107,6 @@ services:
       - afrofade-network
     depends_on:
       - db
-      - minio
 
 networks:
   afrofade-network:
@@ -136,5 +114,4 @@ networks:
 
 volumes:
   postgres-data:
-  minio-data:
   afrofade-generated-models:
