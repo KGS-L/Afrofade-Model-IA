@@ -59,22 +59,33 @@ Use this file as the entry point for the 2026-08-21 product expansion.
 
 11. `epics-marketplace-2026-08-21.md`
     - Epics 12-17;
-    - implementation stories and acceptance criteria.
+    - original marketplace implementation stories and acceptance criteria.
 
-12. `EXECUTION-MARKETPLACE-2026-08-21.md`
+12. `epics-marketplace-ux-v2-amendments-2026-08-21.md`
+    - **mandatory backlog reconciliation for UX V2**;
+    - replaces the conflicting forced-role onboarding criterion in Story 12.3;
+    - adds Story 12.7 workspace/context shell;
+    - adds Story 13.8 public Landing V2;
+    - extends discovery/public-profile/booking/visual-brief/trust criteria;
+    - adds Stories 14.9 consumer workspace, 14.10 professional workspace and 14.11 salon workspace;
+    - records contextual smartphone bottom navigation and progressive admin workspace requirements.
+
+13. `EXECUTION-MARKETPLACE-2026-08-21.md`
     - exact story order;
     - branch/spec/test/review workflow;
     - implementation gates and no-merge rule.
 
-13. `_bmad-output/implementation-artifacts/readiness-2026-08-21-marketplace.md`
+14. `_bmad-output/implementation-artifacts/readiness-2026-08-21-marketplace.md`
     - implementation readiness result.
 
-14. `_bmad-output/implementation-artifacts/marketplace-sprint-status.yaml`
+15. `_bmad-output/implementation-artifacts/marketplace-sprint-status.yaml`
     - live marketplace story status during implementation.
 
 ## UX authority note
 
 The V2 UX contract was produced after the marketplace planning set and records subsequent validated product decisions. For UX behavior, navigation, onboarding, landing-page composition and workspace interaction, use the V2 contract when an older artifact conflicts with it.
+
+The backlog amendment must be read together with the original Epic 12-17 backlog. It does not discard the security/data/concurrency stories; it changes or extends only the acceptance criteria required by UX V2.
 
 In particular, do not implement the older UX assumption that every new account must immediately choose `client / professional / salon`. The current approved model starts with a personal/consumer context and creates professional/salon activities only when the user expresses that intent.
 
@@ -99,7 +110,7 @@ After this planning set is merged to `main`, marketplace coding begins at:
 
 unless a more recent explicitly approved BMAD artifact changes the order.
 
-The V2 UX contract must be reconciled into story-level implementation acceptance criteria before any UI story is considered ready for development.
+Before implementing any amended UI story, reconcile its story spec with both the V2 UX contract and `epics-marketplace-ux-v2-amendments-2026-08-21.md`.
 
 ## Important non-authorizations
 
