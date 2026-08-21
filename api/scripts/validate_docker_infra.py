@@ -19,8 +19,8 @@ def test_docker_compose_config():
     assert compose_path.exists(), "docker-compose.yml must exist at project root"
     content = compose_path.read_text()
     assert "postgres:16-alpine" in content, "docker-compose.yml must include postgres:16-alpine"
-    assert "CLOUDINARY_CLOUD_NAME" in content, "docker-compose.yml must include CLOUDINARY_CLOUD_NAME"
-    print("[PASS] docker-compose.yml includes postgres:16-alpine and CLOUDINARY_CLOUD_NAME services")
+    assert "env_file:" in content, "docker-compose.yml must use env_file to load .env"
+    print("[PASS] docker-compose.yml includes postgres:16-alpine and uses env_file for configuration")
 
 
 def test_nextauth_jwt_verifier():
