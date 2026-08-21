@@ -9,7 +9,6 @@ import {
   getMarketplaceSubscriptionProduct,
   legacySalonProductId,
   priceSubscription,
-  type MarketplaceSubscriptionProduct,
 } from '@/lib/marketplace-plans';
 import type { TermId } from '@/lib/plans';
 
@@ -185,7 +184,7 @@ export async function POST(req: NextRequest) {
     const forwardedHost = req.headers.get('x-forwarded-host');
     const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL || (forwardedHost ? `${forwardedProto}://${forwardedHost}` : req.nextUrl.origin)).replace(/\/$/, '');
-    const returnPath = purpose === 'credits' ? '/account' : professionalProfile ? '/pro/onboarding' : '/dashboard';
+    const returnPath = purpose === 'credits' ? '/account' : '/workspace/subscription';
     const returnBase = `${appUrl}${returnPath}`;
     const commonProviderMetadata = {
       paymentId: payment.id, userId: principal.user.id, purpose: product.purpose, productId: product.productId,
