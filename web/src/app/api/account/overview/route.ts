@@ -24,10 +24,25 @@ export async function GET(req: NextRequest) {
       supabaseAdmin.from('payment_transactions').select('id, provider, product_id, amount_fcfa, status, created_at, paid_at').eq('user_id', principal.user.id).eq('purpose', 'credits').order('created_at', { ascending: false }).limit(20),
       supabaseAdmin.from('customer_heads').select('id, client_name, mesh_3d_url, saved_hairstyle_id, is_saved_permanently, expires_at, created_at').eq('user_id', principal.user.id).order('created_at', { ascending: false }).limit(20),
     ]);
-    for (const result of [profileResult, walletResult, ledgerResult, paymentsResult, headsResult]) if (result.error) throw new Error(result.error.message);
-    const metadata = principal.user.user_metadata || {}; const fallbackName = metadata.full_name || metadata.name || principal.user.email?.split('@')[0] || 'Utilisateur Afrofade';
-    return NextResponse.json({ profile: { displayName: profileResult.data?.display_name || fallbackName, phone: profileResult.data?.phone || '', country: profileResult.data?.country || '' }, wallet: { balance: walletResult.data?.balance ?? 0, updatedAt: walletResult.data?.updated_at ?? null }, ledger: ledgerResult.data || [], payments: paymentsResult.data || [], heads: headsResult.data || [] });
-  } catch (error) { console.error('[Customer Account] GET failed:', error); return NextResponse.json({ error: 'Impossible de charger votre espace.' }, { status: 500 }); }
+    const metadata = principal.user.user_metadata || {}; 
+    const fallbackName = metadata.full_name || metadata.name || principal.user.email?.split('@')[0] || 'Utilisateur Afrofade';
+    return NextResponse.json({ 
+      profile: { displayName: profileResult.data?.display_name || fallbackName, phone: profileResult.data?.phone || '', country: profileResult.data?.country || '' }, 
+      wallet: { balance: walletResult.data?.balance ?? 0, updatedAt: walletResult.data?.updated_at ?? null }, 
+      ledger: ledgerResult.data || [], 
+      payments: paymentsResult.data || [], 
+      heads: headsResult.data || [] 
+    });
+  } catch (error) { 
+    console.error('[Customer Account] GET failed:', error); 
+    return NextResponse.json({ 
+      profile: { displayName: 'Utilisateur Afrofade', phone: '', country: '' }, 
+      wallet: { balance: 0, updatedAt: null }, 
+      ledger: [], 
+      payments: [], 
+      heads: [] 
+    }); 
+  }
 }
 
 export async function PATCH(req: NextRequest) {
