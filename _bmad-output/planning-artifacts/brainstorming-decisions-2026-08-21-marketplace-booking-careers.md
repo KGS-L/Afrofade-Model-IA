@@ -346,3 +346,80 @@ If marketplace payments are introduced, model them as payment/order/settlement r
 ### Compliance consequence
 
 Any future marketplace/split-payment provider and launch jurisdiction must be reviewed before enabling service-payment flows. This product decision defines the intended architecture but is not itself a legal or regulatory determination.
+
+---
+
+## D07 — Reputation comes from verified completed-service experiences
+
+**Status:** ACCEPTED
+
+Afrofade's public reputation system must prioritize **verified reviews linked to real service activity** rather than anonymous/open ratings that can be easily manipulated.
+
+### Eligibility rule
+
+A customer may publish a verified review only for a booking that reached the product-defined completed-service state. A booking can produce at most one customer review record, with controlled edit/moderation rules.
+
+The review keeps an immutable relationship to the underlying booking for auditability even if public presentation is later moderated.
+
+### Salon versus professional reputation
+
+Salon reputation and professional reputation are distinct aggregates.
+
+For a salon-originated booking:
+
+- the customer may rate the salon/service experience;
+- when a concrete professional was assigned and completed the service, the same review flow may additionally include a professional-specific rating/feedback component;
+- Afrofade computes salon and professional aggregates separately instead of copying one score onto both entities.
+
+For an independent-professional booking:
+
+- the verified review contributes to that professional's independent reputation.
+
+Conceptually:
+
+```text
+Booking completed
+      |
+      +--> VerifiedReview
+              |
+              +--> salon_rating?          -> Salon aggregate
+              +--> professional_rating?   -> Professional aggregate
+              +--> text / structured feedback
+```
+
+### Trust signal
+
+Public UI should distinguish booking-backed feedback with a clear `verified service` / equivalent trust indicator.
+
+Unverified public ratings are excluded from the initial marketplace reputation score. Future imported testimonials or portfolio endorsements, if ever supported, must remain visibly distinct and must not masquerade as verified Afrofade bookings.
+
+### Anti-abuse consequence
+
+The reputation system should at minimum support:
+
+- one review per eligible booking;
+- author ownership verification;
+- moderation/reporting state;
+- protection against the salon/professional editing customer review content;
+- auditable timestamps and target entities;
+- no rating creation solely from a client-supplied `salon_id` or `professional_id` without server-authoritative booking eligibility.
+
+### Marketplace consequence
+
+Verified reputation can later participate in nearby-search ranking and recommendation, alongside distance, service/hairstyle skill match, availability and other transparent marketplace signals.
+
+### 3D differentiation consequence
+
+When a booking includes an Afrofade `try_on_asset_id` / saved look, the completed booking and review create a future quality signal connecting:
+
+```text
+desired visual style
+      ->
+selected salon/professional
+      ->
+completed service
+      ->
+verified customer feedback
+```
+
+This relationship may later improve style-to-professional matching, but D07 does not authorize opaque automated ranking or model training without a separate product/privacy decision.
