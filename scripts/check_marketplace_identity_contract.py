@@ -35,7 +35,15 @@ def main() -> int:
     ban(m, r"DROP\s+TABLE\s+(IF\s+EXISTS\s+)?(?:public\.)?salons\b", "must not drop salons")
     ban(m, r"CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?(?:public\.)?salons\b", "must extend, not recreate, salons")
     ban(m, r"geography\s*\(", "PostGIS belongs to Story 13.4")
-    ban(m, r"role\s+IN\s*\([^\)]*professional", "professional must not become a legacy global role")
+
+    # `professional` is a valid salon_memberships role. What Story 12.1 forbids is
+    # mutating the legacy global user_profiles role contract to add `professional`.
+    ban(m, r"ALTER\s+TABLE\s+(?:public\.)?user_profiles\b", "must not alter legacy user_profiles role contract")
+    ban(
+        m,
+        r"(?:UPDATE|INSERT\s+INTO)\s+(?:public\.)?user_profiles\b[^;]*\bprofessional\b",
+        "professional must not become a legacy global role",
+    )
 
     for token, msg in [
         ("CREATE TABLE IF NOT EXISTS public.professional_profiles", "professional_profiles missing"),
