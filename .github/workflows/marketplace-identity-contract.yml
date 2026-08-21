@@ -3,12 +3,12 @@ name: Marketplace Identity Contract
 on:
   push:
     paths:
-      - "web/supabase/migrations/12_marketplace_identity_foundation.sql"
+      - "web/supabase/migrations/20_marketplace_identity_foundation.sql"
       - "scripts/check_marketplace_identity_contract.py"
       - ".github/workflows/marketplace-identity-contract.yml"
   pull_request:
     paths:
-      - "web/supabase/migrations/12_marketplace_identity_foundation.sql"
+      - "web/supabase/migrations/20_marketplace_identity_foundation.sql"
       - "scripts/check_marketplace_identity_contract.py"
       - ".github/workflows/marketplace-identity-contract.yml"
 
@@ -20,13 +20,8 @@ jobs:
     name: Validate Story 12.1 identity migration contract
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
-      - name: Validate additive marketplace identity contract
-        run: python3 scripts/check_marketplace_identity_contract.py
+      - run: python3 scripts/check_marketplace_identity_contract.py
