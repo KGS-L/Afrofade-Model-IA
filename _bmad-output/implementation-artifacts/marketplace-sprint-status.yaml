@@ -1,12 +1,11 @@
 # Afrofade Marketplace track — BMAD sprint status
-# This file is intentionally separate from the existing sprint-status.yaml while the
-# marketplace plan is developed/merged. Implementation agents update this file story-by-story.
+# Separate from the legacy sprint-status.yaml until Marketplace V2 is reviewed and merged.
 
 track: marketplace
 created: 2026-08-21
 updated: 2026-08-21
 status: in-review
-current_story: "12.1-marketplace-identity-schema"
+current_story: "cross-epic-review-12-to-17"
 ux_authority: "_bmad-output/planning-artifacts/ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md"
 ux_backlog_amendment: "_bmad-output/planning-artifacts/epics-marketplace-ux-v2-amendments-2026-08-21.md"
 
@@ -53,88 +52,89 @@ execution_order:
 
 epics:
   epic-12-identity-professional-salons-entitlements:
-    status: in-progress
+    status: review
     stories:
       12.1-marketplace-identity-schema: review
-      12.2-legacy-salon-backfill-compatibility: backlog
-      12.3-professional-profile-onboarding: backlog
-      12.4-salon-memberships-multi-location: backlog
-      12.5-capability-entitlement-resolver: backlog
-      12.6-marketplace-plan-catalog: backlog
-      12.7-authenticated-workspace-context-switching: backlog
+      12.2-legacy-salon-backfill-compatibility: review
+      12.3-professional-profile-onboarding: review
+      12.4-salon-memberships-multi-location: review
+      12.5-capability-entitlement-resolver: review
+      12.6-marketplace-plan-catalog: review
+      12.7-authenticated-workspace-context-switching: review
 
   epic-13-taxonomy-services-local-discovery:
-    status: backlog
+    status: review
     stories:
-      13.1-hair-service-taxonomy-bridge: backlog
-      13.2-bookable-services-professional-eligibility: backlog
-      13.3-professional-portfolio: backlog
-      13.4-postgis-location-privacy: backlog
-      13.5-public-salon-professional-profiles: backlog
-      13.6-nearby-search-ranking-v1: backlog
-      13.7-discovery-ui: backlog
-      13.8-public-landing-v2-marketplace: backlog
+      13.1-hair-service-taxonomy-bridge: review
+      13.2-bookable-services-professional-eligibility: review
+      13.3-professional-portfolio: review
+      13.4-postgis-location-privacy: review
+      13.5-public-salon-professional-profiles: review
+      13.6-nearby-search-ranking-v1: review
+      13.7-discovery-ui: review
+      13.8-public-landing-v2-marketplace: review
 
   epic-14-availability-booking-notifications:
-    status: backlog
+    status: review
     stories:
-      14.1-scheduling-schema: backlog
-      14.2-availability-engine: backlog
-      14.3-concurrency-safe-booking: backlog
-      14.4-customer-booking-journey: backlog
-      14.5-provider-booking-operations: backlog
-      14.6-notification-outbox: backlog
-      14.7-tryon-visual-brief: backlog
-      14.8-booking-lifecycle-e2e: backlog
+      14.1-scheduling-schema: review
+      14.2-availability-engine: review
+      14.3-concurrency-safe-booking: review
+      14.4-customer-booking-journey: review
+      14.5-provider-booking-operations: review
+      14.6-notification-outbox: review
+      14.7-tryon-visual-brief: review
+      14.8-booking-lifecycle-e2e: review
 
   epic-15-trust-reviews-moderation:
-    status: backlog
+    status: review
     stories:
-      15.1-verification-listing-state: backlog
-      15.2-verified-reviews-schema: backlog
-      15.3-review-ui-aggregates: backlog
-      15.4-reporting-admin-moderation: backlog
-      15.5-trust-aware-ranking: backlog
+      15.1-verification-listing-state: review
+      15.2-verified-reviews-schema: review
+      15.3-review-ui-aggregates: review
+      15.4-reporting-admin-moderation: review
+      15.5-trust-aware-ranking: review
 
   epic-16-careers-recruitment:
-    status: backlog
+    status: review
     stories:
-      16.1-job-application-schema: backlog
-      16.2-salon-recruitment-ux: backlog
-      16.3-professional-jobs-application-ux: backlog
-      16.4-application-pipeline: backlog
-      16.5-hire-membership-handoff: backlog
-      16.6-careers-trust-moderation: backlog
+      16.1-job-application-schema: review
+      16.2-salon-recruitment-ux: review
+      16.3-professional-jobs-application-ux: review
+      16.4-application-pipeline: review
+      16.5-hire-membership-handoff: review
+      16.6-careers-trust-moderation: review
 
   epic-17-growth-commercial-readiness:
-    status: backlog
+    status: review
     stories:
-      17.1-marketplace-funnel-telemetry: backlog
-      17.2-professional-salon-subscription-ux: backlog
-      17.3-multi-location-entitlements-dashboard: backlog
-      17.4-marketplace-payment-readiness: backlog_feature_gated
-      17.5-sponsored-listing-guardrails: backlog_feature_gated
+      17.1-marketplace-funnel-telemetry: review
+      17.2-professional-salon-subscription-ux: review
+      17.3-multi-location-entitlements-dashboard: review
+      17.4-marketplace-payment-readiness: review_feature_gated
+      17.5-sponsored-listing-guardrails: review_feature_gated
 
 release_gates:
   M1:
-    status: pending
+    status: review_pending_ci
     requires: ["12.*", "13.*"]
   M2:
-    status: pending
+    status: review_pending_ci
     requires: ["14.*"]
   M3:
-    status: pending
+    status: review_pending_ci
     requires: ["15.*"]
   M4:
-    status: pending
+    status: review_pending_ci
     requires: ["16.*"]
   M5:
-    status: pending
+    status: review_pending_ci
     requires: ["17.1", "17.2", "17.3"]
 
 notes:
   - "Existing 3D Epics remain separate and may continue in parallel."
-  - "UX V2 amendment is authoritative for 12.3 onboarding, 12.7 workspace shell, 13.8 landing and related UX criteria."
-  - "Story 12.1 implementation exists and is under review in draft PR #15; do not mark done until CI evidence is green."
-  - "17.4 and 17.5 require explicit activation decisions before live rollout."
-  - "No story is done until BMAD review evidence + CI pass."
+  - "UX V2 amendment is authoritative for onboarding, workspace shell, landing and related UX criteria."
+  - "Stories 12.1 through 17.3 are implemented on draft PR #15 and are now in BMAD review, not done."
+  - "17.4 and 17.5 are implemented as disabled-by-default readiness/guardrail layers and require explicit activation decisions before rollout."
+  - "Marketplace V2 review workflow must pass static contract and Next/TypeScript typecheck before any story is promoted to done."
+  - "Do not merge PR #15 while CI/review evidence is incomplete."
