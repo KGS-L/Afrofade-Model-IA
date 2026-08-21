@@ -38,13 +38,13 @@ context: ['_bmad-output/implementation-artifacts/epic-12-context.md']
 
 ## Code Map
 
-- `web/supabase/migrations/13_marketplace_identity_foundation.sql` -- New migration script creating `professional_profiles`, `salon_memberships`, enums, indexes, and RLS policies.
+- `web/supabase/migrations/04_role_dashboards.sql` -- New migration script creating `professional_profiles`, `salon_memberships`, enums, indexes, and RLS policies.
 - `web/src/lib/types/marketplace.ts` -- TypeScript type definitions for `ProfessionalProfile`, `SalonMembership`, roles, and states.
 
 ## Tasks & Acceptance
 
 **Execution:**
-- [x] `web/supabase/migrations/13_marketplace_identity_foundation.sql` -- Create migration for `professional_profiles` and `salon_memberships` tables, constraints, indexes, and RLS policies -- Foundation for multi-tenant marketplace identity.
+- [x] `web/supabase/migrations/04_role_dashboards.sql` -- Create migration for `professional_profiles` and `salon_memberships` tables, constraints, indexes, and RLS policies -- Foundation for multi-tenant marketplace identity.
 - [x] `web/src/lib/types/marketplace.ts` -- Add TypeScript interfaces matching the database schema -- Type safety for marketplace entity operations.
 
 **Acceptance Criteria:**
@@ -63,7 +63,7 @@ context: ['_bmad-output/implementation-artifacts/epic-12-context.md']
 **Fondation du schéma d'identité & RLS**
 
 - Migration PostgreSQL créant les tables `professional_profiles`, `salon_memberships`, enums, index et politiques RLS multi-tenant
-  [`13_marketplace_identity_foundation.sql:1`](../../web/supabase/migrations/13_marketplace_identity_foundation.sql#L1)
+  [`04_role_dashboards.sql:323`](../../web/supabase/migrations/04_role_dashboards.sql#L323)
 
 **Types TypeScript & Contrats d'interfaces**
 
