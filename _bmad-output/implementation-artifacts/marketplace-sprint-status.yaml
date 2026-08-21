@@ -48,14 +48,14 @@ execution_order:
 
 epics:
   epic-12-identity-professional-salons-entitlements:
-    status: in-progress
+    status: done
     stories:
       12.1-marketplace-identity-schema: done
-      12.2-legacy-salon-backfill-compatibility: backlog
-      12.3-professional-profile-onboarding: backlog
-      12.4-salon-memberships-multi-location: backlog
-      12.5-capability-entitlement-resolver: backlog
-      12.6-marketplace-plan-catalog: backlog
+      12.2-legacy-salon-backfill-compatibility: done
+      12.3-professional-profile-onboarding: done
+      12.4-salon-memberships-multi-location: done
+      12.5-capability-entitlement-resolver: done
+      12.6-marketplace-plan-catalog: done
 
   epic-13-taxonomy-services-local-discovery:
     status: backlog

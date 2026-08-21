@@ -432,3 +432,37 @@ CREATE POLICY salon_memberships_update_owner_manager
         )
     );
 
+-- Backfill procedure for Story 12.2: Legacy salon backfill & compatibility
+CREATE OR REPLACE FUNCTION backfill_legacy_salon_memberships()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    -- 1. Ensure professional_profiles exists for all users
+    INSERT INTO professional_profiles (user_id, full_name)
+    SELECT 
+        up.user_id,
+        COALESCE(cp.display_name, 'Professionnel Afrofade')
+    FROM user_profiles up
+    LEFT JOIN customer_profiles cp ON cp.user_id = up.user_id
+    ON CONFLICT (user_id) DO NOTHING;
+
+    -- 2. Backfill salon_memberships for existing salon accounts
+    INSERT INTO salon_memberships (user_id, salon_id, role, state)
+    SELECT 
+        up.user_id,
+        s.id,
+        'owner',
+        'active'
+    FROM user_profiles up
+    CROSS JOIN salons s
+    WHERE up.role = 'salon'
+    ON CONFLICT (user_id, salon_id) DO NOTHING;
+END;
+$$;
+
+SELECT backfill_legacy_salon_memberships();
+
+
