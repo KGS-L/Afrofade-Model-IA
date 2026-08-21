@@ -4,8 +4,11 @@
 
 track: marketplace
 created: 2026-08-21
+updated: 2026-08-21
 status: ready
 current_story: "12.1-marketplace-identity-schema"
+ux_authority: "_bmad-output/planning-artifacts/ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md"
+ux_backlog_amendment: "_bmad-output/planning-artifacts/epics-marketplace-ux-v2-amendments-2026-08-21.md"
 
 execution_order:
   - 12.1-marketplace-identity-schema
@@ -14,6 +17,7 @@ execution_order:
   - 12.4-salon-memberships-multi-location
   - 12.5-capability-entitlement-resolver
   - 12.6-marketplace-plan-catalog
+  - 12.7-authenticated-workspace-context-switching
   - 13.1-hair-service-taxonomy-bridge
   - 13.2-bookable-services-professional-eligibility
   - 13.3-professional-portfolio
@@ -21,6 +25,7 @@ execution_order:
   - 13.5-public-salon-professional-profiles
   - 13.6-nearby-search-ranking-v1
   - 13.7-discovery-ui
+  - 13.8-public-landing-v2-marketplace
   - 14.1-scheduling-schema
   - 14.2-availability-engine
   - 14.3-concurrency-safe-booking
@@ -48,14 +53,15 @@ execution_order:
 
 epics:
   epic-12-identity-professional-salons-entitlements:
-    status: backlog
+    status: ready
     stories:
-      12.1-marketplace-identity-schema: backlog
+      12.1-marketplace-identity-schema: ready-for-dev
       12.2-legacy-salon-backfill-compatibility: backlog
       12.3-professional-profile-onboarding: backlog
       12.4-salon-memberships-multi-location: backlog
       12.5-capability-entitlement-resolver: backlog
       12.6-marketplace-plan-catalog: backlog
+      12.7-authenticated-workspace-context-switching: backlog
 
   epic-13-taxonomy-services-local-discovery:
     status: backlog
@@ -67,6 +73,7 @@ epics:
       13.5-public-salon-professional-profiles: backlog
       13.6-nearby-search-ranking-v1: backlog
       13.7-discovery-ui: backlog
+      13.8-public-landing-v2-marketplace: backlog
 
   epic-14-availability-booking-notifications:
     status: backlog
@@ -127,5 +134,6 @@ release_gates:
 
 notes:
   - "Existing 3D Epics remain separate and may continue in parallel."
+  - "UX V2 amendment is authoritative for 12.3 onboarding, 12.7 workspace shell, 13.8 landing and related UX criteria."
   - "17.4 and 17.5 require explicit activation decisions before live rollout."
   - "No story is done until BMAD review evidence + CI pass."
