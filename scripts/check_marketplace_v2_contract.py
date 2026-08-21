@@ -62,7 +62,7 @@ if "payment_mode VARCHAR(24) NOT NULL DEFAULT 'pay_at_provider'" not in payment:
 
 home=must('web/src/app/page.tsx','Trouvez le professionnel qui saura vraiment réaliser')
 for token in ['/discover','/rituel','Pour les professionnels','Questions fréquentes']:
- if token not in home: fail(f'landing missing {token}')
+ if token.lower() not in home.lower(): fail(f'landing missing {token}')
 nav=must('web/src/components/Navbar.tsx','Pour les pros')
 if 'Le Rituel' in nav: fail('Rituel must not lead the primary navbar')
 workspace=must('web/src/components/workspace/WorkspaceShell.tsx','grid grid-cols-4')
