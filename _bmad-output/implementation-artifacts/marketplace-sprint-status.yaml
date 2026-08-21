@@ -8,6 +8,7 @@ status: in-review
 current_story: "cross-epic-review-12-to-17"
 ux_authority: "_bmad-output/planning-artifacts/ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md"
 ux_backlog_amendment: "_bmad-output/planning-artifacts/epics-marketplace-ux-v2-amendments-2026-08-21.md"
+cross_epic_review: "_bmad-output/implementation-artifacts/MARKETPLACE-V2-CROSS-EPIC-REVIEW-2026-08-21.md"
 
 execution_order:
   - 12.1-marketplace-identity-schema
@@ -137,4 +138,6 @@ notes:
   - "Stories 12.1 through 17.3 are implemented on draft PR #15 and are now in BMAD review, not done."
   - "17.4 and 17.5 are implemented as disabled-by-default readiness/guardrail layers and require explicit activation decisions before rollout."
   - "Marketplace V2 review workflow must pass static contract and Next/TypeScript typecheck before any story is promoted to done."
-  - "Do not merge PR #15 while CI/review evidence is incomplete."
+  - "main advanced by 13 commits during this track; a real three-way merge/rebase is required and must preserve newer main infrastructure."
+  - "See MARKETPLACE-V2-CROSS-EPIC-REVIEW-2026-08-21.md for integration blockers and merge policy."
+  - "Do not merge PR #15 while main reconciliation or CI/review evidence is incomplete."
