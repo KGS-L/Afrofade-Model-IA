@@ -1,4 +1,45 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: afrofade-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-afrofade}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-afrofade_secret_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-afrofade_db}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-afrofade} -d ${POSTGRES_DB:-afrofade_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - afrofade-network
+
+  minio:
+    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: afrofade-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_secret}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - afrofade-network
+
   web:
     build:
       context: ./web
@@ -18,9 +59,9 @@ services:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.afrofade.pro}
       - API_INTERNAL_URL=${API_INTERNAL_URL:-http://api:8000}
       - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://afrofade:afrofade_secret_pass@db:5432/afrofade_db}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://afrofade.pro}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - CRON_SECRET=${CRON_SECRET}
       - PAYMENT_ENABLED_PROVIDERS=${PAYMENT_ENABLED_PROVIDERS:-money_fusion}
       - MONEY_FUSION_API_URL=${MONEY_FUSION_API_URL}
@@ -32,6 +73,8 @@ services:
     networks:
       - afrofade-network
     depends_on:
+      - db
+      - minio
       - api
 
   api:
@@ -47,12 +90,17 @@ services:
       - FASTAPI_ENV=${FASTAPI_ENV:-production}
       - API_INTERNAL_SECRET=${API_INTERNAL_SECRET}
       - API_ALLOWED_ORIGINS=${API_ALLOWED_ORIGINS:-https://afrofade.pro}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://afrofade:afrofade_secret_pass@db:5432/afrofade_db}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin_secret}
     volumes:
       - afrofade-generated-models:/tmp/generated_models
     networks:
       - afrofade-network
+    depends_on:
+      - db
+      - minio
 
   worker:
     build:
@@ -63,8 +111,10 @@ services:
     command: ["python", "-m", "workers.job_worker"]
     environment:
       - FASTAPI_ENV=${FASTAPI_ENV:-production}
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://afrofade:afrofade_secret_pass@db:5432/afrofade_db}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin_secret}
       - AI_WORKER_ENABLED=${AI_WORKER_ENABLED:-true}
       - AI_WORKER_ID=${AI_WORKER_ID:-}
       - AI_WORKER_CLAIM_LIMIT=${AI_WORKER_CLAIM_LIMIT:-1}
@@ -76,10 +126,15 @@ services:
       - afrofade-generated-models:/tmp/generated_models
     networks:
       - afrofade-network
+    depends_on:
+      - db
+      - minio
 
 networks:
   afrofade-network:
     driver: bridge
 
 volumes:
+  postgres-data:
+  minio-data:
   afrofade-generated-models:
