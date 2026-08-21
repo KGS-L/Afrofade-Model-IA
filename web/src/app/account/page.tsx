@@ -18,14 +18,17 @@ import {
   Wallet,
 } from 'lucide-react';
 import { CountrySelect } from '@/components/CountrySelect';
+import { NationalitySelect } from '@/components/NationalitySelect';
+import { PhoneInput } from '@/components/PhoneInput';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { useAuth } from '@/lib/auth';
 import { B2C_CREDIT_PACKS } from '@/lib/credits';
+import { parsePhone, getDialCodeForCountry, getNationalityForCountry } from '@/lib/countries';
 import type { PaymentProvider } from '@/lib/payment-providers';
 import { formatFcfa } from '@/lib/plans';
 
 type AccountOverview = {
-  profile: { displayName: string; phone: string; country: string };
+  profile: { displayName: string; phone: string; country: string; nationality?: string };
   wallet: { balance: number; updatedAt: string | null };
   ledger: Array<{
     id: string;
@@ -72,7 +75,13 @@ export default function AccountPage() {
   const router = useRouter();
   const { user, hydrated, logout } = useAuth();
   const [overview, setOverview] = useState<AccountOverview | null>(null);
-  const [profile, setProfile] = useState({ displayName: '', phone: '', country: '' });
+  const [profile, setProfile] = useState({
+    displayName: '',
+    country: 'Burkina Faso',
+    nationality: 'Burkinabè',
+    dialCode: '+226',
+    phoneRaw: '',
+  });
   const [salonForm, setSalonForm] = useState({ name: '', country: '', phone: '' });
   const [providers, setProviders] = useState<Provider[]>([]);
   const [provider, setProvider] = useState<PaymentProvider>('money_fusion');
@@ -86,7 +95,14 @@ export default function AccountPage() {
 
   const applyOverview = (data: AccountOverview) => {
     setOverview(data);
-    setProfile(data.profile);
+    const parsed = parsePhone(data.profile.phone || '');
+    setProfile({
+      displayName: data.profile.displayName || '',
+      country: data.profile.country || 'Burkina Faso',
+      nationality: data.profile.nationality || getNationalityForCountry(data.profile.country || 'Burkina Faso'),
+      dialCode: parsed.dialCode,
+      phoneRaw: parsed.numberOnly,
+    });
     setSalonForm((previous) => ({
       name: previous.name || `${data.profile.displayName || 'Mon'} Barber Shop`,
       country: previous.country || data.profile.country,
@@ -196,16 +212,30 @@ export default function AccountPage() {
     setSaving(true);
     setSaved(false);
     setError(null);
+
+    const fullPhone = `${profile.dialCode}${profile.phoneRaw.replace(/\s+/g, '')}`;
+
     try {
       const response = await fetch('/api/account/overview', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({
+          displayName: profile.displayName,
+          country: profile.country,
+          nationality: profile.nationality,
+          phone: fullPhone,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Enregistrement impossible.');
-      setProfile(data.profile);
-      setOverview((previous) => (previous ? { ...previous, profile: data.profile } : previous));
+      const parsed = parsePhone(data.profile.phone || fullPhone);
+      setProfile({
+        displayName: data.profile.displayName || profile.displayName,
+        country: data.profile.country || profile.country,
+        nationality: data.profile.nationality || profile.nationality,
+        dialCode: parsed.dialCode,
+        phoneRaw: parsed.numberOnly,
+      });
       setSaved(true);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Enregistrement impossible.');
@@ -301,14 +331,48 @@ export default function AccountPage() {
 
         <section className="bg-card rounded-card border border-ink/10 p-6 sm:p-8 shadow-soft">
           <h2 className="font-display text-xl">Mon profil</h2>
-          <p className="text-xs text-ink-soft mt-1">Ces données servent aussi à préremplir les paiements.</p>
-          <form onSubmit={saveProfile} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-            <input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="Nom" required className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <CountrySelect value={profile.country} onChange={(country) => setProfile({ ...profile, country })} required className="w-full" />
-            <input value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} placeholder="+226..." className="min-h-[48px] rounded-input border border-ink/15 bg-cream px-4" />
-            <div className="sm:col-span-3 flex items-center gap-3">
+          <p className="text-xs text-ink-soft mt-1">Ces données servent aussi à préremplir les paiements et réservations.</p>
+          <form onSubmit={saveProfile} className="space-y-4 mt-5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label className="block text-xs font-bold">Votre nom
+                <input value={profile.displayName} onChange={(event) => setProfile({ ...profile, displayName: event.target.value })} placeholder="Nom" required className="mt-1.5 w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 font-normal" />
+              </label>
+              <label className="block text-xs font-bold">Pays de résidence
+                <CountrySelect
+                  value={profile.country}
+                  onChange={(country) => {
+                    const dialCode = getDialCodeForCountry(country);
+                    const nationality = getNationalityForCountry(country);
+                    setProfile((prev) => ({ ...prev, country, dialCode, nationality }));
+                  }}
+                  required
+                  className="mt-1.5 w-full font-normal"
+                />
+              </label>
+              <label className="block text-xs font-bold">Nationalité
+                <NationalitySelect
+                  value={profile.nationality}
+                  onChange={(nationality) => setProfile({ ...profile, nationality })}
+                  required
+                  className="mt-1.5 w-full font-normal"
+                />
+              </label>
+            </div>
+
+            <label className="block text-xs font-bold">Téléphone (Indicatif + Numéro sans indicatif)
+              <PhoneInput
+                dialCode={profile.dialCode}
+                onDialCodeChange={(dialCode) => setProfile({ ...profile, dialCode })}
+                phoneNumber={profile.phoneRaw}
+                onPhoneNumberChange={(phoneRaw) => setProfile({ ...profile, phoneRaw })}
+                required
+                className="mt-1.5"
+              />
+            </label>
+
+            <div className="flex items-center gap-3 pt-2">
               <button disabled={saving} className="min-h-[46px] px-6 rounded-pill bg-terracotta text-white font-bold disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
-              {saved && <span className="text-xs font-bold text-terracotta-dark inline-flex gap-1"><Check className="w-4 h-4" />Profil enregistré</span>}
+              {saved && <span className="text-xs font-bold text-terracotta-dark inline-flex items-center gap-1"><Check className="w-4 h-4" />Profil enregistré</span>}
             </div>
           </form>
         </section>

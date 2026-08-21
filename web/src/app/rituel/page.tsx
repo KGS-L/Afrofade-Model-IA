@@ -52,7 +52,7 @@ const AvatarCanvas: React.FC<{
   hairstyleColor: string;
   modelUrl: string;
   autoRotate?: boolean;
-  canvasRef?: React.RefObject<HTMLDivElement | null>;
+  canvasRef?: React.Ref<HTMLDivElement>;
 }> = ({ hairstyleId, hairstyleColor, modelUrl, autoRotate = true, canvasRef }) => (
   <div ref={canvasRef} className="relative h-[380px] rounded-card overflow-hidden bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)]">
     <Canvas

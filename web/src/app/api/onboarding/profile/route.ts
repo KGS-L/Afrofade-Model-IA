@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const profileType = body?.profileType === 'salon' ? 'salon' : body?.profileType === 'customer' ? 'customer' : null;
     const country = cleanString(body?.country, 100);
+    const nationality = cleanString(body?.nationality, 100);
     const phone = cleanPhone(body?.phone);
     if (!profileType) return NextResponse.json({ error: 'Choisissez Particulier ou Salon de coiffure.' }, { status: 400 });
     if (!isSupportedCountry(country)) return NextResponse.json({ error: 'Sélectionnez un pays dans la liste.' }, { status: 400 });
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
         const displayName = cleanString(body?.displayName, 120) || principal.user.user_metadata?.full_name || principal.user.user_metadata?.name || principal.user.email?.split('@')[0] || 'Utilisateur Afrofade';
         try {
           await supabaseAdmin.from('user_profiles').upsert({ user_id: principal.user.id, role: 'customer', salon_id: null }, { onConflict: 'user_id' });
-          await supabaseAdmin.from('customer_profiles').upsert({ user_id: principal.user.id, display_name: displayName, phone, country, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+          await supabaseAdmin.from('customer_profiles').upsert({ user_id: principal.user.id, display_name: displayName, phone, country, nationality: nationality || null, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
         } catch (dbErr) {
           console.warn('[Onboarding] Supabase db write skipped:', dbErr);
         }

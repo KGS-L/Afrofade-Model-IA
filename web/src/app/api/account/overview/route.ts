@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const auth = await requireCustomer(req); if ('response' in auth) return auth.response;
     const { principal } = auth; const supabaseAdmin = getServiceSupabase();
     const [profileResult, walletResult, ledgerResult, paymentsResult, headsResult] = await Promise.all([
-      supabaseAdmin.from('customer_profiles').select('display_name, phone, country, updated_at').eq('user_id', principal.user.id).maybeSingle(),
+      supabaseAdmin.from('customer_profiles').select('display_name, phone, country, nationality, updated_at').eq('user_id', principal.user.id).maybeSingle(),
       supabaseAdmin.from('credit_wallets').select('balance, updated_at').eq('user_id', principal.user.id).maybeSingle(),
       supabaseAdmin.from('credit_transactions').select('id, delta, reason, reference_id, created_at').eq('user_id', principal.user.id).order('created_at', { ascending: false }).limit(30),
       supabaseAdmin.from('payment_transactions').select('id, provider, product_id, amount_fcfa, status, created_at, paid_at').eq('user_id', principal.user.id).eq('purpose', 'credits').order('created_at', { ascending: false }).limit(20),
@@ -27,7 +27,12 @@ export async function GET(req: NextRequest) {
     const metadata = principal.user.user_metadata || {}; 
     const fallbackName = metadata.full_name || metadata.name || principal.user.email?.split('@')[0] || 'Utilisateur Afrofade';
     return NextResponse.json({ 
-      profile: { displayName: profileResult.data?.display_name || fallbackName, phone: profileResult.data?.phone || '', country: profileResult.data?.country || '' }, 
+      profile: {
+        displayName: profileResult.data?.display_name || fallbackName,
+        phone: profileResult.data?.phone || '',
+        country: profileResult.data?.country || '',
+        nationality: profileResult.data?.nationality || '',
+      }, 
       wallet: { balance: walletResult.data?.balance ?? 0, updatedAt: walletResult.data?.updated_at ?? null }, 
       ledger: ledgerResult.data || [], 
       payments: paymentsResult.data || [], 
@@ -36,7 +41,7 @@ export async function GET(req: NextRequest) {
   } catch (error) { 
     console.error('[Customer Account] GET failed:', error); 
     return NextResponse.json({ 
-      profile: { displayName: 'Utilisateur Afrofade', phone: '', country: '' }, 
+      profile: { displayName: 'Utilisateur Afrofade', phone: '', country: '', nationality: '' }, 
       wallet: { balance: 0, updatedAt: null }, 
       ledger: [], 
       payments: [], 
@@ -48,12 +53,16 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const auth = await requireCustomer(req); if ('response' in auth) return auth.response;
-    const { principal } = auth; const body = await req.json(); const displayName = cleanString(body?.displayName, 120); const country = cleanString(body?.country, 100); const phone = cleanPhone(body?.phone);
+    const { principal } = auth; const body = await req.json();
+    const displayName = cleanString(body?.displayName, 120);
+    const country = cleanString(body?.country, 100);
+    const nationality = cleanString(body?.nationality, 100);
+    const phone = cleanPhone(body?.phone);
     if (!displayName) return NextResponse.json({ error: 'Le nom est requis.' }, { status: 400 });
     if (!isSupportedCountry(country)) return NextResponse.json({ error: 'Sélectionnez un pays dans la liste.' }, { status: 400 });
     if (body?.phone && !phone) return NextResponse.json({ error: 'Numéro de téléphone invalide.' }, { status: 400 });
-    const { data, error } = await getServiceSupabase().from('customer_profiles').upsert({ user_id: principal.user.id, display_name: displayName, phone: phone || null, country, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).select('display_name, phone, country').single();
+    const { data, error } = await getServiceSupabase().from('customer_profiles').upsert({ user_id: principal.user.id, display_name: displayName, phone: phone || null, country, nationality: nationality || null, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).select('display_name, phone, country, nationality').single();
     if (error) throw new Error(error.message);
-    return NextResponse.json({ profile: { displayName: data.display_name || '', phone: data.phone || '', country: data.country || '' } });
+    return NextResponse.json({ profile: { displayName: data.display_name || '', phone: data.phone || '', country: data.country || '', nationality: data.nationality || '' } });
   } catch (error) { console.error('[Customer Account] PATCH failed:', error); return NextResponse.json({ error: 'Impossible d’enregistrer votre profil.' }, { status: 500 }); }
 }
