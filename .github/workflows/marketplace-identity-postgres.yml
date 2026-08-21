@@ -3,13 +3,13 @@ name: Marketplace Identity PostgreSQL
 on:
   push:
     paths:
-      - "web/supabase/migrations/12_marketplace_identity_foundation.sql"
-      - "web/supabase/tests/12_marketplace_identity_foundation.sql"
+      - "web/supabase/migrations/20_marketplace_identity_foundation.sql"
+      - "web/supabase/tests/20_marketplace_identity_foundation.sql"
       - ".github/workflows/marketplace-identity-postgres.yml"
   pull_request:
     paths:
-      - "web/supabase/migrations/12_marketplace_identity_foundation.sql"
-      - "web/supabase/tests/12_marketplace_identity_foundation.sql"
+      - "web/supabase/migrations/20_marketplace_identity_foundation.sql"
+      - "web/supabase/tests/20_marketplace_identity_foundation.sql"
       - ".github/workflows/marketplace-identity-postgres.yml"
 
 permissions:
@@ -26,21 +26,15 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Run migration contract
         env:
           PGPASSWORD: postgres
-        run: |
-          psql -h 127.0.0.1 -U postgres -d postgres \
-            -f web/supabase/tests/12_marketplace_identity_foundation.sql
+        run: psql -h 127.0.0.1 -U postgres -d postgres -f web/supabase/tests/20_marketplace_identity_foundation.sql
