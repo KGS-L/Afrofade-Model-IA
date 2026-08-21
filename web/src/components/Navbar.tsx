@@ -1,121 +1,32 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Scissors, Menu, X } from "lucide-react";
+import Link from 'next/link';
+import { Menu, Scissors, X } from 'lucide-react';
+import { useState } from 'react';
 
 const NAV_LINKS = [
-  { href: "/#rituel-studio", label: "Le Rituel" },
-  { href: "/styles", label: "Styles" },
-  { href: "/#tarifs", label: "Tarifs" },
-  { href: "/#faq", label: "FAQ" },
+  { href: '/discover', label: 'Découvrir' },
+  { href: '/styles', label: 'Styles' },
+  { href: '/discover?type=professional', label: 'Professionnels' },
+  { href: '/discover?type=salon', label: 'Salons' },
+  { href: '/pour-les-pros', label: 'Pour les pros' },
 ];
 
-export const Navbar: React.FC = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  return (
-    <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur-md border-b border-ink/10">
-      <div className="max-w-container mx-auto px-6 py-3 flex items-center gap-6">
-        {/* Brand Logo */}
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 shrink-0"
-          aria-label="Afrofade — retour à l'accueil"
-          onClick={() => setMenuOpen(false)}
-        >
-          <div className="w-10 h-10 rounded-card bg-terracotta flex items-center justify-center">
-            <Scissors className="w-5 h-5 text-white stroke-[2.5]" />
-          </div>
-          <span className="font-display text-xl tracking-tight text-ink">
-            Afro<span className="text-terracotta">fade</span>
-          </span>
-        </Link>
-
-        {/* Ancres desktop */}
-        <nav
-          aria-label="Navigation principale"
-          className="hidden lg:flex items-center gap-1 ml-4"
-        >
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="min-h-[44px] flex items-center px-3 rounded-pill text-sm font-medium text-ink-soft hover:text-terracotta transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-3">
-          {/* Espace salon / connexion */}
-          <Link
-            href="/connexion"
-            className="hidden sm:inline-flex min-h-[44px] items-center px-3 rounded-pill text-sm font-medium text-ink-soft hover:text-terracotta transition-colors"
-          >
-            Espace salon
-          </Link>
-
-          {/* CTA pill terracotta → page dédiée au test du Rituel */}
-          <Link
-            href="/rituel"
-            className="min-h-[44px] inline-flex items-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
-          >
-            <span className="hidden sm:inline">Tester le rituel 1mn</span>
-            <span className="sm:hidden">Tester 1mn</span>
-          </Link>
-
-          {/* Hamburger mobile (< lg) */}
-          <button
-            onClick={() => setMenuOpen((prev) => !prev)}
-            aria-expanded={menuOpen}
-            aria-controls="navbar-mobile-menu"
-            aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-            className="lg:hidden w-11 h-11 rounded-pill bg-card border border-ink/15 text-ink flex items-center justify-center"
-          >
-            {menuOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
-        </div>
+export function Navbar() {
+  const [open, setOpen] = useState(false);
+  return <header className="sticky top-0 z-40 border-b border-ink/10 bg-cream/95 backdrop-blur">
+    <div className="max-w-container mx-auto px-4 sm:px-6 min-h-[68px] flex items-center gap-5">
+      <Link href="/" onClick={()=>setOpen(false)} className="flex items-center gap-2.5 shrink-0" aria-label="Afrofade — accueil">
+        <span className="w-10 h-10 rounded-card bg-terracotta text-white flex items-center justify-center"><Scissors className="w-5 h-5"/></span>
+        <span className="font-display text-xl">Afro<span className="text-terracotta">fade</span></span>
+      </Link>
+      <nav className="hidden lg:flex items-center gap-1">{NAV_LINKS.map(item=><Link key={item.href} href={item.href} className="min-h-[44px] inline-flex items-center px-3 rounded-pill text-sm font-medium text-ink-soft hover:text-terracotta">{item.label}</Link>)}</nav>
+      <div className="ml-auto flex items-center gap-2">
+        <Link href="/connexion" className="hidden sm:inline-flex min-h-[44px] items-center px-3 text-sm font-medium text-ink-soft hover:text-terracotta">Se connecter</Link>
+        <Link href="/rituel" className="min-h-[44px] inline-flex items-center rounded-pill bg-terracotta hover:bg-terracotta-dark px-4 sm:px-5 text-sm font-bold text-white">Essayer une coiffure</Link>
+        <button className="lg:hidden w-11 h-11 rounded-pill border border-ink/15 bg-card flex items-center justify-center" onClick={()=>setOpen(v=>!v)} aria-label={open?'Fermer le menu':'Ouvrir le menu'}>{open?<X className="w-5 h-5"/>:<Menu className="w-5 h-5"/>}</button>
       </div>
-
-      {/* Panneau mobile */}
-      {menuOpen && (
-        <nav
-          id="navbar-mobile-menu"
-          aria-label="Navigation mobile"
-          className="lg:hidden bg-card border-t border-ink/10 px-6 py-4 space-y-1 animate-fade-in"
-        >
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMenuOpen(false)}
-              className="min-h-[48px] flex items-center px-3 rounded-pill text-sm font-medium text-ink hover:bg-terracotta-wash transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link
-            href="/connexion"
-            onClick={() => setMenuOpen(false)}
-            className="min-h-[48px] flex items-center px-3 rounded-pill text-sm font-medium text-ink hover:bg-terracotta-wash transition-colors"
-          >
-            Espace salon
-          </Link>
-          <Link
-            href="/rituel"
-            onClick={() => setMenuOpen(false)}
-            className="w-full min-h-[48px] mt-2 inline-flex items-center justify-center gap-2 bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm px-5 rounded-pill transition-colors"
-          >
-            Tester le rituel 1mn
-          </Link>
-        </nav>
-      )}
-    </header>
-  );
-};
+    </div>
+    {open&&<nav className="lg:hidden border-t border-ink/10 bg-card px-4 sm:px-6 py-3">{NAV_LINKS.map(item=><Link key={item.href} href={item.href} onClick={()=>setOpen(false)} className="min-h-[48px] flex items-center px-3 rounded-input text-sm font-medium hover:bg-terracotta-wash">{item.label}</Link>)}<Link href="/connexion" onClick={()=>setOpen(false)} className="min-h-[48px] flex sm:hidden items-center px-3 rounded-input text-sm font-medium hover:bg-terracotta-wash">Se connecter</Link></nav>}
+  </header>;
+}

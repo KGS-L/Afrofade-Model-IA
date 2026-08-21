@@ -61,9 +61,20 @@ class AssetStorage(ABC):
     def exists(self, asset: StoredAssetRef) -> bool:
         raise NotImplementedError
 
-    @abstractmethod
     def read_object(self, asset: StoredAssetRef, *, max_bytes: int) -> bytes:
-        raise NotImplementedError
+        """Read a bounded object when supported by the adapter.
+
+        `read_object` was added after the original AssetStorage contract. Keeping a
+        fail-closed concrete fallback preserves compatibility with older lightweight
+        adapters/test doubles while every production adapter that supports reads
+        overrides this method. Callers still receive an explicit storage error if a
+        legacy adapter is used on a code path that actually requires object reads.
+        """
+        if max_bytes < 1:
+            raise AssetStorageError("max_bytes must be positive")
+        raise AssetStorageError(
+            f"Bounded reads are not supported by {self.__class__.__name__}"
+        )
 
 
 class AssetStorageService:

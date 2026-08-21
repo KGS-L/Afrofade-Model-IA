@@ -55,13 +55,21 @@ def main() -> int:
         and "effectiveEnabled" in provider_config
         and "getOperationalPaymentProviders" in checkout
     )
+    # Marketplace V2 authorizes purchases by the owned business context rather than by
+    # the legacy mutually-exclusive customer/salon role. Personal credit packs remain
+    # available to non-admin accounts; subscriptions require an owned ProfessionalProfile
+    # or an owner/manager SalonMembership (legacy salon_id is compatibility-only).
     checkout_role_aware = (
-        ("purpose === 'credits' && principal.role !== 'customer'" in checkout or "purpose==='credits'&&principal.role!=='customer'" in checkout)
-        and ("principal.role !== 'salon'" in checkout or "principal.role!=='salon'" in checkout)
+        "principal.role === 'admin'" in checkout
+        and "professional_profiles" in checkout
+        and ".eq('user_id', principal.user.id)" in checkout
+        and "resolveSalonSubscriptionContext" in checkout
+        and "membership?.role === 'owner'" in checkout
+        and "membership?.role === 'manager'" in checkout
     )
     checkout_return_paths_match_role = (
-        "purpose === 'credits' ? '/account' : '/dashboard'" in checkout
-        or "purpose==='credits'?'/account':'/dashboard'" in checkout
+        "purpose === 'credits' ? '/account' : '/workspace/subscription'" in checkout
+        or "purpose==='credits'?'/account':'/workspace/subscription'" in checkout
     )
     explicit_new_user_onboarding = (
         "handle_afrofade_auth_user_created" in migration09
@@ -78,7 +86,7 @@ def main() -> int:
         require("Middleware verifies session", "getVerifiedPrincipal" in middleware and "principal.role !== 'admin'" in middleware, "protected routes validate the Supabase-backed principal and admin role"),
         require("Unified checkout requires verified user", "getVerifiedPrincipal" in checkout, "checkout is authenticated server-side"),
         require("Checkout does not trust client amount", "body?.amountFcfa" not in checkout and "body.amountFcfa" not in checkout, "price comes from server catalog"),
-        require("Checkout uses server product catalogs", "PLANS.find" in checkout and "B2C_CREDIT_PACKS.find" in checkout, "subscriptions and credits are priced from trusted constants"),
+        require("Checkout uses server product catalogs", "B2C_CREDIT_PACKS.find" in checkout and "getMarketplaceSubscriptionProduct" in checkout and "priceSubscription" in checkout, "credits and Marketplace subscriptions are priced from trusted server catalogs"),
         require("Payment is persisted pending", payment_is_persisted_pending, "provider session is linked to a pending DB transaction"),
         require("Payment providers are feature-gated", payment_provider_gate, "DB admin switch and server allow-list must both allow a provider"),
         require("Legacy Money Fusion checkout is safe", "export { POST }" in legacy_checkout and "../../checkout/route" in legacy_checkout, "old route delegates to unified server-side checkout"),
@@ -111,9 +119,9 @@ def main() -> int:
         require("Salon dashboard uses real data", "clients_heads" in salon_api and "subscriptions" in salon_api and "payment_transactions" in salon_api and "Stats mock" not in salon_page, "salon KPIs and histories come from Supabase"),
         require("Admin API enforces role", "principal.role !== 'admin'" in admin_api and "getVerifiedPrincipal" in admin_api, "admin analytics cannot be read by non-admins"),
         require("Admin dashboard has no fixtures", "const KPIS" not in admin_page and "RECENT_SALONS" not in admin_page and "/api/admin/overview" in admin_page, "admin UI consumes real server analytics"),
-        require("Checkout is role-aware", checkout_role_aware, "B2C and salon purchases cannot cross role boundaries"),
-        require("Checkout return paths match role", checkout_return_paths_match_role, "payment redirects land in the correct operational dashboard"),
-        require("Subscription discounts are server-verified", "discountEligible" in checkout and "previousPayment" in checkout and "salon?.country" in checkout, "client cannot unlock first-subscription discounts locally"),
+        require("Checkout is context-authorized", checkout_role_aware, "personal credits are non-admin; Pro and Salon subscriptions require owned contexts"),
+        require("Checkout return paths match context", checkout_return_paths_match_role, "personal credits return to account and subscriptions return to the multi-context workspace"),
+        require("Subscription discounts are server-verified", "discountEligible" in checkout and "previousPayment" in checkout and "salonContext.salon.country" in checkout and "priceSubscription(subscriptionProduct, termId, discountEligible)" in checkout, "client cannot unlock first-subscription discounts locally"),
     ]
 
     passed = sum(checks)
