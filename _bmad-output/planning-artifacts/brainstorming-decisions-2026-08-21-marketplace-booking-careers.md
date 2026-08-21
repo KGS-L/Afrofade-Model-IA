@@ -155,3 +155,53 @@ D03 does **not** yet decide whether a subscription is billed:
 - or through a hybrid base plan + additional-location fee.
 
 That is a separate monetization decision because it materially affects pricing and entitlements.
+
+---
+
+## D04 — Professional access follows the business channel that benefits
+
+**Status:** ACCEPTED
+
+Afrofade separates a professional's identity from the commercial entitlement used to operate on the platform.
+
+### Rule for salon-affiliated professionals
+
+A hair professional who belongs to a salon with an active eligible salon entitlement does **not** need to purchase a separate personal professional subscription merely to perform salon-authorized work.
+
+Through the salon entitlement, the professional may receive the capabilities required for that salon, such as:
+
+- appearing on the salon team;
+- receiving bookings assigned through that salon;
+- maintaining the professional information/portfolio required by the salon experience;
+- participating in salon scheduling and operational workflows according to membership permissions.
+
+The salon is paying for the business channel that receives the commercial benefit.
+
+### Rule for independent/personal business activity
+
+A professional who operates independently, or wants to develop a personal business channel outside the scope of a salon membership, must have an active personal `Afrofade Pro`-type entitlement according to the future pricing model.
+
+Personal paid capabilities may govern:
+
+- independent marketplace discoverability;
+- direct bookings to the professional;
+- independent service-area listing;
+- personal business portfolio and analytics;
+- recruitment/career premium capabilities;
+- future promotion/boost tools.
+
+### Consumer rule
+
+A consumer/particulier does not need a recurring professional subscription. The existing B2C direction remains credit-based for billable AI actions unless a later explicit monetization decision changes it.
+
+### Entitlement consequence
+
+Authorization must be capability/entitlement based rather than inferred only from a global user role. The same `ProfessionalProfile` may receive capabilities from:
+
+1. a personal professional subscription;
+2. one or more active salon memberships whose salons carry eligible subscriptions;
+3. platform/admin grants when explicitly supported.
+
+### Pricing consequence
+
+D04 does not set final prices. Pricing for `Professional`, `Salon` and `Multi-location/Business` plans remains a separate product decision informed by competitive research and willingness-to-pay validation.
