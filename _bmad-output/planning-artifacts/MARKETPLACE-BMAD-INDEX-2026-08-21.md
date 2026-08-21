@@ -43,23 +43,40 @@ Use this file as the entry point for the 2026-08-21 product expansion.
    - booking concurrency/RLS invariants.
 
 9. `ux-designs/UX-AFROFADE-MARKETPLACE-2026-08-21.md`
-   - navigation and screen behavior;
-   - onboarding, discover, booking, professional and salon workspaces, careers.
+   - original marketplace UX contract;
+   - useful baseline for discover, booking, careers and workspace concepts.
 
-10. `epics-marketplace-2026-08-21.md`
+10. `ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md`
+    - **canonical UX authority when it conflicts with the V1 UX contract**;
+    - validated landing V2 and public marketplace narrative;
+    - style-first discovery and optional Try-On bridge;
+    - discover -> provider -> booking flow;
+    - personal-by-default onboarding (no forced irreversible role choice);
+    - one-account/multi-context workspace model;
+    - consumer, professional, salon/multi-location and admin dashboards;
+    - smartphone hamburger + contextual bottom tab bar, maximum four items;
+    - UX implementation gates and route targets.
+
+11. `epics-marketplace-2026-08-21.md`
     - Epics 12-17;
     - implementation stories and acceptance criteria.
 
-11. `EXECUTION-MARKETPLACE-2026-08-21.md`
+12. `EXECUTION-MARKETPLACE-2026-08-21.md`
     - exact story order;
     - branch/spec/test/review workflow;
     - implementation gates and no-merge rule.
 
-12. `_bmad-output/implementation-artifacts/readiness-2026-08-21-marketplace.md`
+13. `_bmad-output/implementation-artifacts/readiness-2026-08-21-marketplace.md`
     - implementation readiness result.
 
-13. `_bmad-output/implementation-artifacts/marketplace-sprint-status.yaml`
+14. `_bmad-output/implementation-artifacts/marketplace-sprint-status.yaml`
     - live marketplace story status during implementation.
+
+## UX authority note
+
+The V2 UX contract was produced after the marketplace planning set and records subsequent validated product decisions. For UX behavior, navigation, onboarding, landing-page composition and workspace interaction, use the V2 contract when an older artifact conflicts with it.
+
+In particular, do not implement the older UX assumption that every new account must immediately choose `client / professional / salon`. The current approved model starts with a personal/consumer context and creates professional/salon activities only when the user expresses that intent.
 
 ## Deprecated redirect
 
@@ -81,6 +98,8 @@ After this planning set is merged to `main`, marketplace coding begins at:
 > **Story 12.1 — Marketplace identity schema**
 
 unless a more recent explicitly approved BMAD artifact changes the order.
+
+The V2 UX contract must be reconciled into story-level implementation acceptance criteria before any UI story is considered ready for development.
 
 ## Important non-authorizations
 
