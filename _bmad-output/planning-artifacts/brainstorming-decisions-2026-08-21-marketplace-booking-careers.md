@@ -286,3 +286,63 @@ Availability must be modeled at both levels:
 - professional working schedule/availability.
 
 Booking resolution must intersect service duration, salon hours, professional eligibility, existing appointments and future capacity rules instead of storing only a free-form requested datetime.
+
+---
+
+## D06 — Afrofade is non-custodial for third-party service money
+
+**Status:** ACCEPTED
+
+Afrofade must **not hold, custody or maintain stored-value balances containing money that economically belongs to customers, salons or professionals**.
+
+### Financial boundary
+
+Afrofade may receive and account for money that belongs to Afrofade itself, including for example:
+
+- subscription fees;
+- B2C AI credit-pack purchases where credits are product usage units, not withdrawable monetary balances;
+- platform commissions;
+- booking/platform fees;
+- premium recruitment fees;
+- promoted listing / boost fees;
+- other Afrofade-owned service fees.
+
+Afrofade must not expose a withdrawable user wallet, salon balance or professional cash balance that represents third-party funds held by Afrofade.
+
+### If service payment is later enabled
+
+If a customer later pays for a haircut/service through an Afrofade checkout, the preferred architecture is a payment service provider capable of marketplace routing, split payments or equivalent settlement so that:
+
+```text
+Customer payment
+      |
+      +--> Salon / independent professional share -> PSP settlement to provider
+      |
+      +--> Afrofade commission / platform fee -> Afrofade
+```
+
+Afrofade records transaction references, booking payment state, fee/commission amounts and provider settlement identifiers, but does not become the custodian of the provider's money.
+
+### MVP consequence
+
+Booking does **not** require online payment in the first version. A valid MVP may support:
+
+```text
+Reserve on Afrofade
+      ->
+Pay the salon/professional directly at service time
+```
+
+while Afrofade monetizes subscriptions and its own platform services.
+
+This avoids making booking dependent on marketplace payout infrastructure before customer/salon demand is validated.
+
+### Architecture consequence
+
+Do not design a generic `user_wallet.balance` or `salon_wallet.balance` representing fiat money. Existing B2C `credit wallet` terminology must remain strictly scoped to non-withdrawable Afrofade usage credits and must never be represented as a fiat deposit account.
+
+If marketplace payments are introduced, model them as payment/order/settlement records tied to an external regulated PSP and provider accounts, with explicit commission accounting and idempotent payment state.
+
+### Compliance consequence
+
+Any future marketplace/split-payment provider and launch jurisdiction must be reviewed before enabling service-payment flows. This product decision defines the intended architecture but is not itself a legal or regulatory determination.
