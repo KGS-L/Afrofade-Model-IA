@@ -25,7 +25,12 @@ jobs:
       - name: Install lightweight integration dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "pydantic~=2.6.0" "requests~=2.31.0"
+          python -m pip install \
+            "pydantic~=2.6.0" \
+            "requests~=2.31.0" \
+            "numpy~=1.26.0" \
+            "trimesh~=4.3.0" \
+            "pillow~=10.2.0"
 
       - name: Validate Story 7.6 end-to-end durable head lifecycle
         run: python3 api/scripts/validate_head_job_integration.py
