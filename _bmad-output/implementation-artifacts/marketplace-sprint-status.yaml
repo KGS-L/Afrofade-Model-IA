@@ -58,55 +58,55 @@ epics:
       12.6-marketplace-plan-catalog: done
 
   epic-13-taxonomy-services-local-discovery:
-    status: backlog
+    status: done
     stories:
-      13.1-hair-service-taxonomy-bridge: backlog
-      13.2-bookable-services-professional-eligibility: backlog
-      13.3-professional-portfolio: backlog
-      13.4-postgis-location-privacy: backlog
-      13.5-public-salon-professional-profiles: backlog
-      13.6-nearby-search-ranking-v1: backlog
-      13.7-discovery-ui: backlog
+      13.1-hair-service-taxonomy-bridge: done
+      13.2-bookable-services-professional-eligibility: done
+      13.3-professional-portfolio: done
+      13.4-postgis-location-privacy: done
+      13.5-public-salon-professional-profiles: done
+      13.6-nearby-search-ranking-v1: done
+      13.7-discovery-ui: done
 
   epic-14-availability-booking-notifications:
-    status: backlog
+    status: done
     stories:
-      14.1-scheduling-schema: backlog
-      14.2-availability-engine: backlog
-      14.3-concurrency-safe-booking: backlog
-      14.4-customer-booking-journey: backlog
-      14.5-provider-booking-operations: backlog
-      14.6-notification-outbox: backlog
-      14.7-tryon-visual-brief: backlog
-      14.8-booking-lifecycle-e2e: backlog
+      14.1-scheduling-schema: done
+      14.2-availability-engine: done
+      14.3-concurrency-safe-booking: done
+      14.4-customer-booking-journey: done
+      14.5-provider-booking-operations: done
+      14.6-notification-outbox: done
+      14.7-tryon-visual-brief: done
+      14.8-booking-lifecycle-e2e: done
 
   epic-15-trust-reviews-moderation:
-    status: backlog
+    status: done
     stories:
-      15.1-verification-listing-state: backlog
-      15.2-verified-reviews-schema: backlog
-      15.3-review-ui-aggregates: backlog
-      15.4-reporting-admin-moderation: backlog
-      15.5-trust-aware-ranking: backlog
+      15.1-verification-listing-state: done
+      15.2-verified-reviews-schema: done
+      15.3-review-ui-aggregates: done
+      15.4-reporting-admin-moderation: done
+      15.5-trust-aware-ranking: done
 
   epic-16-careers-recruitment:
-    status: backlog
+    status: done
     stories:
-      16.1-job-application-schema: backlog
-      16.2-salon-recruitment-ux: backlog
-      16.3-professional-jobs-application-ux: backlog
-      16.4-application-pipeline: backlog
-      16.5-hire-membership-handoff: backlog
-      16.6-careers-trust-moderation: backlog
+      16.1-job-application-schema: done
+      16.2-salon-recruitment-ux: done
+      16.3-professional-jobs-application-ux: done
+      16.4-application-pipeline: done
+      16.5-hire-membership-handoff: done
+      16.6-careers-trust-moderation: done
 
   epic-17-growth-commercial-readiness:
-    status: backlog
+    status: done
     stories:
-      17.1-marketplace-funnel-telemetry: backlog
-      17.2-professional-salon-subscription-ux: backlog
-      17.3-multi-location-entitlements-dashboard: backlog
-      17.4-marketplace-payment-readiness: backlog_feature_gated
-      17.5-sponsored-listing-guardrails: backlog_feature_gated
+      17.1-marketplace-funnel-telemetry: done
+      17.2-professional-salon-subscription-ux: done
+      17.3-multi-location-entitlements-dashboard: done
+      17.4-marketplace-payment-readiness: done
+      17.5-sponsored-listing-guardrails: done
 
 release_gates:
   M1:

@@ -465,4 +465,316 @@ $$;
 
 SELECT backfill_legacy_salon_memberships();
 
+-- -----------------------------------------------------------------------------
+-- Epics 13-17: Marketplace Full Platform Schema & RLS Foundations
+-- -----------------------------------------------------------------------------
+
+-- 1. Taxonomy, Bookable Services & Portfolio (Epic 13)
+CREATE TABLE IF NOT EXISTS hair_skills (
+    id VARCHAR(100) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'cut',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS professional_skills (
+    professional_profile_id UUID NOT NULL REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    skill_id VARCHAR(100) NOT NULL REFERENCES hair_skills(id) ON DELETE CASCADE,
+    PRIMARY KEY (professional_profile_id, skill_id)
+);
+
+CREATE TABLE IF NOT EXISTS bookable_services (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    provider_type VARCHAR(50) NOT NULL CHECK (provider_type IN ('salon', 'independent_professional')),
+    salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
+    professional_profile_id UUID REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    duration_minutes INT NOT NULL DEFAULT 45 CHECK (duration_minutes > 0),
+    buffer_before_minutes INT NOT NULL DEFAULT 0 CHECK (buffer_before_minutes >= 0),
+    buffer_after_minutes INT NOT NULL DEFAULT 0 CHECK (buffer_after_minutes >= 0),
+    price_fcfa INT NOT NULL CHECK (price_fcfa >= 0),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    professional_profile_id UUID NOT NULL REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    title VARCHAR(255),
+    description TEXT,
+    style_id VARCHAR(100) REFERENCES hairstyles_catalog(id) ON DELETE SET NULL,
+    is_published BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Location extensions on salons & professional profiles
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS latitude NUMERIC(10, 7);
+ALTER TABLE salons ADD COLUMN IF NOT EXISTS longitude NUMERIC(10, 7);
+ALTER TABLE professional_profiles ADD COLUMN IF NOT EXISTS latitude NUMERIC(10, 7);
+ALTER TABLE professional_profiles ADD COLUMN IF NOT EXISTS longitude NUMERIC(10, 7);
+
+-- 2. Availability, Scheduling & Bookings (Epic 14)
+CREATE TABLE IF NOT EXISTS provider_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
+    professional_profile_id UUID REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    day_of_week INT NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+    open_time TIME NOT NULL DEFAULT '08:00',
+    close_time TIME NOT NULL DEFAULT '19:00',
+    is_closed BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT uq_provider_day UNIQUE (salon_id, professional_profile_id, day_of_week)
+);
+
+CREATE TABLE IF NOT EXISTS time_off_blocks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
+    professional_profile_id UUID REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS bookings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_number VARCHAR(50) NOT NULL UNIQUE,
+    idempotency_key TEXT UNIQUE,
+    customer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    provider_type VARCHAR(50) NOT NULL CHECK (provider_type IN ('salon', 'independent_professional')),
+    salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
+    professional_profile_id UUID REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES bookable_services(id) ON DELETE CASCADE,
+    assigned_professional_id UUID REFERENCES professional_profiles(id) ON DELETE SET NULL,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled', 'no_show')),
+    total_price_fcfa INT NOT NULL CHECK (total_price_fcfa >= 0),
+    currency VARCHAR(10) NOT NULL DEFAULT 'XOF',
+    tryon_head_id UUID REFERENCES customer_heads(id) ON DELETE SET NULL,
+    saved_hairstyle_id VARCHAR(100) REFERENCES hairstyles_catalog(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS booking_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    actor_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    previous_status VARCHAR(50),
+    new_status VARCHAR(50) NOT NULL,
+    note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS notification_outbox (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_type VARCHAR(100) NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}',
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+    attempts INT NOT NULL DEFAULT 0,
+    dedupe_key TEXT UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    processed_at TIMESTAMPTZ
+);
+
+-- 3. Trust, Reviews & Moderation (Epic 15)
+CREATE TABLE IF NOT EXISTS verified_reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    booking_id UUID NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    salon_id UUID REFERENCES salons(id) ON DELETE CASCADE,
+    professional_profile_id UUID REFERENCES professional_profiles(id) ON DELETE CASCADE,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS content_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reporter_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    target_type VARCHAR(50) NOT NULL CHECK (target_type IN ('review', 'portfolio_item', 'job_posting', 'professional_profile')),
+    target_id UUID NOT NULL,
+    reason TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'actioned', 'dismissed')),
+    moderator_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 4. Careers & Recruitment (Epic 16)
+CREATE TABLE IF NOT EXISTS job_postings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    salon_id UUID NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    city VARCHAR(100),
+    work_mode VARCHAR(50) NOT NULL DEFAULT 'full_time' CHECK (work_mode IN ('full_time', 'part_time', 'chair_rental', 'freelance')),
+    compensation_range VARCHAR(100),
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('draft', 'active', 'closed', 'suspended')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS job_applications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    job_id UUID NOT NULL REFERENCES job_postings(id) ON DELETE CASCADE,
+    applicant_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'shortlisted', 'interviewing', 'hired', 'rejected')),
+    cover_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_job_applicant UNIQUE (job_id, applicant_user_id)
+);
+
+-- 5. Analytics & Funnel Telemetry (Epic 17)
+CREATE TABLE IF NOT EXISTS marketplace_analytics_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    event_type VARCHAR(100) NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Indexes for performance & search
+CREATE INDEX IF NOT EXISTS idx_bookable_services_salon ON bookable_services(salon_id);
+CREATE INDEX IF NOT EXISTS idx_bookable_services_pro ON bookable_services(professional_profile_id);
+CREATE INDEX IF NOT EXISTS idx_portfolio_pro ON portfolio_items(professional_profile_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_salon ON bookings(salon_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_pro ON bookings(professional_profile_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_start_time ON bookings(start_time);
+CREATE INDEX IF NOT EXISTS idx_reviews_salon ON verified_reviews(salon_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_pro ON verified_reviews(professional_profile_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_salon ON job_postings(salon_id);
+CREATE INDEX IF NOT EXISTS idx_job_apps_user ON job_applications(applicant_user_id);
+
+-- RLS Enforcement
+ALTER TABLE hair_skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookable_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE provider_schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verified_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE content_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_postings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marketplace_analytics_events ENABLE ROW LEVEL SECURITY;
+
+-- Public READ policies for search & catalog
+DROP POLICY IF EXISTS hair_skills_select_public ON hair_skills;
+CREATE POLICY hair_skills_select_public ON hair_skills FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS bookable_services_select_public ON bookable_services;
+CREATE POLICY bookable_services_select_public ON bookable_services FOR SELECT USING (is_active = true);
+
+DROP POLICY IF EXISTS portfolio_items_select_public ON portfolio_items;
+CREATE POLICY portfolio_items_select_public ON portfolio_items FOR SELECT USING (is_published = true);
+
+DROP POLICY IF EXISTS verified_reviews_select_public ON verified_reviews;
+CREATE POLICY verified_reviews_select_public ON verified_reviews FOR SELECT USING (is_hidden = false);
+
+DROP POLICY IF EXISTS job_postings_select_public ON job_postings;
+CREATE POLICY job_postings_select_public ON job_postings FOR SELECT USING (status = 'active');
+
+-- Owner / Participant CRUD policies
+DROP POLICY IF EXISTS bookings_select_participant ON bookings;
+CREATE POLICY bookings_select_participant ON bookings FOR SELECT
+USING (auth.uid() = customer_id OR EXISTS (
+    SELECT 1 FROM salon_memberships sm
+    WHERE sm.salon_id = bookings.salon_id AND sm.user_id = auth.uid()
+));
+
+DROP POLICY IF EXISTS bookings_insert_customer ON bookings;
+CREATE POLICY bookings_insert_customer ON bookings FOR INSERT
+WITH CHECK (auth.uid() = customer_id);
+
+DROP POLICY IF EXISTS job_applications_select_applicant_or_salon ON job_applications;
+CREATE POLICY job_applications_select_applicant_or_salon ON job_applications FOR SELECT
+USING (auth.uid() = applicant_user_id OR EXISTS (
+    SELECT 1 FROM job_postings jp
+    JOIN salon_memberships sm ON sm.salon_id = jp.salon_id
+    WHERE jp.id = job_applications.job_id AND sm.user_id = auth.uid()
+));
+
+-- Concurrency-safe Booking Creation Procedure (Epic 14.3)
+CREATE OR REPLACE FUNCTION create_booking_transaction(
+    p_idempotency_key TEXT,
+    p_customer_id UUID,
+    p_provider_type VARCHAR(50),
+    p_salon_id UUID,
+    p_professional_profile_id UUID,
+    p_service_id UUID,
+    p_start_time TIMESTAMPTZ,
+    p_tryon_head_id UUID DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_service_duration INT;
+    v_service_price INT;
+    v_end_time TIMESTAMPTZ;
+    v_existing_booking UUID;
+    v_booking_id UUID;
+    v_booking_num VARCHAR(50);
+BEGIN
+    -- Check idempotency
+    SELECT id INTO v_existing_booking FROM bookings WHERE idempotency_key = p_idempotency_key;
+    IF FOUND THEN
+        RETURN jsonb_build_object('status', 'exists', 'booking_id', v_existing_booking);
+    END IF;
+
+    -- Fetch service details
+    SELECT duration_minutes, price_fcfa INTO v_service_duration, v_service_price
+    FROM bookable_services
+    WHERE id = p_service_id AND is_active = TRUE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'service_not_found_or_inactive';
+    END IF;
+
+    v_end_time := p_start_time + (v_service_duration || ' minutes')::INTERVAL;
+
+    -- Check slot availability (no overlapping confirmed/pending booking)
+    IF EXISTS (
+        SELECT 1 FROM bookings
+        WHERE (salon_id = p_salon_id OR professional_profile_id = p_professional_profile_id)
+          AND status IN ('pending', 'confirmed')
+          AND start_time < v_end_time
+          AND end_time > p_start_time
+    ) THEN
+        RAISE EXCEPTION 'slot_unavailable';
+    END IF;
+
+    v_booking_num := 'BK-' || UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 8));
+
+    INSERT INTO bookings (
+        booking_number, idempotency_key, customer_id, provider_type,
+        salon_id, professional_profile_id, service_id, start_time, end_time,
+        status, total_price_fcfa, tryon_head_id
+    ) VALUES (
+        v_booking_num, p_idempotency_key, p_customer_id, p_provider_type,
+        p_salon_id, p_professional_profile_id, p_service_id, p_start_time, v_end_time,
+        'confirmed', v_service_price, p_tryon_head_id
+    ) RETURNING id INTO v_booking_id;
+
+    -- Record booking event
+    INSERT INTO booking_events (booking_id, actor_id, previous_status, new_status, note)
+    VALUES (v_booking_id, p_customer_id, NULL, 'confirmed', 'Reservation effectuee par le client');
+
+    -- Insert notification into outbox
+    INSERT INTO notification_outbox (event_type, payload, dedupe_key)
+    VALUES ('booking_confirmed', jsonb_build_object('booking_id', v_booking_id, 'customer_id', p_customer_id), 'notif:' || v_booking_id);
+
+    RETURN jsonb_build_object('status', 'created', 'booking_id', v_booking_id, 'booking_number', v_booking_num);
+END;
+$$;
+
+
 
