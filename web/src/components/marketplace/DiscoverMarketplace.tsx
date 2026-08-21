@@ -3,7 +3,7 @@
 import { FormEvent,useEffect,useMemo,useState } from 'react';
 import Link from 'next/link';
 import { useRouter,useSearchParams } from 'next/navigation';
-import { Building2,CheckCircle2,LocateFixed,MapPin,Search,Scissors,SlidersHorizontal,Star } from 'lucide-react';
+import { ArrowLeft,Building2,CheckCircle2,LocateFixed,MapPin,Search,Scissors,SlidersHorizontal,Star } from 'lucide-react';
 import { trackMarketplaceEvent } from '@/lib/marketplace-telemetry';
 
 type ProviderResult={provider_type:'salon'|'professional';provider_id:string;slug:string|null;display_name:string;city:string|null;neighborhood:string|null;distance_m:number|null;matched_service_id:string;matched_service_name:string;matched_service_price:number;currency:string;matched_style_slug:string|null;average_rating:number|null;review_count:number|null;rank_score:number};
@@ -93,7 +93,12 @@ export default function DiscoverMarketplace(){
   return (
     <main className="min-h-screen bg-cream text-ink">
       <section className="bg-card border-b border-ink/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          <div className="mb-4">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-ink-soft hover:text-terracotta transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Accueil
+            </Link>
+          </div>
           <p className="font-hand text-2xl text-terracotta">trouvez votre talent</p>
           <h1 className="font-display text-4xl sm:text-5xl mt-1">Qui peut réaliser votre prochain style ?</h1>
           <p className="mt-3 text-ink-soft max-w-2xl">Style, ville, distance et réputation vérifiée : Afrofade classe les résultats de façon déterministe.</p>
