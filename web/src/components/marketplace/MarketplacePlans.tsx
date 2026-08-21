@@ -1,0 +1,11 @@
+'use client';
+
+import { useEffect,useState } from 'react';
+import Link from 'next/link';
+import { CheckCircle2 } from 'lucide-react';
+type Product={id:string;subjectType:'professional'|'salon';label:string;amountFcfa:number|null;enabled:boolean;capabilities:string[]};
+const benefit:Record<string,string>={
+ 'professional.independent.list':'Profil indépendant visible','professional.independent.book':'Réservations directes','portfolio.manage':'Portfolio professionnel','career.apply':'Candidatures métiers',
+ 'salon.marketplace.list':'Salon visible dans la marketplace','salon.booking.work':'Gestion des réservations','salon.team.manage':'Gestion de l’équipe','salon.analytics.view':'Analytics salon','salon.location.create':'Gestion avancée établissement','salon.multi_location.manage':'Multi-établissements','career.post_job':'Publication d’offres','tryon.salon.use':'Try-On en contexte salon'
+};
+export default function MarketplacePlans(){const[products,setProducts]=useState<Product[]>([]);useEffect(()=>{fetch('/api/marketplace/plans').then(r=>r.json()).then(d=>setProducts(d.products||[])).catch(()=>{});},[]);return <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">{products.map(p=><article key={p.id} className="rounded-card bg-card border border-ink/10 p-5 shadow-soft flex flex-col"><p className="text-xs uppercase tracking-[.1em] font-bold text-terracotta">{p.subjectType==='professional'?'Professionnel':'Salon / Business'}</p><h3 className="font-display text-2xl mt-2">{p.label.replace('Afrofade ','')}</h3><p className="font-display text-2xl mt-4">{p.enabled&&p.amountFcfa?`${p.amountFcfa.toLocaleString('fr-FR')} FCFA`:'Configuration à venir'}</p><p className="text-xs text-ink-soft">{p.enabled?'par mois avant remise de durée':'Plan désactivé tant que le tarif serveur n’est pas fixé'}</p><ul className="mt-5 space-y-2 text-xs flex-1">{p.capabilities.slice(0,5).map(c=><li key={c} className="flex gap-2"><CheckCircle2 className="w-4 h-4 shrink-0 text-terracotta"/>{benefit[c]||c}</li>)}</ul><Link href={p.subjectType==='professional'?'/pro/onboarding':'/connexion?next=%2Fworkspace'} className={`mt-5 min-h-[44px] rounded-pill flex items-center justify-center font-bold text-sm ${p.enabled?'bg-terracotta text-white':'border border-ink/15 text-ink-soft'}`}>{p.enabled?'Commencer':'Préparer mon profil'}</Link></article>)}</div>}
