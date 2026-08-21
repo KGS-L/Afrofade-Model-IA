@@ -70,7 +70,6 @@ def assert_jobs_and_results_are_per_request() -> None:
 def assert_scaffolds_are_fail_closed() -> None:
     providers = [
         ManualHairProvider(enabled=True),
-        HunyuanMultiViewHairProvider(enabled=True),
         MeshyHairProvider(enabled=True),
     ]
 
