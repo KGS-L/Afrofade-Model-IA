@@ -53,22 +53,22 @@ def run_all_e2e_tests():
     status, _ = request(f"{WEB_URL}/api/v1/reconstruct", method="POST", data=reconstruct_payload)
     results.append(expect("Next reconstruction proxy requires user auth", status == 401, f"HTTP {status}"))
 
-    status, _ = request(f"{WEB_URL}/api/v1/upload-url", method="POST", data={"filename": "test.jpg", "mime_type": "image/jpeg"})
+    status, _ = request(f"{WEB_URL}/api/upload/presigned-url", method="POST", data={"filename": "test.jpg", "mime_type": "image/jpeg"})
     results.append(expect("Upload signing requires user auth", status == 401, f"HTTP {status}"))
 
     status, _ = request(f"{WEB_URL}/api/v1/payments/checkout", method="POST", data={"provider": "money_fusion", "purpose": "credits", "productId": "pack_10"})
     results.append(expect("Unified payment checkout requires user auth", status == 401, f"HTTP {status}"))
 
-    status, _ = request(f"{WEB_URL}/api/v1/payments/genius-pay/webhook", method="POST", data={"event": "payment.success"})
+    status, _ = request(f"{WEB_URL}/api/webhooks/genius-pay", method="POST", data={"event": "payment.success"})
     results.append(expect("GeniusPay rejects unsigned webhook", status == 400 or status == 401, f"HTTP {status}"))
 
-    status, _ = request(f"{WEB_URL}/api/v1/payments/money-fusion/webhook", method="POST", data={"event": "payment.success"})
+    status, _ = request(f"{WEB_URL}/api/webhooks/money-fusion", method="POST", data={"event": "payment.success"})
     results.append(expect("Money Fusion webhook requires tokenPay before provider lookup", status == 400 or status == 401 or status == 422, f"HTTP {status}"))
 
-    status, _ = request(f"{WEB_URL}/api/v1/payments/webhook", method="POST", data={"event": "payment.success"})
+    status, _ = request(f"{WEB_URL}/api/webhooks/payment", method="POST", data={"event": "payment.success"})
     results.append(expect("Legacy generic payment webhook is retired", status == 404 or status == 400 or status == 410, f"HTTP {status}"))
 
-    status, _ = request(f"{WEB_URL}/api/cron/purge-biometrics", method="POST")
+    status, _ = request(f"{WEB_URL}/api/cron/purge-biometric", method="POST")
     results.append(expect("Biometric purge rejects missing secret", status == 401, f"HTTP {status}"))
 
     for page in ["/legal/mentions-legales", "/legal/confidentialite", "/legal/cgv", "/contact"]:
