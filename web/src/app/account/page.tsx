@@ -284,22 +284,39 @@ export default function AccountPage() {
     }
   };
 
+  const [menuOpen, setMenuOpen] = useState(false);
+
   if (!hydrated || !user || user.role !== 'customer' || loading) return <DashboardSkeleton />;
 
   return (
     <div className="min-h-screen bg-cream text-ink">
       <header className="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-ink/10">
-        <div className="max-w-container mx-auto px-6 py-3 flex items-center gap-4">
+        <div className="max-w-container mx-auto px-4 sm:px-6 min-h-[64px] flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-card bg-terracotta flex items-center justify-center"><Scissors className="w-4 h-4 text-white" /></div>
             <span className="font-display text-lg">Afro<span className="text-terracotta">fade</span></span>
           </Link>
           <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.12em] bg-terracotta-wash text-terracotta-dark px-3 py-1.5 rounded-pill"><UserRound className="w-3.5 h-3.5" />Espace particulier</span>
-          <div className="ml-auto flex gap-2">
-            <Link href="/rituel" className="min-h-[44px] inline-flex items-center gap-2 px-4 rounded-pill bg-terracotta text-white text-sm font-bold"><Sparkles className="w-4 h-4" />Tester un style</Link>
-            <button onClick={logout} className="w-11 h-11 rounded-pill border border-ink/15 flex items-center justify-center" aria-label="Se déconnecter"><LogOut className="w-4 h-4" /></button>
+          
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/rituel" className="hidden sm:inline-flex min-h-[44px] items-center gap-2 px-4 rounded-pill bg-terracotta text-white text-sm font-bold hover:bg-terracotta-dark"><Sparkles className="w-4 h-4" />Tester un style</Link>
+            <button onClick={logout} className="hidden sm:flex w-11 h-11 rounded-pill border border-ink/15 flex items-center justify-center hover:bg-ink/5" aria-label="Se déconnecter"><LogOut className="w-4 h-4" /></button>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="sm:hidden w-11 h-11 rounded-pill border border-ink/15 bg-card flex items-center justify-center" aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}>{menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
           </div>
         </div>
+
+        {menuOpen && (
+          <nav className="sm:hidden border-t border-ink/10 bg-card p-4 space-y-3 shadow-soft">
+            <div className="pb-3 border-b border-ink/10 flex items-center justify-between">
+              <span className="text-xs font-bold text-ink-soft">Connecté en tant que</span>
+              <span className="text-xs font-bold text-terracotta">{profile.displayName || user.name}</span>
+            </div>
+            <Link href="/discover" onClick={() => setMenuOpen(false)} className="min-h-[44px] flex items-center px-3 rounded-input text-sm font-medium hover:bg-terracotta-wash">Découvrir la marketplace</Link>
+            <Link href="/styles" onClick={() => setMenuOpen(false)} className="min-h-[44px] flex items-center px-3 rounded-input text-sm font-medium hover:bg-terracotta-wash">Catalogue des styles</Link>
+            <Link href="/pour-les-pros" onClick={() => setMenuOpen(false)} className="min-h-[44px] flex items-center px-3 rounded-input text-sm font-medium hover:bg-terracotta-wash">Offres pour les salons (Pros)</Link>
+            <button onClick={() => { setMenuOpen(false); void logout(); }} className="w-full min-h-[44px] flex items-center gap-2 px-3 rounded-input text-sm font-bold text-red-600 hover:bg-red-50 text-left"><LogOut className="w-4 h-4" />Se déconnecter</button>
+          </nav>
+        )}
       </header>
 
       <main className="max-w-container mx-auto px-6 py-10 space-y-8">
