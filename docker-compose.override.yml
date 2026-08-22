@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Configuration spécifique au Développement Local avec Hot-Reload (Rechargement automatique)
 # Docker Compose fusionne automatiquement ce fichier avec docker-compose.yml en local.
 

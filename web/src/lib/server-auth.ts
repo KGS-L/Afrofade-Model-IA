@@ -1,6 +1,5 @@
 import type { NextRequest } from 'next/server';
 import { verifySessionJwt } from '@/lib/auth/auth-config';
-import { query } from '@/lib/db';
 
 export type AppRole = 'customer' | 'salon' | 'admin';
 
@@ -30,24 +29,8 @@ export async function verifyAccessToken(accessToken: string): Promise<VerifiedPr
     const sessionJwtUser = await verifySessionJwt(accessToken);
 
     if (sessionJwtUser) {
-      let role = sessionJwtUser.role || 'customer';
-      let salonId = sessionJwtUser.salonId || null;
-      let profileConfigured = true;
-
-      try {
-        const dbRes = await query(
-          `SELECT role, salon_id FROM public.user_profiles WHERE user_id = $1 OR email = $2 LIMIT 1`,
-          [sessionJwtUser.id, sessionJwtUser.email]
-        );
-        if (dbRes.rows.length > 0) {
-          role = dbRes.rows[0].role as AppRole;
-          salonId = dbRes.rows[0].salon_id || null;
-        } else {
-          profileConfigured = false;
-        }
-      } catch (dbErr) {
-        console.warn('[Auth] Database profile lookup skipped:', dbErr);
-      }
+      const role = sessionJwtUser.role || 'customer';
+      const salonId = sessionJwtUser.salonId || null;
 
       return {
         user: {
@@ -58,7 +41,7 @@ export async function verifyAccessToken(accessToken: string): Promise<VerifiedPr
         role,
         salonId,
         accessToken,
-        profileConfigured,
+        profileConfigured: true,
       };
     }
 

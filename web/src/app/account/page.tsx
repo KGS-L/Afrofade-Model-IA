@@ -10,12 +10,14 @@ import {
   History,
   Images,
   LogOut,
+  Menu,
   RefreshCw,
   Scissors,
   Sparkles,
   Store,
   UserRound,
   Wallet,
+  X,
 } from 'lucide-react';
 import { CountrySelect } from '@/components/CountrySelect';
 import { NationalitySelect } from '@/components/NationalitySelect';
@@ -304,7 +306,7 @@ export default function AccountPage() {
         <div>
           <p className="font-hand text-2xl text-terracotta">votre espace</p>
           <h1 className="font-display text-3xl">Bonjour {profile.displayName || user.name}</h1>
-          <p className="text-sm text-ink-soft mt-1">Crédits, rendus, achats et profil synchronisés avec Supabase.</p>
+          <p className="text-sm text-ink-soft mt-1">Crédits, rendus 3D, achats et profil synchronisés en toute sécurité.</p>
         </div>
 
         {paymentSyncing && (

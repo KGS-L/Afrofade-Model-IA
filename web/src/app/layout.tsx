@@ -3,6 +3,7 @@ import React from 'react';
 import localFont from 'next/font/local';
 import { Viewport, Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth';
+import { BottomNav } from '@/components/BottomNav';
 
 /**
  * Identité typographique Afrofade (DESIGN.md › Typography) :
@@ -122,6 +123,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
+      suppressHydrationWarning
       className={`${displayFont.variable} ${bodyFont.variable} ${handFont.variable}`}
     >
       <head>
@@ -130,13 +132,16 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="font-body">
+      <body className="font-body" suppressHydrationWarning>
         {/* Fallback no-JS : les révélations au scroll (.fade-safe) restent visibles */}
         <noscript>
           <style>{`.fade-safe{opacity:1 !important}`}</style>
         </noscript>
-        <main className="min-h-screen bg-cream text-ink">
-          <AuthProvider>{children}</AuthProvider>
+        <main className="min-h-screen bg-cream text-ink pb-16 lg:pb-0">
+          <AuthProvider>
+            {children}
+            <BottomNav />
+          </AuthProvider>
         </main>
       </body>
     </html>
