@@ -6,7 +6,9 @@ import urllib.request
 import urllib.error
 import sys
 
-BASE_URL = "http://localhost:3000"
+import os
+
+BASE_URL = os.getenv("TEST_WEB_URL", "http://localhost:3000")
 
 def run_salon_onboarding_test():
     print("==> Simulation E2E : Création d'un Espace Salon & Vérification DB")

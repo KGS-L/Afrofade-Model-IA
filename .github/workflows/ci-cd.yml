@@ -146,12 +146,12 @@ jobs:
           exit 1
 
       - name: Run P0 security smoke tests
-        run: python3 scripts/test_e2e_integration.py
+        run: TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_e2e_integration.py
 
       - name: Run Customer Profile & Salon Onboarding simulation tests
         run: |
-          python3 scripts/test_profile_update.py
-          python3 scripts/test_salon_onboarding.py
+          TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_profile_update.py
+          TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_salon_onboarding.py
 
       - name: Stop production stack
         if: always()

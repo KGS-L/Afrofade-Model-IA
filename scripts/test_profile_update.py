@@ -6,7 +6,9 @@ import urllib.request
 import urllib.error
 import sys
 
-BASE_URL = "http://localhost:3000"
+import os
+
+BASE_URL = os.getenv("TEST_WEB_URL", "http://localhost:3000")
 
 def run_profile_test():
     print("==> Simulation E2E : Connexion OTP Dev + Mise à jour du profil client & vérification DB")
