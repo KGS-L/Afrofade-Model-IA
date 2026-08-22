@@ -44,41 +44,47 @@ export async function GET(req: NextRequest, context: { params: Promise<{ section
       if (authUsers.error) throw new Error(authUsers.error.message);
 
       const emailById = new Map((authUsers.data?.users || []).map((user) => [user.id, user.email || '']));
-      const ownerBySalon = new Map(
-        (profilesResult.data || []).map((profile) => [profile.salon_id, emailById.get(profile.user_id) || '']),
+      const ownerEmailBySalonId = new Map(
+        (profilesResult.data || []).map((profile: any) => [profile.salon_id, emailById.get(profile.user_id) || '']),
       );
-      const subscriptionBySalon = new Map(
-        (subscriptionsResult.data || []).map((subscription) => [subscription.salon_id, subscription]),
+      const activeSubscriptionBySalonId = new Map(
+        (subscriptionsResult.data || []).map((subscription: any) => [subscription.salon_id, subscription]),
       );
 
       return NextResponse.json({
         section,
-        items: (salonsResult.data || []).map((salon) => ({
-          ...salon,
-          owner_email: ownerBySalon.get(salon.id) || '',
-          subscription: subscriptionBySalon.get(salon.id) || null,
+        items: (salonsResult.data || []).map((salon: any) => ({
+          id: salon.id,
+          name: salon.name,
+          slug: salon.slug,
+          ownerEmail: ownerEmailBySalonId.get(salon.id) || '',
+          city: salon.city,
+          neighborhood: salon.neighborhood,
+          country: salon.country,
+          plan: salon.plan,
+          quotaLimit: salon.quota_limit,
+          quotaUsed: salon.quota_used,
+          verificationStatus: salon.verification_status,
+          listingStatus: salon.listing_status,
+          hasActiveSubscription: Boolean(activeSubscriptionBySalonId.get(salon.id)),
+          subscriptionExpiresAt: (activeSubscriptionBySalonId.get(salon.id) as any)?.expires_at || null,
+          createdAt: salon.created_at,
         })),
       });
     }
 
     if (section === 'subscriptions') {
       const [subscriptionsResult, salonsResult] = await Promise.all([
-        supabaseAdmin
-          .from('subscriptions')
-          .select('id, salon_id, provider, amount_fcfa, status, expires_at, created_at, updated_at')
-          .eq('status', 'active')
-          .gt('expires_at', now)
-          .order('created_at', { ascending: false })
-          .limit(1000),
-        supabaseAdmin.from('salons').select('id, name, country, plan'),
+        supabaseAdmin.from('subscriptions').select('id, salon_id, provider, amount_fcfa, status, expires_at, created_at').order('created_at', { ascending: false }).limit(500),
+        supabaseAdmin.from('salons').select('id, name, city, plan').limit(1000),
       ]);
       if (subscriptionsResult.error) throw new Error(subscriptionsResult.error.message);
       if (salonsResult.error) throw new Error(salonsResult.error.message);
-      const salons = new Map((salonsResult.data || []).map((salon) => [salon.id, salon]));
 
+      const salons = new Map((salonsResult.data || []).map((salon: any) => [salon.id, salon]));
       return NextResponse.json({
         section,
-        items: (subscriptionsResult.data || []).map((subscription) => ({
+        items: (subscriptionsResult.data || []).map((subscription: any) => ({
           ...subscription,
           salon: salons.get(subscription.salon_id) || null,
         })),
@@ -96,10 +102,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ section
       if (profilesResult.error) throw new Error(profilesResult.error.message);
       if (authUsers.error) throw new Error(authUsers.error.message);
 
-      const profileByUserId = new Map((profilesResult.data || []).map((profile) => [profile.user_id, profile]));
+      const profileByUserId = new Map((profilesResult.data || []).map((profile: any) => [profile.user_id, profile]));
       const items = (authUsers.data?.users || [])
-        .map((authUser) => {
-          const profile = profileByUserId.get(authUser.id);
+        .map((authUser: any) => {
+          const profile: any = profileByUserId.get(authUser.id);
           return {
             user_id: authUser.id,
             email: authUser.email || '',
@@ -111,7 +117,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ section
             updated_at: profile?.updated_at || authUser.updated_at || authUser.created_at,
           };
         })
-        .sort((left, right) => String(right.created_at).localeCompare(String(left.created_at)));
+        .sort((left: any, right: any) => String(right.created_at).localeCompare(String(left.created_at)));
 
       return NextResponse.json({ section, items });
     }
@@ -123,13 +129,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ section
       .order('paid_at', { ascending: false })
       .limit(1000);
     if (paymentsResult.error) throw new Error(paymentsResult.error.message);
-    const items = paymentsResult.data || [];
+    const items: any[] = paymentsResult.data || [];
 
     return NextResponse.json({
       section,
       items,
       summary: {
-        totalRevenueFcfa: items.reduce((sum, item) => sum + Number(item.amount_fcfa || 0), 0),
+        totalRevenueFcfa: items.reduce((sum: number, item: any) => sum + Number(item.amount_fcfa || 0), 0),
         paidTransactions: items.length,
       },
     });

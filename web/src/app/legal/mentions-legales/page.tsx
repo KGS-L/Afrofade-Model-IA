@@ -12,8 +12,6 @@ export const metadata = {
 export default function MentionsLegalesPage() {
   return (
     <div className="min-h-screen bg-cream text-ink font-body flex flex-col">
-      <Navbar />
-
       <main className="max-w-[840px] mx-auto px-6 py-12 md:py-16 flex-1">
         <Link
           href="/"

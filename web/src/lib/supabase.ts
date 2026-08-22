@@ -1,6 +1,12 @@
 import { query } from '@/lib/db';
 
-class NativeDbQueryBuilder<T = any> {
+export interface QueryResult<T = any> {
+  data: T;
+  count?: number | null;
+  error: any;
+}
+
+class NativeDbQueryBuilder<T = any> implements PromiseLike<QueryResult<T>> {
   private tableName: string;
   private selectCols: string = '*';
   private whereClauses: { col: string; op: string; val: any }[] = [];
@@ -33,6 +39,11 @@ class NativeDbQueryBuilder<T = any> {
 
   neq(col: string, val: any) {
     if (val !== undefined) this.whereClauses.push({ col, op: '!=', val });
+    return this;
+  }
+
+  ilike(col: string, val: any) {
+    if (val !== undefined) this.whereClauses.push({ col, op: 'ILIKE', val: `%${val}%` });
     return this;
   }
 
@@ -132,14 +143,20 @@ class NativeDbQueryBuilder<T = any> {
     return this;
   }
 
-  async then(onfulfilled?: (value: { data: any; count?: number | null; error: any }) => any) {
+  async then<TResult1 = QueryResult<T>, TResult2 = never>(
+    onfulfilled?: ((value: QueryResult<T>) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+  ): Promise<TResult1 | TResult2> {
     try {
       let resultData: any = null;
       let countVal: number | null = null;
 
       if (this.action === 'insert') {
         const records = Array.isArray(this.payloadData) ? this.payloadData : [this.payloadData];
-        if (records.length === 0) return onfulfilled ? onfulfilled({ data: [], error: null }) : { data: [], error: null };
+        if (records.length === 0) {
+          const resObj = { data: [] as any, error: null };
+          return onfulfilled ? onfulfilled(resObj) : (resObj as any);
+        }
 
         const keys = Object.keys(records[0]);
         const columns = keys.map((k) => `"${k}"`).join(', ');
@@ -159,7 +176,10 @@ class NativeDbQueryBuilder<T = any> {
         resultData = this.isSingle || this.isMaybeSingle ? res.rows[0] || null : res.rows;
       } else if (this.action === 'update') {
         const keys = Object.keys(this.payloadData || {});
-        if (keys.length === 0) return onfulfilled ? onfulfilled({ data: null, error: null }) : { data: null, error: null };
+        if (keys.length === 0) {
+          const resObj = { data: null as any, error: null };
+          return onfulfilled ? onfulfilled(resObj) : (resObj as any);
+        }
 
         const params: any[] = [];
         const setSql = keys
@@ -188,7 +208,10 @@ class NativeDbQueryBuilder<T = any> {
         resultData = this.isSingle || this.isMaybeSingle ? res.rows[0] || null : res.rows;
       } else if (this.action === 'upsert') {
         const records = Array.isArray(this.payloadData) ? this.payloadData : [this.payloadData];
-        if (records.length === 0) return onfulfilled ? onfulfilled({ data: [], error: null }) : { data: [], error: null };
+        if (records.length === 0) {
+          const resObj = { data: [] as any, error: null };
+          return onfulfilled ? onfulfilled(resObj) : (resObj as any);
+        }
 
         const conflictCol = this.upsertOptions?.onConflict || 'id';
         const keys = Object.keys(records[0]);
@@ -288,30 +311,43 @@ class NativeDbQueryBuilder<T = any> {
         }
       }
 
-      const resObj = { data: resultData, count: countVal, error: null };
-      return onfulfilled ? onfulfilled(resObj) : resObj;
+      const resObj: QueryResult<T> = { data: resultData, count: countVal, error: null };
+      return onfulfilled ? onfulfilled(resObj) : (resObj as any);
     } catch (error: any) {
       console.error(`[Native DB] Query error in ${this.tableName}:`, error);
-      const errObj = { data: null, count: null, error: { message: error?.message || String(error) } as any };
-      return onfulfilled ? onfulfilled(errObj) : errObj;
+      const errObj: QueryResult<T> = { data: null as any, count: null, error: { message: error?.message || String(error) } as any };
+      return onfulfilled ? onfulfilled(errObj) : (errObj as any);
     }
   }
 }
 
 class NativeClient {
-  from(table: string) {
-    return new NativeDbQueryBuilder(table);
+  from<T = any>(table: string) {
+    return new NativeDbQueryBuilder<T>(table);
   }
-  rpc(funcName: string, args?: any) {
+  rpc<T = any>(funcName: string, args?: any) {
     return (async () => {
       try {
         const keys = args ? Object.keys(args) : [];
         const params = keys.map((k) => args[k]);
         const paramPlaceholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-        const res = await query(`SELECT public.${funcName}(${paramPlaceholders})`, params);
-        return { data: res.rows[0]?.[funcName] ?? res.rows, error: null };
+        const res = await query(`SELECT * FROM public.${funcName}(${paramPlaceholders})`, params);
+        let data: any = res.rows;
+        if (res.rows.length === 1 && res.rows[0][funcName] !== undefined) {
+          const raw = res.rows[0][funcName];
+          if (typeof raw === 'string') {
+            try {
+              data = JSON.parse(raw);
+            } catch (e) {
+              data = raw;
+            }
+          } else {
+            data = raw;
+          }
+        }
+        return { data: data as T, error: null };
       } catch (error: any) {
-        return { data: null, error: { message: error?.message || String(error) } as any };
+        return { data: null as any, error: { message: error?.message || String(error) } as any };
       }
     })();
   }
@@ -328,6 +364,9 @@ class NativeClient {
   auth = {
     getUser: async () => ({ data: { user: null }, error: null as any }),
     getSession: async () => ({ data: { session: null }, error: null as any }),
+    admin: {
+      listUsers: async (params?: any) => ({ data: { users: [] as any[] }, error: null as any }),
+    },
   };
 }
 

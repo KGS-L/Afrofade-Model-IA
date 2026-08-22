@@ -74,22 +74,22 @@ export async function GET(req: NextRequest) {
 
     const planDistribution: Record<PlanKey, number> = { PRO: 0, VIP: 0, EXTRA: 0 };
     for (const salon of salonsResult.data || []) {
-      if (isPlanKey(salon.plan)) planDistribution[salon.plan] += 1;
+      if (isPlanKey(salon.plan)) (planDistribution as any)[salon.plan] += 1;
     }
 
     const roleDistribution: Record<RoleKey, number> = { customer: 0, salon: 0, admin: 0 };
     for (const profile of rolesResult.data || []) {
-      if (isRoleKey(profile.role)) roleDistribution[profile.role] += 1;
+      if (isRoleKey(profile.role)) (roleDistribution as any)[profile.role] += 1;
     }
 
-    const payments = paidPaymentsResult.data || [];
-    const totalRevenueFcfa = payments.reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
+    const payments: any[] = paidPaymentsResult.data || [];
+    const totalRevenueFcfa = payments.reduce((sum: number, payment: any) => sum + Number(payment.amount_fcfa || 0), 0);
     const subscriptionRevenueFcfa = payments
-      .filter((payment) => payment.purpose === 'subscription')
-      .reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
+      .filter((payment: any) => payment.purpose === 'subscription')
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount_fcfa || 0), 0);
     const creditRevenueFcfa = payments
-      .filter((payment) => payment.purpose === 'credits')
-      .reduce((sum, payment) => sum + Number(payment.amount_fcfa || 0), 0);
+      .filter((payment: any) => payment.purpose === 'credits')
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount_fcfa || 0), 0);
 
     const providerMetrics = new Map<string, { paidTransactions: number; revenueFcfa: number }>();
     for (const payment of payments) {
@@ -99,8 +99,8 @@ export async function GET(req: NextRequest) {
       providerMetrics.set(payment.provider, current);
     }
 
-    const recentSalons = recentSalonsResult.data || [];
-    const recentIds = recentSalons.map((salon) => salon.id);
+    const recentSalons: any[] = recentSalonsResult.data || [];
+    const recentIds = recentSalons.map((salon: any) => salon.id);
     let activeSalonIds = new Set<string>();
     if (recentIds.length) {
       const { data, error } = await supabaseAdmin
@@ -110,13 +110,13 @@ export async function GET(req: NextRequest) {
         .eq('status', 'active')
         .gt('expires_at', now);
       if (error) throw new Error(error.message);
-      activeSalonIds = new Set((data || []).map((item) => item.salon_id));
+      activeSalonIds = new Set((data || []).map((item: any) => item.salon_id));
     }
 
     const jobs: Record<JobKey, number> = { queued: 0, running: 0, failed: 0, completed: 0 };
     if (!jobsResult.error) {
       for (const job of jobsResult.data || []) {
-        if (isJobKey(job.status)) jobs[job.status] += 1;
+        if (isJobKey(job.status)) (jobs as any)[job.status] += 1;
       }
     }
 
@@ -139,13 +139,17 @@ export async function GET(req: NextRequest) {
       ),
       jobs,
       aiMetricsAvailable: !jobsResult.error && !headsResult.error,
-      paymentProviders: providerStates.map((state) => ({
+      paymentProviders: providerStates.map((state: any) => ({
         ...state,
-        ...(providerMetrics.get(state.provider) || { paidTransactions: 0, revenueFcfa: 0 }),
+        ...(providerMetrics.get(state.id) || { paidTransactions: 0, revenueFcfa: 0 }),
       })),
-      recentSalons: recentSalons.map((salon) => ({
-        ...salon,
-        status: activeSalonIds.has(salon.id) ? 'Actif' : 'Sans abonnement actif',
+      recentSalons: recentSalons.map((salon: any) => ({
+        id: salon.id,
+        name: salon.name,
+        city: salon.city,
+        plan: salon.plan,
+        createdAt: salon.created_at,
+        isActive: activeSalonIds.has(salon.id),
       })),
     });
   } catch (error) {

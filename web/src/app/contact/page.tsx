@@ -23,8 +23,6 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-cream text-ink font-body flex flex-col">
-      <Navbar />
-
       <main className="max-w-container mx-auto px-6 py-12 md:py-16 flex-1">
         <Link
           href="/"

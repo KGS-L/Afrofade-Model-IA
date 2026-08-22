@@ -11,7 +11,7 @@ export async function GET(req:NextRequest){
     if(error)throw error;
     let team:any[]=[];
     if(type==='salon'&&services?.length){
-      const ids=services.map(s=>s.id); const {data,error:teamError}=await db.from('salon_service_professionals').select('service_id,membership_id,salon_memberships!inner(id,professional_profile_id,professional_profiles(id,professional_name,slug))').in('service_id',ids);
+      const ids=services.map((s: any)=>s.id); const {data,error:teamError}=await db.from('salon_service_professionals').select('service_id,membership_id,salon_memberships!inner(id,professional_profile_id,professional_profiles(id,professional_name,slug))').in('service_id',ids);
       if(teamError)throw teamError; team=data||[];
     }
     return NextResponse.json({services:services||[],team});

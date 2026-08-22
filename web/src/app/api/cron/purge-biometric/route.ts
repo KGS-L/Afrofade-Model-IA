@@ -90,11 +90,11 @@ async function handlePurge(request: NextRequest) {
     }
 
     if (salonHeads.length > 0) {
-      const { error } = await supabaseAdmin.from('clients_heads').delete().in('id', salonHeads.map((head) => head.id));
+      const { error } = await supabaseAdmin.from('clients_heads').delete().in('id', salonHeads.map((head: any) => head.id));
       if (error) throw new Error(error.message);
     }
     if (customerHeads.length > 0) {
-      const { error } = await supabaseAdmin.from('customer_heads').delete().in('id', customerHeads.map((head) => head.id));
+      const { error } = await supabaseAdmin.from('customer_heads').delete().in('id', customerHeads.map((head: any) => head.id));
       if (error) throw new Error(error.message);
     }
 

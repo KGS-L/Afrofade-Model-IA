@@ -104,7 +104,7 @@ export default function DiscoverMarketplace() {
         cache: 'no-store',
       });
       const d = await r.json();
-      const nextResults = d.results || [];
+      const nextResults = Array.isArray(d?.results) ? d.results : [];
       setResults(nextResults);
 
       trackMarketplaceEvent({
@@ -343,7 +343,7 @@ export default function DiscoverMarketplace() {
               />
             ))}
           </div>
-        ) : results.length ? (
+        ) : Array.isArray(results) && results.length > 0 ? (
           <div className="mt-7 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {results.map((r) => {
               const href = r.slug

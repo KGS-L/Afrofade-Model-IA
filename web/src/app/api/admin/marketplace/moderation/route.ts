@@ -16,8 +16,8 @@ export async function GET(req:NextRequest){
     ]);
     for(const result of [verificationResult,reportsResult,reviewsResult,auditResult])if(result.error)throw result.error;
     const verification=verificationResult.data||[];
-    const proIds=verification.map(v=>v.professional_profile_id).filter(Boolean) as string[];
-    const salonIds=verification.map(v=>v.salon_id).filter(Boolean) as string[];
+    const proIds=verification.map((v: any)=>v.professional_profile_id).filter(Boolean) as string[];
+    const salonIds=verification.map((v: any)=>v.salon_id).filter(Boolean) as string[];
     const [prosResult,salonsResult]=await Promise.all([
       proIds.length?db.from('professional_profiles').select('id,professional_name,slug,verification_status,listing_status').in('id',proIds):Promise.resolve({data:[],error:null}),
       salonIds.length?db.from('salons').select('id,name,slug,verification_status,listing_status').in('id',salonIds):Promise.resolve({data:[],error:null}),
@@ -25,7 +25,7 @@ export async function GET(req:NextRequest){
     if(prosResult.error)throw prosResult.error;if(salonsResult.error)throw salonsResult.error;
     const pros=new Map((prosResult.data||[]).map((p:any)=>[p.id,p]));const salons=new Map((salonsResult.data||[]).map((s:any)=>[s.id,s]));
     return NextResponse.json({
-      verification:verification.map(v=>({...v,entity:v.entity_type==='professional'?pros.get(v.professional_profile_id as string)||null:salons.get(v.salon_id as string)||null})),
+      verification:verification.map((v: any)=>({...v,entity:v.entity_type==='professional'?pros.get(v.professional_profile_id as string)||null:salons.get(v.salon_id as string)||null})),
       reports:reportsResult.data||[],reviews:reviewsResult.data||[],audit:auditResult.data||[],
     });
   }catch(error){console.error('[Admin Marketplace Moderation GET]',error);return NextResponse.json({error:'Impossible de charger la modération marketplace.'},{status:500});}
