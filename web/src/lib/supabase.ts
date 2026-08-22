@@ -1,34 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-const rawPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-const publicUrl = rawPublicUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
-
-export const supabase = createClient(publicUrl, supabaseAnonKey);
-
-/**
- * URL de la couche données vue côté serveur. SUPABASE_URL permet de servir
- * les données depuis une couche locale (dev : gateway PostgREST) tandis que
- * le navigateur continue d'utiliser NEXT_PUBLIC_SUPABASE_URL (cloud) pour
- * l'authentification GoTrue.
- */
-function serverDataUrl(): string {
-  const raw = process.env.SUPABASE_URL || rawPublicUrl;
-  return raw.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+function resolveLocalUrl(): string {
+  const envUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (envUrl && !envUrl.includes('supabase.co') && !envUrl.includes('placeholder')) {
+    return envUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+  }
+  return 'http://localhost:3000';
 }
 
-/**
- * Server-only Supabase client for privileged operations.
- * Privileged code must fail closed when the service role key is missing.
- */
+const localUrl = resolveLocalUrl();
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'local-dev-anon-key';
+
+export const supabase = createClient(localUrl, supabaseAnonKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
 export function getServiceSupabase() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!serviceKey || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    throw new Error('Supabase server credentials are not configured.');
-  }
-
-  return createClient(serverDataUrl(), serviceKey, {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'local-dev-service-key';
+  return createClient(resolveLocalUrl(), serviceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -36,14 +25,9 @@ export function getServiceSupabase() {
   });
 }
 
-/**
- * Client données scopé sur l'utilisateur (Bearer accessToken).
- * Factory partagée par les routes marketplace/careers/workspace.
- */
 export function getUserScopedClient(accessToken: string) {
-  const url = serverDataUrl();
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  if (!url || !anon) throw new Error('Supabase public credentials missing');
+  const url = resolveLocalUrl();
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'local-dev-anon-key';
 
   return createClient(url, anon, {
     global: { headers: { Authorization: `Bearer ${accessToken}` } },

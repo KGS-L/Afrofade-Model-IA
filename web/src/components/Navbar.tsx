@@ -23,7 +23,7 @@ export function Navbar() {
       <nav className="hidden lg:flex items-center gap-1">{NAV_LINKS.map(item=><Link key={item.href} href={item.href} className="min-h-[44px] inline-flex items-center px-3 rounded-pill text-sm font-medium text-ink-soft hover:text-terracotta">{item.label}</Link>)}</nav>
       <div className="ml-auto flex items-center gap-2">
         <Link href="/connexion" className="hidden sm:inline-flex min-h-[44px] items-center px-3 text-sm font-medium text-ink-soft hover:text-terracotta">Se connecter</Link>
-        <Link href="/rituel" className="min-h-[44px] inline-flex items-center rounded-pill bg-terracotta hover:bg-terracotta-dark px-4 sm:px-5 text-sm font-bold text-white">Essayer une coiffure</Link>
+        <Link href="/rituel" className="hidden sm:inline-flex min-h-[44px] items-center rounded-pill bg-terracotta hover:bg-terracotta-dark px-4 sm:px-5 text-sm font-bold text-white">Essayer une coiffure</Link>
         <button className="lg:hidden w-11 h-11 rounded-pill border border-ink/15 bg-card flex items-center justify-center" onClick={()=>setOpen(v=>!v)} aria-label={open?'Fermer le menu':'Ouvrir le menu'}>{open?<X className="w-5 h-5"/>:<Menu className="w-5 h-5"/>}</button>
       </div>
     </div>
