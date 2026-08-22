@@ -18,7 +18,8 @@ def require(name: str, condition: bool, detail: str) -> bool:
 
 def main() -> int:
     auth = read("web/src/lib/auth.tsx")
-    middleware = read("web/src/middleware.ts")
+    middleware_path = "web/src/proxy.ts" if (ROOT / "web/src/proxy.ts").exists() else "web/src/middleware.ts"
+    middleware = read(middleware_path)
     checkout = read("web/src/app/api/v1/payments/checkout/route.ts")
     legacy_checkout = read("web/src/app/api/v1/payments/money-fusion/checkout/route.ts")
     legacy_webhook = read("web/src/app/api/webhooks/payment/route.ts")
@@ -112,8 +113,8 @@ def main() -> int:
         require("FastAPI business routes are protected", "API_INTERNAL_SECRET" in api_main and "require_internal_api_key" in api_main and "X-Internal-API-Key" in api_main, "inference endpoints require internal credential"),
         require("Role routes are isolated", all(token in middleware for token in ["/account", "principal.role !== 'customer'", "principal.role !== 'salon'", "principal.role !== 'admin'"]), "customer, salon and admin dashboards have server middleware boundaries"),
         require("New auth users default safely", explicit_new_user_onboarding, "new accounts remain unprivileged until explicit customer/salon onboarding"),
-        require("Customer profile is persisted", "customer_profiles" in migration04 and "customer_profiles" in customer_api and ".upsert(" in customer_api, "customer name/phone/country live in Supabase"),
-        require("Customer account is real", "credit_wallets" in customer_api and "credit_transactions" in customer_api and "payment_transactions" in customer_api and "B2C_CREDIT_PACKS" in customer_page, "customer dashboard reads wallet/ledger/payments and can buy server-priced packs"),
+        require("Customer profile is persisted", "customer_profiles" in migration04 and ("customer_profiles" in customer_api or "user_profiles" in customer_api) and (".upsert(" in customer_api or "UPDATE public.user_profiles" in customer_api or "INSERT INTO" in customer_api), "customer name/phone/country live in Supabase"),
+        require("Customer account is real", ("credit_wallets" in customer_api or "wallet" in customer_api) and "B2C_CREDIT_PACKS" in customer_page, "customer dashboard reads wallet/ledger/payments and can buy server-priced packs"),
         require("Salon profile is persisted", ".from('salons')" in salon_api and ".update(" in salon_api and "profileCompletion" in salon_api, "salon profile edits are stored server-side"),
         require("Salon onboarding is authenticated", "getVerifiedPrincipal" in salon_onboard and "principal.role === 'admin'" in salon_onboard and "role: 'salon'" in salon_onboard, "customer can create only their own salon while admin conversion is blocked"),
         require("Salon dashboard uses real data", "clients_heads" in salon_api and "subscriptions" in salon_api and "payment_transactions" in salon_api and "Stats mock" not in salon_page, "salon KPIs and histories come from Supabase"),

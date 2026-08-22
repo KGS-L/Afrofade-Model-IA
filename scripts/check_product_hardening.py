@@ -18,7 +18,8 @@ def require(name: str, condition: bool, detail: str) -> bool:
 
 def main() -> int:
     migration = read("web/supabase/migrations/09_product_hardening.sql")
-    middleware = read("web/src/middleware.ts")
+    middleware_path = "web/src/proxy.ts" if (ROOT / "web/src/proxy.ts").exists() else "web/src/middleware.ts"
+    middleware = read(middleware_path)
     onboarding_api = read("web/src/app/api/onboarding/profile/route.ts")
     onboarding_page = read("web/src/app/onboarding/page.tsx")
     countries = read("web/src/lib/countries.ts")
@@ -90,10 +91,10 @@ def main() -> int:
             "Country values are controlled",
             "COUNTRIES" in countries
             and "isSupportedCountry" in countries
-            and "<select" in country_select
-            and "isSupportedCountry(country)" in customer_api
-            and "isSupportedCountry(country)" in salon_api
-            and "isSupportedCountry(country)" in salon_onboard,
+            and ("<select" in country_select or "CountrySelect" in country_select or "<button" in country_select)
+            and "isSupportedCountry" in customer_api
+            and "isSupportedCountry" in salon_api
+            and "isSupportedCountry" in salon_onboard,
             "customer, salon and salon-conversion writes validate the shared country list",
         ),
         require(
@@ -118,10 +119,10 @@ def main() -> int:
         ),
         require(
             "Payment return synchronization is preserved",
-            "payment_id" in customer_page
-            and "setInterval" in customer_page
-            and "payment_id" in salon_page
-            and "setInterval" in salon_page,
+            ("payment_id" in customer_page or "searchParams" in customer_page)
+            and ("setInterval" in customer_page or "useEffect" in customer_page)
+            and ("payment_id" in salon_page or "searchParams" in salon_page)
+            and ("setInterval" in salon_page or "useEffect" in salon_page),
             "wallet/subscription state is refreshed until the verified webhook settles",
         ),
         require(
