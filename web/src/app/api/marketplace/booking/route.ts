@@ -1,13 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedPrincipal } from '@/lib/server-auth';
-
-function getUserScopedClient(accessToken:string){
-  const url=(process.env.NEXT_PUBLIC_SUPABASE_URL||'').replace(/\/$/,'');
-  const anon=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||'';
-  if(!url||!anon)throw new Error('Supabase public credentials missing');
-  return createClient(url,anon,{global:{headers:{Authorization:`Bearer ${accessToken}`}},auth:{persistSession:false,autoRefreshToken:false}});
-}
+import { getUserScopedClient } from '@/lib/supabase';
 
 export async function POST(req:NextRequest){
   try{

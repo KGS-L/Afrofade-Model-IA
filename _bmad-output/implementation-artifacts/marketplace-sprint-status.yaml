@@ -3,7 +3,7 @@
 
 track: marketplace
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-22
 status: merged-and-validated
 current_story: "cross-epic-review-12-to-17-validated"
 ux_authority: "_bmad-output/planning-artifacts/ux-designs/UX-AFROFADE-MARKETPLACE-V2-VALIDATED-2026-08-21.md"
@@ -115,6 +115,12 @@ epics:
       17.4-marketplace-payment-readiness: review_feature_gated
       17.5-sponsored-listing-guardrails: review_feature_gated
 
+retrospective:
+  date: 2026-08-22
+  doc: "_bmad-output/implementation-artifacts/epic-12-17-retro-2026-08-22.md"
+  verdict: rejected
+  note: "Verdict machine : stories non-done (39 en review) + F1 bloquant (fork de schema 04/20 reproduit sur base vierge). 12 action items P0-P2 proposees dans le document retro. Le script sprint_status.py est incompatible avec ce format de fichier (cles N.M-, epics imbriquees) : entree ajoutee manuellement."
+
 release_gates:
   M1:
     status: passed
@@ -133,6 +139,7 @@ release_gates:
     requires: ["17.1", "17.2", "17.3"]
 
 notes:
+  - "2026-08-22: retrospective epic-12-17 rendue, verdict rejected (voir bloc retrospective + document retro). Aucune story ne doit etre promue done avant remediations P0 et CI vert (action items A1-A5)."
   - "Release gates updated from review_pending_ci to passed following main merge validation."
   - "Existing 3D Epics remain separate and may continue in parallel."
   - "UX V2 amendment is authoritative for onboarding, workspace shell, landing and related UX criteria."

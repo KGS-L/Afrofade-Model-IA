@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import type { PaymentProvider } from '@/lib/payment-providers';
 import { PlanName, SalonProfileFields, TermId } from '@/lib/plans';
 
@@ -61,13 +60,6 @@ async function fetchServerSession(): Promise<ServerSessionUser | null> {
   return (data.user ?? null) as ServerSessionUser | null;
 }
 
-async function establishServerSession(accessToken: string): Promise<ServerSessionUser | null> {
-  const response = await fetch('/api/auth/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }) });
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data.user ?? null;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -89,7 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cached = raw ? (JSON.parse(raw) as AuthUser) : null;
     } catch {}
 
-    fetchServerSession().then((serverUser) => serverUser ? persist(mergeServerUser(serverUser, cached)) : persist(null)).catch(() => persist(null)).finally(() => setHydrated(true));
+    fetchServerSession()
+      .then((serverUser) => (serverUser ? persist(mergeServerUser(serverUser, cached)) : persist(null)))
+      .catch(() => persist(null))
+      .finally(() => setHydrated(true));
 
     const paymentPending = new URLSearchParams(window.location.search).get('payment') === 'pending';
     if (paymentPending) {
@@ -99,7 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!serverUser) return;
           setUser((previous) => {
             const next = mergeServerUser(serverUser, previous);
-            try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+            try {
+              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+            } catch {}
             return next;
           });
           if (serverUser.subscription && paymentPollTimer !== null) {
@@ -114,45 +111,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, 30000);
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!session?.access_token) return;
-      const serverUser = await establishServerSession(session.access_token);
-      if (!serverUser) return;
-      setUser((previous) => mergeServerUser(serverUser, previous));
-    });
-
     return () => {
-      authListener.subscription.unsubscribe();
       if (paymentPollTimer !== null) window.clearInterval(paymentPollTimer);
       if (paymentPollStopTimer !== null) window.clearTimeout(paymentPollStopTimer);
     };
   }, [persist]);
 
   const loginWithEmail = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-    if (error) console.warn('[Auth] Unable to send OTP:', error.message);
-    return !error;
+    try {
+      const response = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      return response.ok;
+    } catch (err) {
+      console.warn('[Auth] Unable to send OTP:', err);
+      return false;
+    }
   }, []);
 
-  const verifyEmailOtp = useCallback(async (email: string, token: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
-    if (error || !data.session) return false;
-    const serverUser = await establishServerSession(data.session.access_token);
-    if (!serverUser) return false;
-    persist(mergeServerUser(serverUser, user));
-    return true;
-  }, [persist, user]);
+  const verifyEmailOtp = useCallback(
+    async (email: string, token: string) => {
+      try {
+        const response = await fetch('/api/auth/otp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token }),
+        });
+        if (!response.ok) return false;
+        const data = await response.json();
+        if (!data.user) return false;
+
+        const serverUser: ServerSessionUser = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          salonId: data.user.salonId || null,
+          needsOnboarding: Boolean(data.user.needsOnboarding),
+          subscription: null,
+          everSubscribed: false,
+        };
+
+        persist(mergeServerUser(serverUser, user));
+        return true;
+      } catch (err) {
+        console.warn('[Auth] Unable to verify OTP:', err);
+        return false;
+      }
+    },
+    [persist, user]
+  );
 
   const loginWithGoogle = useCallback(async (nextUrl = '/account') => {
     const safeNext = nextUrl.startsWith('/') && !nextUrl.startsWith('//') ? nextUrl : '/account';
-    const callbackUrl = new URL('/connexion', window.location.origin);
-    callbackUrl.searchParams.set('next', safeNext);
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callbackUrl.toString() } });
-    if (error) throw error;
+    window.location.href = `/api/auth/signin/google?next=${encodeURIComponent(safeNext)}`;
   }, []);
 
   const logout = useCallback(async () => {
-    await Promise.allSettled([supabase.auth.signOut(), fetch('/api/auth/session', { method: 'DELETE' })]);
+    await fetch('/api/auth/session', { method: 'DELETE' });
     persist(null);
   }, [persist]);
 
@@ -160,20 +178,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser((prev) => {
       if (!prev) return prev;
       const next = { ...prev, profile: { ...prev.profile, ...patch } };
-      try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {}
       return next;
     });
   }, []);
 
-  const subscribe = useCallback(async (plan: PlanName, _amount: number, term: TermId, provider: PaymentProvider = 'money_fusion') => {
-    const response = await fetch('/api/v1/payments/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ provider, purpose: 'subscription', planName: plan, termId: term }) });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Échec de la création du paiement.');
-    if (!data.url) throw new Error('Le prestataire de paiement n’a pas retourné de lien de paiement.');
-    window.location.assign(data.url);
-  }, []);
+  const subscribe = useCallback(
+    async (plan: PlanName, _amount: number, term: TermId, provider: PaymentProvider = 'money_fusion') => {
+      const response = await fetch('/api/v1/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, purpose: 'subscription', planName: plan, termId: term }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Échec de la création du paiement.');
+      if (!data.url) throw new Error('Le prestataire de paiement n’a pas retourné de lien de paiement.');
+      window.location.assign(data.url);
+    },
+    []
+  );
 
-  const value = useMemo(() => ({ user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, logout, updateProfile, subscribe }), [user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, logout, updateProfile, subscribe]);
+  const value = useMemo(
+    () => ({ user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, logout, updateProfile, subscribe }),
+    [user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, logout, updateProfile, subscribe]
+  );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

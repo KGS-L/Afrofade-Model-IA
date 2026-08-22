@@ -1,9 +1,10 @@
 ---
 title: "PRD — Afrofade post-P0"
-status: draft
+status: superseded-by-marketplace-prd-2026-08-21
 created: 2026-08-19
-updated: 2026-08-19
+updated: 2026-08-21
 supersedes: "_bmad-output/planning-artifacts/prds/prd-Afrofade-2026-08-18/prd.md"
+superseded_by: "_bmad-output/planning-artifacts/prds/prd-Afrofade-2026-08-21-marketplace/prd.md (Fully Implemented & Merged to main)"
 change_source: "BMAD Correct Course post-P0"
 ---
 

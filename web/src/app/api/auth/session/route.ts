@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getVerifiedPrincipal, verifyAccessToken } from '@/lib/server-auth';
-import { getServiceSupabase } from '@/lib/supabase';
+import { query } from '@/lib/db';
 
 const COOKIE_NAME = 'afrofade_session';
 const VALID_PLANS = new Set(['PRO', 'VIP', 'EXTRA']);
@@ -11,24 +11,45 @@ type Principal = NonNullable<Awaited<ReturnType<typeof getVerifiedPrincipal>>>;
 
 async function getBillingState(principal: Principal) {
   if (!principal.profileConfigured || !principal.salonId) return { subscription: null, everSubscribed: false };
-  const supabaseAdmin = getServiceSupabase();
   const now = new Date().toISOString();
-  const [salonResult, activeSubscriptionResult, lastPaymentResult] = await Promise.all([
-    supabaseAdmin.from('salons').select('plan').eq('id', principal.salonId).maybeSingle(),
-    supabaseAdmin.from('subscriptions').select('amount_fcfa, status, expires_at, created_at').eq('salon_id', principal.salonId).eq('status', 'active').gt('expires_at', now).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    supabaseAdmin.from('payment_transactions').select('product_id, term_id, amount_fcfa, metadata, paid_at, created_at').eq('salon_id', principal.salonId).eq('purpose', 'subscription').eq('status', 'paid').order('paid_at', { ascending: false }).limit(1).maybeSingle(),
-  ]);
-  if (salonResult.error) console.warn('[Auth Session] Unable to load salon plan:', salonResult.error.message);
-  if (activeSubscriptionResult.error) console.warn('[Auth Session] Unable to load active subscription:', activeSubscriptionResult.error.message);
-  if (lastPaymentResult.error) console.warn('[Auth Session] Unable to load subscription payment:', lastPaymentResult.error.message);
 
-  const activeSubscription = activeSubscriptionResult.data;
-  const payment = lastPaymentResult.data;
+  let salonPlan = 'PRO';
+  let activeSubscription: any = null;
+  let payment: any = null;
+
+  try {
+    const salonRes = await query(`SELECT plan FROM public.salons WHERE id = $1 LIMIT 1`, [principal.salonId]);
+    if (salonRes.rows.length > 0 && salonRes.rows[0].plan) {
+      salonPlan = salonRes.rows[0].plan;
+    }
+
+    const subRes = await query(
+      `SELECT amount_fcfa, status, expires_at, created_at FROM public.subscriptions 
+       WHERE salon_id = $1 AND status = 'active' AND expires_at > $2 
+       ORDER BY created_at DESC LIMIT 1`,
+      [principal.salonId, now]
+    );
+    if (subRes.rows.length > 0) {
+      activeSubscription = subRes.rows[0];
+    }
+
+    const payRes = await query(
+      `SELECT product_id, term_id, amount_fcfa, metadata, paid_at, created_at FROM public.payment_transactions 
+       WHERE salon_id = $1 AND purpose = 'subscription' AND status = 'paid' 
+       ORDER BY paid_at DESC LIMIT 1`,
+      [principal.salonId]
+    );
+    if (payRes.rows.length > 0) {
+      payment = payRes.rows[0];
+    }
+  } catch (dbErr) {
+    console.warn('[Auth Session] Billing query skipped:', dbErr);
+  }
+
   const everSubscribed = Boolean(activeSubscription || payment);
   if (!activeSubscription) return { subscription: null, everSubscribed };
 
   const productPlan = typeof payment?.product_id === 'string' ? payment.product_id : '';
-  const salonPlan = typeof salonResult.data?.plan === 'string' ? salonResult.data.plan : '';
   const plan = VALID_PLANS.has(productPlan) ? productPlan : VALID_PLANS.has(salonPlan) ? salonPlan : 'PRO';
   const paymentTerm = typeof payment?.term_id === 'string' ? payment.term_id : '';
   const term = VALID_TERMS.has(paymentTerm) ? paymentTerm : 'mensuel';

@@ -1,16 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedPrincipal } from '@/lib/server-auth';
-import { getServiceSupabase } from '@/lib/supabase';
-
-function userDb(token: string) {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  return createClient(url, key, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+import { getServiceSupabase, getUserScopedClient as userDb } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   try {

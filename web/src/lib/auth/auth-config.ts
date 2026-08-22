@@ -1,37 +1,69 @@
 /**
- * NextAuth.js / Auth.js Configuration for Self-Hosted Afrofade.
- * Manages sessions and OAuth/Email providers directly via PostgreSQL.
+ * NextAuth.js / Self-Hosted JWT Auth Configuration for Afrofade.
+ * Manages sessions and JWT tokens directly via local PostgreSQL and Jose.
  */
+
+import { SignJWT, jwtVerify } from 'jose';
 
 export interface AuthUser {
   id: string;
   email: string;
   name?: string;
   role: 'customer' | 'salon' | 'admin';
+  salonId?: string | null;
 }
 
 export interface NextAuthConfig {
   secret: string;
   databaseUrl: string;
-  providers: {
-    google?: {
-      clientId: string;
-      clientSecret: string;
-    };
-  };
+  jwtExpiration: string;
 }
 
 export function getAuthConfig(): NextAuthConfig {
   return {
     secret: process.env.NEXTAUTH_SECRET || 'afrofade_dev_nextauth_secret',
     databaseUrl: process.env.DATABASE_URL || 'postgresql://afrofade:afrofade_secret_pass@localhost:5432/afrofade_db',
-    providers: {
-      google: {
-        clientId: process.env.GOOGLE_CLIENT_ID || '',
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      },
-    },
+    jwtExpiration: '7d',
   };
+}
+
+function getSecretKey(): Uint8Array {
+  const secret = getAuthConfig().secret;
+  return new TextEncoder().encode(secret);
+}
+
+export async function createSessionJwt(user: AuthUser): Promise<string> {
+  const secretKey = getSecretKey();
+  return new SignJWT({
+    sub: user.id,
+    email: user.email,
+    name: user.name || user.email.split('@')[0],
+    role: user.role,
+    salonId: user.salonId || null,
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(secretKey);
+}
+
+export async function verifySessionJwt(token: string): Promise<AuthUser | null> {
+  try {
+    const secretKey = getSecretKey();
+    const { payload } = await jwtVerify(token, secretKey, { algorithms: ['HS256'] });
+    
+    if (!payload.sub || !payload.email) return null;
+
+    return {
+      id: payload.sub as string,
+      email: payload.email as string,
+      name: (payload.name as string) || (payload.email as string).split('@')[0],
+      role: (payload.role as 'customer' | 'salon' | 'admin') || 'customer',
+      salonId: (payload.salonId as string) || null,
+    };
+  } catch (error) {
+    return null;
+  }
 }
 
 export function formatAuthHeader(token: string): Record<string, string> {

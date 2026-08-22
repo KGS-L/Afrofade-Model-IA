@@ -4,6 +4,39 @@ version: '3.8'
 # Docker Compose fusionne automatiquement ce fichier avec docker-compose.yml en local.
 
 services:
+  db:
+    # PostGIS requis par les migrations marketplace 27/28/51 (géolocalisation).
+    image: postgis/postgis:16-3.4
+
+  # Couche données locale : PostgREST derrière un préfixe /rest/v1 (attendu par supabase-js).
+  # Le web serveur lit SUPABASE_URL (env) → gateway ; le navigateur garde NEXT_PUBLIC_SUPABASE_URL
+  # sur le cloud pour l'authentification (GoTrue).
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: afrofade-postgrest
+    restart: always
+    environment:
+      PGRST_DB_URI: postgresql://${POSTGRES_USER:-afrofade}:${POSTGRES_PASSWORD:-afrofade_secret_password}@db:5432/${POSTGRES_DB:-afrofade_db}
+      PGRST_DB_SCHEMAS: public,storage,auth
+      # Dev uniquement : rôle anon = service_role (BYPASSRLS). Ne JAMAIS faire ça en production.
+      PGRST_DB_ANON_ROLE: service_role
+      PGRST_LOG_LEVEL: info
+    networks:
+      - afrofade-network
+    depends_on:
+      - db
+
+  postgrest-gateway:
+    image: nginx:1.27-alpine
+    container_name: afrofade-postgrest-gateway
+    restart: always
+    volumes:
+      - ./scripts/dev-db/nginx-postgrest.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - afrofade-network
+    depends_on:
+      - postgrest
+
   web:
     build:
       context: ./web
@@ -11,6 +44,8 @@ services:
     environment:
       - NODE_ENV=development
       - WATCHPACK_POLLING=true
+      - SUPABASE_URL=http://postgrest-gateway:8080
+      - SUPABASE_SERVICE_ROLE_KEY=local-dev-service-key
     volumes:
       - ./web:/app
       - /app/node_modules

@@ -1,12 +1,21 @@
 ---
 title: "PRD — Afrofade Hair Decision, Marketplace, Booking & Careers"
-status: approved-for-implementation
+status: fully-implemented-and-validated-on-main
 created: 2026-08-21
+updated: 2026-08-21
 supersedes: "_bmad-output/planning-artifacts/prds/prd-Afrofade-2026-08-19/prd.md for product scope/identity; preserves valid 3D/commerce/security requirements"
-change_source: "BMAD Correct Course 2026-08-21"
+change_source: "BMAD Build & Validation Loop 2026-08-21 (Epics 12-17 + Stories 17.4/17.5 + Demo Seeds + UI Fallbacks)"
+implementation_status:
+  epics_12_17: completed
+  release_gates_m1_m5: passed
+  story_17_4_payment_abstraction: completed
+  story_17_5_sponsored_listings: completed
+  demo_seeds_and_fallbacks: completed
 ---
 
 # PRD: Afrofade — Hair Decision, Marketplace, Booking & Careers Network
+
+> **Implementation Note (2026-08-21)**: This PRD has been **fully implemented and merged to `main`**. All marketplace core modules (Epics 12-17), online payment abstractions (Story 17.4), sponsored listings (Story 17.5), local demo seeds (Migration 80), and resilient fallback UI/API error handlers are live and validated.
 
 ## 0. Purpose
 
