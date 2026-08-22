@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
       || principal.user.email || 'Client Afrofade';
     const customerPhone = normalizePhone(salonContext?.salon.phone)
       || normalizePhone(customerProfile?.phone)
-      || normalizePhone(metadata.phone)
+      || normalizePhone((metadata as Record<string, any>)?.phone)
       || normalizePhone(body?.customerPhone);
     if (provider === 'money_fusion' && !customerPhone) return NextResponse.json({ error: 'Ajoutez un numéro de téléphone valide avant de payer avec Money Fusion.' }, { status: 400 });
 

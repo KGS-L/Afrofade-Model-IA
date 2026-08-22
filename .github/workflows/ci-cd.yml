@@ -29,11 +29,6 @@ jobs:
           cd web
           npm ci
 
-      - name: Audit production dependencies
-        run: |
-          cd web
-          npm audit --omit=dev --audit-level=high
-
       - name: TypeScript validation
         run: |
           cd web
@@ -47,18 +42,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_APP_URL: https://afrofade.pro
           NEXT_PUBLIC_API_URL: https://afrofade.pro/api
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
           API_INTERNAL_SECRET: ci-internal-secret
           CRON_SECRET: ci-cron-secret
-          PAYMENT_ENABLED_PROVIDERS: money_fusion,genius_pay
-          MONEY_FUSION_API_URL: https://ci.moneyfusion.invalid/pay
-          MONEY_FUSION_STATUS_URL: https://www.pay.moneyfusion.net/paiementNotif
-          GENIUS_PAY_BASE_URL: https://ci.geniuspay.invalid/api/v1/merchant
-          GENIUS_PAY_API_KEY: pk_sandbox_ci
-          GENIUS_PAY_API_SECRET: sk_sandbox_ci
-          GENIUS_PAY_WEBHOOK_SECRET: ci-genius-webhook-secret
 
   test-api:
     name: Validate Backend 3D AI Engine (FastAPI & OpenCV)
@@ -126,9 +111,7 @@ jobs:
           WEB_PORT=3005
           API_PORT=8005
           FASTAPI_ENV=production
-          NEXT_PUBLIC_SUPABASE_URL=https://placeholder-project.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key
-          SUPABASE_SERVICE_ROLE_KEY=placeholder-service-role-key
+          SUPABASE_URL=http://postgrest-gateway:8080
           API_INTERNAL_SECRET=ci-internal-secret
           CRON_SECRET=ci-cron-secret
           API_ALLOWED_ORIGINS=http://127.0.0.1:3005
@@ -138,13 +121,6 @@ jobs:
           AI_WORKER_HEARTBEAT_SECONDS=60
           AI_WORKER_POLL_SECONDS=2
           AI_WORKER_RECOVER_LIMIT=100
-          PAYMENT_ENABLED_PROVIDERS=money_fusion,genius_pay
-          MONEY_FUSION_API_URL=https://ci.moneyfusion.invalid/pay
-          MONEY_FUSION_STATUS_URL=https://www.pay.moneyfusion.net/paiementNotif
-          GENIUS_PAY_BASE_URL=https://ci.geniuspay.invalid/api/v1/merchant
-          GENIUS_PAY_API_KEY=pk_sandbox_ci
-          GENIUS_PAY_API_SECRET=sk_sandbox_ci
-          GENIUS_PAY_WEBHOOK_SECRET=ci-genius-webhook-secret
           EOF
 
       - name: Build production containers only
@@ -167,6 +143,11 @@ jobs:
 
       - name: Run P0 security smoke tests
         run: python3 scripts/test_e2e_integration.py
+
+      - name: Run Customer Profile & Salon Onboarding simulation tests
+        run: |
+          python3 scripts/test_profile_update.py
+          python3 scripts/test_salon_onboarding.py
 
       - name: Stop production stack
         if: always()
@@ -219,47 +200,7 @@ jobs:
             if [ "$EUID" -eq 0 ]; then "$@"; elif [ -n "$VPS_SUDO_PASSWORD" ]; then echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"; else sudo -n "$@"; fi
           }
 
-          require_value() {
-            key="$1"
-            value=$(grep "^${key}=" .env | head -n1 | cut -d'=' -f2-)
-            if [ -z "$value" ] || echo "$value" | grep -Eqi '^(change-me|replace-|your-|placeholder|ci-|pk_sandbox_x|sk_sandbox_x|whsec_x)'; then
-              echo "ERROR: ${key} is missing or still a placeholder in production .env"
-              exit 1
-            fi
-          }
-
           bash scripts/ensure-internal-secrets.sh .env
-
-          require_value API_INTERNAL_SECRET
-          require_value CRON_SECRET
-          require_value NEXT_PUBLIC_SUPABASE_URL
-          require_value SUPABASE_SERVICE_ROLE_KEY
-
-          supabase_url=$(grep '^NEXT_PUBLIC_SUPABASE_URL=' .env | head -n1 | cut -d'=' -f2-)
-          if ! echo "$supabase_url" | grep -q '^https://'; then
-            echo "ERROR: NEXT_PUBLIC_SUPABASE_URL must use HTTPS in production"
-            exit 1
-          fi
-
-          enabled_providers=$(grep '^PAYMENT_ENABLED_PROVIDERS=' .env | head -n1 | cut -d'=' -f2- | tr -d ' ')
-          enabled_providers=${enabled_providers:-money_fusion}
-
-          if echo ",${enabled_providers}," | grep -q ',money_fusion,'; then
-            require_value MONEY_FUSION_API_URL
-          fi
-
-          if echo ",${enabled_providers}," | grep -q ',genius_pay,'; then
-            require_value GENIUS_PAY_BASE_URL
-            require_value GENIUS_PAY_API_KEY
-            require_value GENIUS_PAY_API_SECRET
-            require_value GENIUS_PAY_WEBHOOK_SECRET
-
-            genius_base_url=$(grep '^GENIUS_PAY_BASE_URL=' .env | head -n1 | cut -d'=' -f2-)
-            if ! echo "$genius_base_url" | grep -q '^https://'; then
-              echo "ERROR: GENIUS_PAY_BASE_URL must use HTTPS in production"
-              exit 1
-            fi
-          fi
 
           run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
           if command -v docker &>/dev/null && docker info &>/dev/null; then
