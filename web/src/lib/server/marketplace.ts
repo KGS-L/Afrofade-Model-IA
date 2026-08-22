@@ -1,20 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { getServiceSupabase } from '@/lib/supabase';
+export { getServiceSupabase };
 import {
   ProfessionalProfile,
   SalonMembership,
   SalonMembershipRole,
   SalonMembershipState,
 } from '@/lib/types/marketplace';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-export function getServiceSupabase() {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for marketplace server operations');
-  }
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
 
 /**
  * Story 12.3: Get or create professional profile for an authenticated user
