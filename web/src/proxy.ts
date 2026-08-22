@@ -15,7 +15,7 @@ function homeForPrincipal(
   return new URL('/connexion?error=salon_profile_missing', request.url);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 
@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
   try {
     principal = await getVerifiedPrincipal(request);
   } catch (error) {
-    console.error('[Middleware] Authentication verification failed:', error);
+    console.error('[Proxy] Authentication verification failed:', error);
   }
 
   if (!principal) {

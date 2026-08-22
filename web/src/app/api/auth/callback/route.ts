@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createSessionJwt, AuthUser } from '@/lib/auth/auth-config';
 import { query } from '@/lib/db';
+import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const searchParams = url.searchParams;
   const code = searchParams.get('code');
   const rawState = searchParams.get('state');
-  
+
   let next = searchParams.get('next') || '/account';
   if (rawState) {
     try {
@@ -19,16 +20,23 @@ export async function GET(request: NextRequest) {
 
   const forwardedHost = request.headers.get('x-forwarded-host');
   const forwardedProto = request.headers.get('x-forwarded-proto') || 'http';
-  const requestOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : url.origin;
+  const requestOrigin = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : url.origin;
   const envUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const baseUrl = (envUrl && !envUrl.includes('afrofade.pro')) ? envUrl.replace(/\/$/, '') : requestOrigin;
+  const baseUrl =
+    envUrl && !envUrl.includes('afrofade.pro')
+      ? envUrl.replace(/\/$/, '')
+      : requestOrigin;
 
-  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/account';
+  const safeNext =
+    next.startsWith('/') && !next.startsWith('//') ? next : '/account';
 
   if (code) {
     let email = 'client.google@afrofade.pro';
     let fullName = 'Utilisateur Google';
-    let userId = 'usr_g_' + Math.random().toString(36).substring(2, 10);
+    // Toujours générer un UUID valide pour la compatibilité PostgreSQL
+    let userId = crypto.randomUUID();
     let role: 'customer' | 'salon' | 'admin' = 'customer';
     let salonId: string | null = null;
 
@@ -68,9 +76,10 @@ export async function GET(request: NextRequest) {
       );
 
       if (profileRes.rows.length > 0) {
-        role = profileRes.rows[0].role as any || 'customer';
+        role = (profileRes.rows[0].role as any) || 'customer';
         salonId = profileRes.rows[0].salon_id || null;
-        if (profileRes.rows[0].full_name) fullName = profileRes.rows[0].full_name;
+        if (profileRes.rows[0].full_name)
+          fullName = profileRes.rows[0].full_name;
       } else {
         await query(
           `INSERT INTO public.user_profiles (user_id, email, role, full_name)
@@ -105,5 +114,7 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  return NextResponse.redirect(`${baseUrl}/connexion?next=${encodeURIComponent(safeNext)}`);
+  return NextResponse.redirect(
+    `${baseUrl}/connexion?next=${encodeURIComponent(safeNext)}`
+  );
 }

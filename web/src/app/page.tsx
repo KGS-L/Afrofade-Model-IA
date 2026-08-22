@@ -32,7 +32,7 @@ const faq = [
 export default function HomePage() {
   const router=useRouter(); const [q,setQ]=useState(''); const [city,setCity]=useState('Ouagadougou');
   const submit=(e:FormEvent)=>{e.preventDefault();const p=new URLSearchParams();if(q.trim())p.set('q',q.trim());if(city.trim())p.set('city',city.trim());router.push(`/discover?${p}`);};
-  return <div className="min-h-screen bg-cream text-ink font-body"><Navbar/>
+  return <div className="min-h-screen bg-cream text-ink font-body">
     <main>
       <section className="max-w-container mx-auto px-4 sm:px-6 py-12 md:py-20 grid lg:grid-cols-[1.15fr_.85fr] gap-10 items-center">
         <div><p className="font-hand text-2xl text-terracotta">La coiffure commence avant le fauteuil ✦</p><h1 className="font-display text-[42px] sm:text-[54px] lg:text-[64px] leading-[1.04] mt-3">Trouvez le professionnel qui saura vraiment réaliser <span className="text-terracotta">votre style.</span></h1><p className="mt-5 text-base sm:text-lg text-ink-soft max-w-2xl">Découvrez des coiffures, essayez-les sur vous avec Afrofade, trouvez les salons et professionnels adaptés près de chez vous, puis réservez votre prestation.</p>

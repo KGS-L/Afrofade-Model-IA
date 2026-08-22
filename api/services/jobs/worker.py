@@ -126,7 +126,7 @@ class DurableJobWorker:
             try:
                 processed = self.run_once()
             except JobQueueError as exc:
-                logger.error("Durable job queue iteration failed: %s", exc)
+                logger.warning("Durable job queue iteration: %s", exc)
                 processed = 0
 
             if processed == 0:

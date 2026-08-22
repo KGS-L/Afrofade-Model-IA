@@ -3,25 +3,388 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Activity, ArrowRight, CreditCard, LogOut, RefreshCw, Scissors, ShieldCheck, Store, Users, Wallet } from 'lucide-react';
+import {
+  Activity,
+  ArrowRight,
+  CreditCard,
+  RefreshCw,
+  ShieldCheck,
+  Store,
+  Users,
+  Wallet,
+} from 'lucide-react';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
 import { useAuth } from '@/lib/auth';
 import type { PaymentProvider } from '@/lib/payment-providers';
 import { formatFcfa } from '@/lib/plans';
 
-type ProviderState={provider:PaymentProvider;displayName:string;enabled:boolean;configured:boolean;effectiveEnabled:boolean;paidTransactions:number;revenueFcfa:number};
-type AdminOverview={kpis:{salons:number;users:number;activeSubscriptions:number;paidTransactions:number;totalRevenueFcfa:number;subscriptionRevenueFcfa:number;creditRevenueFcfa:number;canonicalHeads:number};planDistribution:{PRO:number;VIP:number;EXTRA:number};roleDistribution:{customer:number;salon:number;admin:number};jobs:{queued:number;running:number;failed:number;completed:number};paymentProviders:ProviderState[];recentSalons:Array<{id:string;name:string;country:string;plan:string;created_at:string;status:string}>};
+type ProviderState = {
+  provider: PaymentProvider;
+  displayName: string;
+  enabled: boolean;
+  configured: boolean;
+  effectiveEnabled: boolean;
+  paidTransactions: number;
+  revenueFcfa: number;
+};
 
-export default function AdminPage(){const router=useRouter();const{user,hydrated,logout}=useAuth();const[overview,setOverview]=useState<AdminOverview|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState<string|null>(null);const[toggling,setToggling]=useState<PaymentProvider|null>(null);
-const load=async(silent=false)=>{if(!silent)setLoading(true);setError(null);try{const response=await fetch('/api/admin/overview',{cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Impossible de charger l’administration.');setOverview(data);}catch(loadError){setError(loadError instanceof Error?loadError.message:'Impossible de charger l’administration.');}finally{if(!silent)setLoading(false);}};
-useEffect(()=>{if(!hydrated)return;if(!user){router.replace('/connexion?next=/admin');return;}if(user.needsOnboarding){router.replace('/onboarding');return;}if(user.role==='customer'){router.replace('/account');return;}if(user.role==='salon'){router.replace('/dashboard');return;}void load();},[hydrated,user,router]); // eslint-disable-line react-hooks/exhaustive-deps
-const toggleProvider=async(item:ProviderState)=>{setToggling(item.provider);setError(null);try{const response=await fetch('/api/admin/payment-providers',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:item.provider,enabled:!item.enabled})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Modification impossible.');await load(true);}catch(toggleError){setError(toggleError instanceof Error?toggleError.message:'Modification impossible.');}finally{setToggling(null);}};
-if(!hydrated||!user||user.role!=='admin'||loading)return <DashboardSkeleton darkHeader/>;
-const kpis=[{label:'Salons inscrits',value:overview?.kpis.salons??0,icon:Store,href:'/admin/salons'},{label:'Abonnements actifs',value:overview?.kpis.activeSubscriptions??0,icon:CreditCard,href:'/admin/subscriptions'},{label:'Utilisateurs',value:overview?.kpis.users??0,icon:Users,href:'/admin/users'},{label:'CA encaissé',value:`${formatFcfa(overview?.kpis.totalRevenueFcfa??0)} FCFA`,icon:Wallet,href:'/admin/revenue'}];
-return <div className="min-h-screen bg-cream text-ink"><header className="sticky top-0 z-30 bg-night/95 backdrop-blur-md border-b border-white/10"><div className="max-w-container mx-auto px-6 py-3 flex items-center gap-4"><Link href="/" className="flex items-center gap-2.5"><div className="w-9 h-9 rounded-card bg-terracotta flex items-center justify-center"><Scissors className="w-4 h-4 text-white"/></div><span className="font-display text-lg text-white">Afro<span className="text-terracotta">fade</span></span></Link><span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.12em] text-white bg-white/10 px-3 py-1.5 rounded-pill"><ShieldCheck className="w-3.5 h-3.5 text-terracotta"/>Console admin</span><div className="ml-auto flex items-center gap-3"><span className="hidden md:inline text-xs text-white/60">{user.email}</span><button onClick={logout} className="w-11 h-11 rounded-pill bg-white/10 border border-white/15 text-white flex items-center justify-center"><LogOut className="w-4 h-4"/></button></div></div></header>
-<main className="max-w-container mx-auto px-6 py-10 space-y-8"><div className="flex items-end justify-between gap-4 flex-wrap"><div><p className="font-hand text-2xl text-terracotta">vue d’ensemble</p><h1 className="font-display text-3xl">Administration Afrofade</h1><p className="text-sm text-ink-soft mt-1">Paiements, comptes, salons, revenus et pipeline IA depuis une seule console.</p></div><button onClick={()=>void load()} className="min-h-[44px] px-4 rounded-pill border border-ink/15 bg-card text-sm font-bold inline-flex items-center gap-2"><RefreshCw className="w-4 h-4"/>Actualiser</button></div>{error&&<div className="rounded-input border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">{error}</div>}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{kpis.map((kpi)=><Link key={kpi.label} href={kpi.href} className="group bg-card rounded-card border border-ink/10 p-5 shadow-soft hover:border-terracotta transition-colors"><div className="flex items-center justify-between"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-ink-soft"><kpi.icon className="w-3.5 h-3.5 text-terracotta"/>{kpi.label}</div><ArrowRight className="w-4 h-4 text-ink-soft group-hover:text-terracotta"/></div><p className="font-display text-2xl mt-2">{kpi.value}</p><p className="text-[11px] text-terracotta mt-2 font-bold">Voir le détail</p></Link>)}</div>
-<section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft"><div className="flex justify-between gap-3 flex-wrap"><div><h2 className="font-display text-xl">Prestataires de paiement</h2><p className="text-xs text-ink-soft mt-1">Le switch base de données coupe immédiatement un prestataire. La configuration serveur reste un garde-fou supplémentaire.</p></div><CreditCard className="w-5 h-5 text-terracotta"/></div><div className="grid md:grid-cols-2 gap-4 mt-5">{overview?.paymentProviders.map((item)=><div key={item.provider} className="rounded-card border border-ink/10 p-5"><div className="flex items-start justify-between gap-4"><div><p className="font-bold">{item.displayName}</p><p className="text-xs text-ink-soft mt-1">{item.configured?'Configuration serveur détectée':'Secrets/configuration serveur absents'}</p></div><button type="button" disabled={Boolean(toggling)} onClick={()=>void toggleProvider(item)} aria-pressed={item.enabled} className={`relative w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${item.enabled?'bg-terracotta':'bg-ink/15'}`}><span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${item.enabled?'left-6':'left-1'}`}/></button></div><div className="grid grid-cols-2 gap-3 mt-4 text-xs"><div className="bg-cream rounded-input p-3"><span className="text-ink-soft">État effectif</span><strong className={`block mt-1 ${item.effectiveEnabled?'text-terracotta-dark':'text-ink-soft'}`}>{item.effectiveEnabled?'ACTIF':'INACTIF'}</strong></div><div className="bg-cream rounded-input p-3"><span className="text-ink-soft">CA encaissé</span><strong className="block mt-1">{formatFcfa(item.revenueFcfa)} FCFA</strong></div><div className="col-span-2 text-ink-soft">{item.paidTransactions} transaction(s) payée(s)</div></div></div>)}</div></section>
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft"><h2 className="font-display text-lg">Répartition des plans</h2><div className="space-y-3 mt-5">{(['PRO','VIP','EXTRA'] as const).map((plan)=><div key={plan} className="flex justify-between text-sm"><span>{plan}</span><strong>{overview?.planDistribution[plan]??0}</strong></div>)}</div></section><section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft"><h2 className="font-display text-lg">Répartition des rôles</h2><div className="space-y-3 mt-5 text-sm"><div className="flex justify-between"><span>Particuliers</span><strong>{overview?.roleDistribution.customer??0}</strong></div><div className="flex justify-between"><span>Salons</span><strong>{overview?.roleDistribution.salon??0}</strong></div><div className="flex justify-between"><span>Admins</span><strong>{overview?.roleDistribution.admin??0}</strong></div></div></section><section className="bg-night text-white rounded-card p-6 shadow-soft"><h2 className="font-display text-lg flex gap-2"><Activity className="w-4 h-4 text-terracotta"/>Pipeline IA</h2><div className="grid grid-cols-2 gap-3 mt-5 text-sm">{Object.entries(overview?.jobs||{}).map(([status,count])=><div key={status} className="bg-white/5 rounded-input p-3"><span className="text-white/55 capitalize">{status}</span><strong className="block text-xl mt-1">{count}</strong></div>)}<div className="col-span-2 border-t border-white/10 pt-3 flex justify-between"><span className="text-white/55">Têtes canoniques</span><strong>{overview?.kpis.canonicalHeads??0}</strong></div></div></section></div>
-<section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft"><div className="flex justify-between items-center gap-3"><h2 className="font-display text-lg">Derniers salons inscrits</h2><Link href="/admin/salons" className="text-xs font-bold text-terracotta">Voir tous <ArrowRight className="inline w-3.5 h-3.5"/></Link></div><div className="overflow-x-auto mt-4"><table className="w-full text-left text-xs"><thead><tr className="uppercase tracking-[.1em] text-[10px] text-ink-soft border-b border-ink/10"><th className="py-2 pr-3">Salon</th><th>Pays</th><th>Plan</th><th>Statut</th><th>Inscrit le</th></tr></thead><tbody>{(overview?.recentSalons||[]).map((salon)=><tr key={salon.id} className="border-b border-ink/5"><td className="py-3 pr-3 font-bold">{salon.name}</td><td>{salon.country}</td><td>{salon.plan}</td><td>{salon.status}</td><td>{new Date(salon.created_at).toLocaleDateString('fr-FR')}</td></tr>)}</tbody></table></div></section></main></div>;
+type AdminOverview = {
+  kpis: {
+    salons: number;
+    users: number;
+    activeSubscriptions: number;
+    paidTransactions: number;
+    totalRevenueFcfa: number;
+    subscriptionRevenueFcfa: number;
+    creditRevenueFcfa: number;
+    canonicalHeads: number;
+  };
+  planDistribution: { PRO: number; VIP: number; EXTRA: number };
+  roleDistribution: { customer: number; salon: number; admin: number };
+  jobs: { queued: number; running: number; failed: number; completed: number };
+  paymentProviders: ProviderState[];
+  recentSalons: Array<{
+    id: string;
+    name: string;
+    country: string;
+    plan: string;
+    created_at: string;
+    status: string;
+  }>;
+};
+
+export default function AdminPage() {
+  const router = useRouter();
+  const { user, hydrated } = useAuth();
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toggling, setToggling] = useState<PaymentProvider | null>(null);
+
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/overview', {
+        cache: 'no-store',
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || 'Impossible de charger l’administration.');
+      setOverview(data);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : 'Impossible de charger l’administration.'
+      );
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!user) {
+      router.replace('/connexion?next=/admin');
+      return;
+    }
+    if (user.needsOnboarding) {
+      router.replace('/onboarding');
+      return;
+    }
+    if (user.role === 'customer') {
+      router.replace('/account');
+      return;
+    }
+    if (user.role === 'salon') {
+      router.replace('/dashboard');
+      return;
+    }
+    void load();
+  }, [hydrated, user, router]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleProvider = async (item: ProviderState) => {
+    setToggling(item.provider);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/payment-providers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: item.provider,
+          enabled: !item.enabled,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || 'Modification impossible.');
+      await load(true);
+    } catch (toggleError) {
+      setError(
+        toggleError instanceof Error
+          ? toggleError.message
+          : 'Modification impossible.'
+      );
+    } finally {
+      setToggling(null);
+    }
+  };
+
+  if (!hydrated || !user || user.role !== 'admin' || loading)
+    return <DashboardSkeleton darkHeader />;
+
+  const kpis = [
+    {
+      label: 'Salons inscrits',
+      value: overview?.kpis.salons ?? 0,
+      icon: Store,
+      href: '/admin/salons',
+    },
+    {
+      label: 'Abonnements actifs',
+      value: overview?.kpis.activeSubscriptions ?? 0,
+      icon: CreditCard,
+      href: '/admin/subscriptions',
+    },
+    {
+      label: 'Utilisateurs',
+      value: overview?.kpis.users ?? 0,
+      icon: Users,
+      href: '/admin/users',
+    },
+    {
+      label: 'CA encaissé',
+      value: `${formatFcfa(overview?.kpis.totalRevenueFcfa ?? 0)} FCFA`,
+      icon: Wallet,
+      href: '/admin/revenue',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-cream text-ink">
+      <main className="max-w-[1550px] mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8">
+        <div className="flex items-end justify-between gap-4 flex-wrap bg-card p-6 rounded-card border border-ink/10 shadow-soft">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-terracotta bg-terracotta-wash px-3 py-1 rounded-pill inline-flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" /> Console Admin
+              </span>
+            </div>
+            <h1 className="font-display text-3xl mt-2">Administration Afrofade</h1>
+            <p className="text-sm text-ink-soft mt-1">
+              Paiements, comptes, salons, revenus et pipeline IA depuis une seule console.
+            </p>
+          </div>
+          <button
+            onClick={() => void load()}
+            className="min-h-[44px] px-5 rounded-pill border border-ink/15 bg-cream hover:bg-terracotta-wash/50 text-sm font-bold inline-flex items-center gap-2 shadow-soft transition-colors"
+          >
+            <RefreshCw className="w-4 h-4 text-terracotta" />
+            Actualiser
+          </button>
+        </div>
+
+        {error && (
+          <div className="rounded-input border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpis.map((kpi) => (
+            <Link
+              key={kpi.label}
+              href={kpi.href}
+              className="group bg-card rounded-card border border-ink/10 p-5 shadow-soft hover:border-terracotta transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-ink-soft">
+                  <kpi.icon className="w-3.5 h-3.5 text-terracotta" />
+                  {kpi.label}
+                </div>
+                <ArrowRight className="w-4 h-4 text-ink-soft group-hover:text-terracotta" />
+              </div>
+              <p className="font-display text-2xl mt-2">{kpi.value}</p>
+              <p className="text-[11px] text-terracotta mt-2 font-bold">
+                Voir le détail
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
+          <div className="flex justify-between gap-3 flex-wrap">
+            <div>
+              <h2 className="font-display text-xl">Prestataires de paiement</h2>
+              <p className="text-xs text-ink-soft mt-1">
+                Le switch base de données coupe immédiatement un prestataire. La configuration serveur reste un garde-fou supplémentaire.
+              </p>
+            </div>
+            <CreditCard className="w-5 h-5 text-terracotta" />
+          </div>
+          <div className="grid md:grid-cols-2 gap-4 mt-5">
+            {overview?.paymentProviders.map((item) => (
+              <div
+                key={item.provider}
+                className="rounded-card border border-ink/10 p-5 bg-cream/40"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-ink">{item.displayName}</p>
+                    <p className="text-xs text-ink-soft mt-1">
+                      {item.configured
+                        ? 'Configuration serveur détectée'
+                        : 'Secrets/configuration serveur absents'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={Boolean(toggling)}
+                    onClick={() => void toggleProvider(item)}
+                    aria-pressed={item.enabled}
+                    className={`relative w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${
+                      item.enabled ? 'bg-terracotta' : 'bg-ink/15'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                        item.enabled ? 'left-6' : 'left-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-4 text-xs">
+                  <div className="bg-card rounded-input p-3 border border-ink/10">
+                    <span className="text-ink-soft">État effectif</span>
+                    <strong
+                      className={`block mt-1 ${
+                        item.effectiveEnabled
+                          ? 'text-terracotta-dark font-bold'
+                          : 'text-ink-soft'
+                      }`}
+                    >
+                      {item.effectiveEnabled ? 'ACTIF' : 'INACTIF'}
+                    </strong>
+                  </div>
+                  <div className="bg-card rounded-input p-3 border border-ink/10">
+                    <span className="text-ink-soft">CA encaissé</span>
+                    <strong className="block mt-1">
+                      {formatFcfa(item.revenueFcfa)} FCFA
+                    </strong>
+                  </div>
+                  <div className="col-span-2 text-ink-soft">
+                    {item.paidTransactions} transaction(s) payée(s)
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
+            <h2 className="font-display text-lg">Répartition des plans</h2>
+            <div className="space-y-3 mt-5">
+              {(['PRO', 'VIP', 'EXTRA'] as const).map((plan) => (
+                <div key={plan} className="flex justify-between text-sm">
+                  <span className="text-ink-soft">{plan}</span>
+                  <strong className="text-ink font-bold">
+                    {overview?.planDistribution[plan] ?? 0}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
+            <h2 className="font-display text-lg">Répartition des rôles</h2>
+            <div className="space-y-3 mt-5 text-sm">
+              <div className="flex justify-between">
+                <span className="text-ink-soft">Particuliers</span>
+                <strong className="text-ink font-bold">
+                  {overview?.roleDistribution.customer ?? 0}
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink-soft">Salons</span>
+                <strong className="text-ink font-bold">
+                  {overview?.roleDistribution.salon ?? 0}
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink-soft">Admins</span>
+                <strong className="text-ink font-bold">
+                  {overview?.roleDistribution.admin ?? 0}
+                </strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-night text-white rounded-card p-6 shadow-soft">
+            <h2 className="font-display text-lg flex items-center gap-2">
+              <Activity className="w-4 h-4 text-terracotta" />
+              Pipeline IA
+            </h2>
+            <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
+              {Object.entries(overview?.jobs || {}).map(([status, count]) => (
+                <div key={status} className="bg-white/5 rounded-input p-3 border border-white/10">
+                  <span className="text-white/55 capitalize">{status}</span>
+                  <strong className="block text-xl mt-1 text-white">{count}</strong>
+                </div>
+              ))}
+              <div className="col-span-2 border-t border-white/10 pt-3 flex justify-between">
+                <span className="text-white/55">Têtes canoniques</span>
+                <strong className="text-white">
+                  {overview?.kpis.canonicalHeads ?? 0}
+                </strong>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section className="bg-card rounded-card border border-ink/10 p-6 shadow-soft">
+          <div className="flex justify-between items-center gap-3">
+            <h2 className="font-display text-lg">Derniers salons inscrits</h2>
+            <Link
+              href="/admin/salons"
+              className="text-xs font-bold text-terracotta hover:underline"
+            >
+              Voir tous <ArrowRight className="inline w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="uppercase tracking-[.1em] text-[10px] text-ink-soft border-b border-ink/10">
+                  <th className="py-2.5 pr-3">Salon</th>
+                  <th>Pays</th>
+                  <th>Plan</th>
+                  <th>Statut</th>
+                  <th>Inscrit le</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(overview?.recentSalons || []).map((salon) => (
+                  <tr key={salon.id} className="border-b border-ink/5">
+                    <td className="py-3 pr-3 font-bold">{salon.name}</td>
+                    <td>{salon.country}</td>
+                    <td>{salon.plan}</td>
+                    <td>
+                      <span className="px-2 py-0.5 rounded-pill bg-terracotta-wash text-terracotta-dark font-bold">
+                        {salon.status}
+                      </span>
+                    </td>
+                    <td>
+                      {new Date(salon.created_at).toLocaleDateString('fr-FR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }

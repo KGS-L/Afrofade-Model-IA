@@ -12,10 +12,13 @@ type BackButtonProps = {
 
 /**
  * Bouton retour intelligent : revient à la page précédente de l'historique
- * quand la navigation vient du site (recherche, filtres et paramètres
- * conservés), sinon redirige vers fallbackHref au lieu de la landing.
+ * quand la navigation vient du site.
  */
-export default function BackButton({ label = 'Retour', fallbackHref = '/', className = '' }: BackButtonProps) {
+export default function BackButton({
+  label = 'Retour',
+  fallbackHref = '/',
+  className = '',
+}: BackButtonProps) {
   const router = useRouter();
 
   const handleBack = () => {

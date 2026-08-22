@@ -12,6 +12,10 @@ function cleanPhone(value: unknown): string {
   return !phone ? '' : /^\+?[0-9]{8,20}$/.test(phone) ? phone : '';
 }
 
+function isUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
 async function requireCustomer(req: NextRequest) {
   const principal = await getVerifiedPrincipal(req);
   if (!principal)
@@ -38,6 +42,18 @@ async function requireCustomer(req: NextRequest) {
   return { principal };
 }
 
+async function ensureTableSchema() {
+  await query(
+    `ALTER TABLE public.user_profiles 
+     ADD COLUMN IF NOT EXISTS full_name VARCHAR(255),
+     ADD COLUMN IF NOT EXISTS display_name VARCHAR(255),
+     ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+     ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+     ADD COLUMN IF NOT EXISTS country VARCHAR(100),
+     ADD COLUMN IF NOT EXISTS nationality VARCHAR(100)`
+  );
+}
+
 export async function GET(req: NextRequest) {
   try {
     const auth = await requireCustomer(req);
@@ -45,7 +61,10 @@ export async function GET(req: NextRequest) {
     const { principal } = auth;
 
     let profileData = {
-      displayName: principal.user.user_metadata?.full_name || principal.user.email?.split('@')[0] || 'Utilisateur Afrofade',
+      displayName:
+        principal.user.user_metadata?.full_name ||
+        principal.user.email?.split('@')[0] ||
+        'Utilisateur Afrofade',
       phone: '',
       country: 'Burkina Faso',
       nationality: 'Burkinabè',
@@ -58,23 +77,28 @@ export async function GET(req: NextRequest) {
     let heads: any[] = [];
 
     try {
-      // Ensure columns exist on public.user_profiles
-      await query(
-        `ALTER TABLE public.user_profiles 
-         ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
-         ADD COLUMN IF NOT EXISTS country VARCHAR(100),
-         ADD COLUMN IF NOT EXISTS nationality VARCHAR(100)`
-      );
+      await ensureTableSchema();
 
-      const profileRes = await query(
-        `SELECT full_name, phone, country, nationality FROM public.user_profiles 
-         WHERE user_id = $1 OR email = $2 LIMIT 1`,
-        [principal.user.id, principal.user.email]
-      );
+      const userIdStr = String(principal.user.id);
+      const emailStr = principal.user.email || '';
+
+      const profileRes = isUUID(userIdStr)
+        ? await query(
+            `SELECT COALESCE(full_name, display_name) AS name, phone, country, nationality 
+             FROM public.user_profiles 
+             WHERE user_id = $1 OR (email IS NOT NULL AND email != '' AND email = $2) LIMIT 1`,
+            [userIdStr, emailStr]
+          )
+        : await query(
+            `SELECT COALESCE(full_name, display_name) AS name, phone, country, nationality 
+             FROM public.user_profiles 
+             WHERE email = $1 LIMIT 1`,
+            [emailStr]
+          );
 
       if (profileRes.rows.length > 0) {
         const row = profileRes.rows[0];
-        if (row.full_name) profileData.displayName = row.full_name;
+        if (row.name) profileData.displayName = row.name;
         if (row.phone) profileData.phone = row.phone;
         if (row.country) profileData.country = row.country;
         if (row.nationality) profileData.nationality = row.nationality;
@@ -133,21 +157,54 @@ export async function PATCH(req: NextRequest) {
       );
 
     try {
-      await query(
-        `ALTER TABLE public.user_profiles 
-         ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
-         ADD COLUMN IF NOT EXISTS country VARCHAR(100),
-         ADD COLUMN IF NOT EXISTS nationality VARCHAR(100)`
-      );
+      await ensureTableSchema();
 
-      await query(
-        `UPDATE public.user_profiles 
-         SET full_name = $1, phone = $2, country = $3, nationality = $4, updated_at = NOW()
-         WHERE user_id = $1 OR email = $5`,
-        [displayName, phone || null, country, nationality || null, principal.user.email]
-      );
+      let userIdStr = String(principal.user.id);
+      const emailStr = principal.user.email || '';
+
+      // Tenter la mise à jour par email ou par UUID
+      const updateRes = isUUID(userIdStr)
+        ? await query(
+            `UPDATE public.user_profiles 
+             SET full_name = $1, display_name = $1, phone = $2, country = $3, nationality = $4, updated_at = NOW()
+             WHERE user_id = $5 OR (email IS NOT NULL AND email != '' AND email = $6)`,
+            [displayName, phone || null, country, nationality || null, userIdStr, emailStr]
+          )
+        : await query(
+            `UPDATE public.user_profiles 
+             SET full_name = $1, display_name = $1, phone = $2, country = $3, nationality = $4, updated_at = NOW()
+             WHERE email = $5`,
+            [displayName, phone || null, country, nationality || null, emailStr]
+          );
+
+      if ((updateRes.rowCount ?? 0) === 0) {
+        // Si la ligne n'existe pas, récupérer ou créer un utilisateur auth.users valide
+        if (!isUUID(userIdStr)) {
+          const authUserRes = await query(
+            `INSERT INTO auth.users (email) VALUES ($1)
+             ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+             RETURNING id`,
+            [emailStr]
+          );
+          if (authUserRes.rows[0]?.id) {
+            userIdStr = authUserRes.rows[0].id;
+          }
+        }
+
+        if (isUUID(userIdStr)) {
+          await query(
+            `INSERT INTO public.user_profiles (user_id, email, full_name, display_name, phone, country, nationality, updated_at)
+             VALUES ($1, $2, $3, $3, $4, $5, $6, NOW())`,
+            [userIdStr, emailStr, displayName, phone || null, country, nationality || null]
+          );
+        }
+      }
     } catch (dbErr) {
-      console.warn('[Customer Account PATCH] DB update warning:', dbErr);
+      console.error('[Customer Account PATCH] DB update error:', dbErr);
+      return NextResponse.json(
+        { error: 'Erreur lors de l’enregistrement en base de données.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

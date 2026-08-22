@@ -3,18 +3,8 @@ import React from 'react';
 import localFont from 'next/font/local';
 import { Viewport, Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth';
-import { BottomNav } from '@/components/BottomNav';
+import { Navbar } from '@/components/Navbar';
 
-/**
- * Identité typographique Afrofade (DESIGN.md › Typography) :
- * - display : Special Gothic Expanded One (titres h1/h2, sections)
- * - body    : Special Gothic (paragraphes, navigation, UI)
- * - hand    : Caveat (accents émotionnels courts, 1-2 par écran)
- *
- * Polices Google Fonts (OFL) auto-hébergées via next/font/local :
- * Next 14.2 ne connaît pas encore "Special Gothic" dans son registre
- * next/font/google ; les fichiers sont les woff2 officiels de Google Fonts.
- */
 const displayFont = localFont({
   src: './fonts/SpecialGothicExpandedOne.woff2',
   variable: '--font-display',
@@ -133,18 +123,16 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body" suppressHydrationWarning>
-        {/* Fallback no-JS : les révélations au scroll (.fade-safe) restent visibles */}
         <noscript>
           <style>{`.fade-safe{opacity:1 !important}`}</style>
         </noscript>
-        <main className="min-h-screen bg-cream text-ink pb-16 lg:pb-0">
+        <main className="min-h-screen bg-cream text-ink">
           <AuthProvider>
+            <Navbar />
             {children}
-            <BottomNav />
           </AuthProvider>
         </main>
       </body>
     </html>
   );
 }
-

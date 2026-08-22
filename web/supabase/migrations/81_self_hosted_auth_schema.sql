@@ -36,5 +36,14 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Compléter la structure de public.user_profiles si la table existait déjà
+ALTER TABLE public.user_profiles 
+  ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS display_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS full_name VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS country VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS nationality VARCHAR(100);
+
 CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON public.user_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);

@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
-import { NATIONALITIES } from '@/lib/countries';
+import React, { useState } from 'react';
+import { ChevronDown, Search } from 'lucide-react';
+import { COUNTRY_DATA } from '@/lib/countries';
+import { CountrySearchModal } from '@/components/CountrySearchModal';
 
 type Props = {
   value: string;
@@ -17,28 +19,48 @@ type Props = {
 export function NationalitySelect({
   value,
   onChange,
-  required = false,
   disabled = false,
   className = '',
   id,
-  name,
   ariaLabel = 'Nationalité',
 }: Props) {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const matched = COUNTRY_DATA.find((item) => item.nationality === value);
+
   return (
-    <select
-      id={id}
-      name={name}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      required={required}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      className={`min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 text-sm focus:outline-none focus:border-terracotta text-ink ${className}`}
-    >
-      <option value="">Sélectionner une nationalité</option>
-      {NATIONALITIES.map((nationality) => (
-        <option key={nationality} value={nationality}>{nationality}</option>
-      ))}
-    </select>
+    <>
+      <button
+        type="button"
+        id={id}
+        disabled={disabled}
+        onClick={() => setModalOpen(true)}
+        aria-label={ariaLabel}
+        className={`w-full min-h-[48px] rounded-input border border-ink/15 bg-cream px-4 text-left flex items-center justify-between text-sm text-ink focus:outline-none focus:border-terracotta ${className}`}
+      >
+        <span className="flex items-center gap-2 truncate">
+          {matched ? (
+            <>
+              <span className="text-lg">{matched.flag}</span>
+              <span className="font-bold">{matched.nationality}</span>
+            </>
+          ) : (
+            <span className="text-ink-soft/60">Sélectionner une nationalité</span>
+          )}
+        </span>
+        <div className="flex items-center gap-1 text-ink-soft shrink-0 ml-2">
+          <Search className="w-3.5 h-3.5 opacity-60" />
+          <ChevronDown className="w-4 h-4 opacity-60" />
+        </div>
+      </button>
+
+      <CountrySearchModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        mode="nationality"
+        selectedValue={value}
+        onSelect={(item) => onChange(item.nationality)}
+      />
+    </>
   );
 }
