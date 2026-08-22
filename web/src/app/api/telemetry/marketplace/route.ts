@@ -1,7 +1,102 @@
-import { NextRequest,NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getVerifiedPrincipal } from '@/lib/server-auth';
 import { getServiceSupabase } from '@/lib/supabase';
-const EVENTS=new Set(['search','style_view','tryon_start','tryon_complete','provider_view','provider_click','booking_started','booking_created','booking_completed','review_submitted','job_view','job_application','subscription_checkout_started','subscription_activated']);
-const FORBIDDEN=/(email|phone|telephone|lat|lng|longitude|latitude|ip|address|adresse|url|photo|image|asset|prompt)/i;
-function safeProps(v:unknown){if(!v||typeof v!=='object'||Array.isArray(v))return {};const out:Record<string,unknown>={};for(const[k,val]of Object.entries(v as Record<string,unknown>).slice(0,20)){if(FORBIDDEN.test(k))continue;if(typeof val==='string')out[k]=val.slice(0,160);else if(typeof val==='number'&&Number.isFinite(val))out[k]=val;else if(typeof val==='boolean')out[k]=val;}return out;}
-export async function POST(req:NextRequest){try{const body=await req.json();const event=typeof body?.event==='string'?body.event:'';if(!EVENTS.has(event))return NextResponse.json({error:'Événement invalide.'},{status:400});const principal=await getVerifiedPrincipal(req);const session=typeof body?.sessionId==='string'&&/^[a-zA-Z0-9_-]{16,80}$/.test(body.sessionId)?body.sessionId:null;if(!principal&&!session)return NextResponse.json({error:'Identifiant de session requis.'},{status:400});const providerType=body?.providerType==='professional'?'professional':body?.providerType==='salon'?'salon':null;const providerId=typeof body?.providerId==='string'&&/^[0-9a-f-]{36}$/i.test(body.providerId)?body.providerId:null;const styleSlug=typeof body?.styleSlug==='string'?body.styleSlug.trim().slice(0,100)||null:null;const source=typeof body?.source==='string'?body.source.trim().slice(0,80)||null:null;const{error}=await getServiceSupabase().from('marketplace_funnel_events').insert({event_type:event,user_id:principal?.user.id||null,anonymous_session_id:principal?null:session,provider_type:providerType,provider_id:providerId,style_slug:styleSlug,source,properties:safeProps(body?.properties)});if(error)throw error;return new NextResponse(null,{status:204});}catch(error){console.error('[Marketplace Telemetry]',error);return NextResponse.json({error:'Telemetry indisponible.'},{status:500});}}
+
+const EVENTS = new Set([
+  'search',
+  'style_view',
+  'tryon_start',
+  'tryon_complete',
+  'provider_view',
+  'provider_click',
+  'booking_started',
+  'booking_created',
+  'booking_completed',
+  'review_submitted',
+  'job_view',
+  'job_application',
+  'subscription_checkout_started',
+  'subscription_activated',
+]);
+
+const FORBIDDEN =
+  /(email|phone|telephone|lat|lng|longitude|latitude|ip|address|adresse|url|photo|image|asset|prompt)/i;
+
+function safeProps(v: unknown) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  const out: Record<string, unknown> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>).slice(0, 20)) {
+    if (FORBIDDEN.test(k)) continue;
+    if (typeof val === 'string') out[k] = val.slice(0, 160);
+    else if (typeof val === 'number' && Number.isFinite(val)) out[k] = val;
+    else if (typeof val === 'boolean') out[k] = val;
+  }
+  return out;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const event = typeof body?.event === 'string' ? body.event : '';
+    if (!EVENTS.has(event))
+      return NextResponse.json({ error: 'Événement invalide.' }, { status: 400 });
+
+    const principal = await getVerifiedPrincipal(req);
+    const session =
+      typeof body?.sessionId === 'string' &&
+      /^[a-zA-Z0-9_-]{16,80}$/.test(body.sessionId)
+        ? body.sessionId
+        : null;
+
+    if (!principal && !session)
+      return NextResponse.json(
+        { error: 'Identifiant de session requis.' },
+        { status: 400 }
+      );
+
+    const providerType =
+      body?.providerType === 'professional'
+        ? 'professional'
+        : body?.providerType === 'salon'
+        ? 'salon'
+        : null;
+    const providerId =
+      typeof body?.providerId === 'string' &&
+      /^[0-9a-f-]{36}$/i.test(body.providerId)
+        ? body.providerId
+        : null;
+    const styleSlug =
+      typeof body?.styleSlug === 'string'
+        ? body.styleSlug.trim().slice(0, 100) || null
+        : null;
+    const source =
+      typeof body?.source === 'string'
+        ? body.source.trim().slice(0, 80) || null
+        : null;
+
+    // S'assurer que user_id est un UUID valide ou null
+    const validUserId =
+      principal?.user.id && /^[0-9a-f-]{36}$/i.test(principal.user.id)
+        ? principal.user.id
+        : null;
+
+    const { error } = await getServiceSupabase()
+      .from('marketplace_funnel_events')
+      .insert({
+        event_type: event,
+        user_id: validUserId,
+        anonymous_session_id: principal ? null : session,
+        provider_type: providerType,
+        provider_id: providerId,
+        style_slug: styleSlug,
+        source,
+        properties: safeProps(body?.properties),
+      });
+
+    if (error) throw error;
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error('[Marketplace Telemetry]', error);
+    return NextResponse.json({ error: 'Telemetry indisponible.' }, { status: 500 });
+  }
+}
