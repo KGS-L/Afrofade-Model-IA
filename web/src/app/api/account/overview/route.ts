@@ -52,6 +52,13 @@ async function ensureTableSchema() {
      ADD COLUMN IF NOT EXISTS country VARCHAR(100),
      ADD COLUMN IF NOT EXISTS nationality VARCHAR(100)`
   );
+  try {
+    await query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_users_email ON auth.users(email)`
+    );
+  } catch (e) {
+    // Ignore
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -178,16 +185,20 @@ export async function PATCH(req: NextRequest) {
           );
 
       if ((updateRes.rowCount ?? 0) === 0) {
-        // Si la ligne n'existe pas, récupérer ou créer un utilisateur auth.users valide
-        if (!isUUID(userIdStr)) {
-          const authUserRes = await query(
-            `INSERT INTO auth.users (email) VALUES ($1)
-             ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-             RETURNING id`,
+        // Si la ligne n'existe pas, récupérer ou créer un utilisateur auth.users valide sans ON CONFLICT risqué
+        if (!isUUID(userIdStr) && emailStr) {
+          const userSearch = await query(
+            `SELECT id FROM auth.users WHERE email = $1 LIMIT 1`,
             [emailStr]
           );
-          if (authUserRes.rows[0]?.id) {
-            userIdStr = authUserRes.rows[0].id;
+          if (userSearch.rows.length > 0) {
+            userIdStr = userSearch.rows[0].id;
+          } else {
+            const newUser = await query(
+              `INSERT INTO auth.users (email) VALUES ($1) RETURNING id`,
+              [emailStr]
+            );
+            if (newUser.rows[0]?.id) userIdStr = newUser.rows[0].id;
           }
         }
 

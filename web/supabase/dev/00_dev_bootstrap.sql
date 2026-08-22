@@ -30,13 +30,15 @@ $$;
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 
 CREATE TABLE IF NOT EXISTS auth.users(
-  id UUID PRIMARY KEY,
-  email TEXT,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE,
   raw_app_meta_data JSONB NOT NULL DEFAULT '{}'::jsonb,
   raw_user_meta_data JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_sign_in_at TIMESTAMPTZ
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_users_email ON auth.users(email);
 
 CREATE SCHEMA IF NOT EXISTS storage;
 CREATE TABLE IF NOT EXISTS storage.buckets(

@@ -54,6 +54,18 @@ services:
   api:
     environment:
       - FASTAPI_ENV=development
+      - SUPABASE_URL=http://postgrest-gateway:8080
+      - SUPABASE_SERVICE_ROLE_KEY=local-dev-service-key
     volumes:
       - ./api:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    environment:
+      - FASTAPI_ENV=development
+      - SUPABASE_URL=http://postgrest-gateway:8080
+      - SUPABASE_SERVICE_ROLE_KEY=local-dev-service-key
+    volumes:
+      - ./api:/app
+    depends_on:
+      - postgrest-gateway

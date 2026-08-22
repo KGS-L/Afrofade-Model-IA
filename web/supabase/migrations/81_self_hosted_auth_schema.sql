@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS auth.users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_users_email ON auth.users(email);
+
 CREATE TABLE IF NOT EXISTS public.auth_otps (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL,

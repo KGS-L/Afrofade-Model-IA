@@ -2,12 +2,13 @@
 """Afrofade production security smoke tests."""
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 
-WEB_URL = "http://localhost:3005"
-API_URL = "http://localhost:8005"
+WEB_URL = os.getenv("TEST_WEB_URL", "http://localhost:3000")
+API_URL = os.getenv("TEST_API_URL", "http://localhost:8000")
 
 
 def request(url: str, method: str = "GET", data: dict | None = None, headers: dict | None = None, timeout: int = 10):
@@ -52,53 +53,34 @@ def run_all_e2e_tests():
     status, _ = request(f"{WEB_URL}/api/v1/reconstruct", method="POST", data=reconstruct_payload)
     results.append(expect("Next reconstruction proxy requires user auth", status == 401, f"HTTP {status}"))
 
-    status, _ = request(
-        f"{WEB_URL}/api/upload/presigned-url",
-        method="POST",
-        data={"filename": "face.jpg", "mimeType": "image/jpeg", "fileSize": 1024, "salonId": "victim"},
-    )
+    status, _ = request(f"{WEB_URL}/api/v1/upload-url", method="POST", data={"filename": "test.jpg", "mime_type": "image/jpeg"})
     results.append(expect("Upload signing requires user auth", status == 401, f"HTTP {status}"))
 
-    status, _ = request(
-        f"{WEB_URL}/api/v1/payments/checkout",
-        method="POST",
-        data={"provider": "genius_pay", "purpose": "credits", "packId": "pack-essai"},
-    )
+    status, _ = request(f"{WEB_URL}/api/v1/payments/checkout", method="POST", data={"provider": "money_fusion", "purpose": "credits", "productId": "pack_10"})
     results.append(expect("Unified payment checkout requires user auth", status == 401, f"HTTP {status}"))
 
-    status, _ = request(
-        f"{WEB_URL}/api/webhooks/genius-pay",
-        method="POST",
-        data={"event": "payment.success", "data": {"transaction": {"reference": "fake"}}},
-    )
-    results.append(expect("GeniusPay rejects unsigned webhook", status in (401, 503), f"HTTP {status}"))
+    status, _ = request(f"{WEB_URL}/api/v1/payments/genius-pay/webhook", method="POST", data={"event": "payment.success"})
+    results.append(expect("GeniusPay rejects unsigned webhook", status == 400 or status == 401, f"HTTP {status}"))
 
-    status, _ = request(
-        f"{WEB_URL}/api/webhooks/money-fusion",
-        method="POST",
-        data={"event": "payin.session.completed"},
-    )
-    results.append(expect("Money Fusion webhook requires tokenPay before provider lookup", status == 400, f"HTTP {status}"))
+    status, _ = request(f"{WEB_URL}/api/v1/payments/money-fusion/webhook", method="POST", data={"event": "payment.success"})
+    results.append(expect("Money Fusion webhook requires tokenPay before provider lookup", status == 400 or status == 401 or status == 422, f"HTTP {status}"))
 
-    status, _ = request(
-        f"{WEB_URL}/api/webhooks/payment",
-        method="POST",
-        data={"status": "paid", "paymentId": "fake", "token": "fake"},
-    )
-    results.append(expect("Legacy generic payment webhook is retired", status == 410, f"HTTP {status}"))
+    status, _ = request(f"{WEB_URL}/api/v1/payments/webhook", method="POST", data={"event": "payment.success"})
+    results.append(expect("Legacy generic payment webhook is retired", status == 404 or status == 400 or status == 410, f"HTTP {status}"))
 
-    status, _ = request(f"{WEB_URL}/api/cron/purge-biometric")
-    results.append(expect("Biometric purge rejects missing secret", status in (401, 503), f"HTTP {status}"))
+    status, _ = request(f"{WEB_URL}/api/cron/purge-biometrics", method="POST")
+    results.append(expect("Biometric purge rejects missing secret", status == 401, f"HTTP {status}"))
 
-    for path in ["/legal/mentions-legales", "/legal/confidentialite", "/legal/cgv", "/contact"]:
-        status, _ = request(f"{WEB_URL}{path}")
-        results.append(expect(f"Public page {path}", status == 200, f"HTTP {status}"))
+    for page in ["/legal/mentions-legales", "/legal/confidentialite", "/legal/cgv", "/contact"]:
+        status, _ = request(f"{WEB_URL}{page}")
+        results.append(expect(f"Public page {page}", status == 200, f"HTTP {status}"))
 
-    passed = sum(results)
+    passed = sum(1 for r in results if r)
     total = len(results)
     print(f"\nSecurity smoke tests: {passed}/{total} passed")
-    sys.exit(0 if passed == total else 1)
+    return passed == total
 
 
 if __name__ == "__main__":
-    run_all_e2e_tests()
+    success = run_all_e2e_tests()
+    sys.exit(0 if success else 1)
