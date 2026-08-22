@@ -44,6 +44,10 @@ done
 echo "==> Seed de démonstration"
 psql_db < web/supabase/dev/seed_demo.sql
 
+echo "==> Rechargement du cache de schéma PostgREST"
+docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB" -c "NOTIFY pgrst, 'reload schema';" || true
+docker restart afrofade-postgrest || true
+
 echo "==> Terminé."
 docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB" -tAc \
   "SELECT 'tables publiques: '||count(*) FROM information_schema.tables WHERE table_schema='public';"
