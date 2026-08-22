@@ -133,16 +133,13 @@ jobs:
       - name: Start production stack
         run: |
           docker compose -f docker-compose.yml up -d
-          echo "Waiting for PostgreSQL..."
-          for i in $(seq 1 30); do
-            if docker compose -f docker-compose.yml exec -T db pg_isready -U afrofade -d afrofade_dev >/dev/null 2>&1; then
+          echo "Waiting for database and migrations to complete..."
+          for i in $(seq 1 60); do
+            if docker compose -f docker-compose.yml exec -T db psql -U afrofade -d afrofade_dev -c "SELECT count(*) FROM public.user_profiles;" >/dev/null 2>&1; then
+              echo "Database migrations ready!"
               break
             fi
-            sleep 1
-          done
-          echo "Applying migrations..."
-          for f in $(ls web/supabase/migrations/*.sql | sort); do
-            docker compose -f docker-compose.yml exec -T db psql -U afrofade -d afrofade_dev -f - < "$f" >/dev/null 2>&1 || true
+            sleep 2
           done
           echo "Waiting for web and api services..."
           for i in $(seq 1 60); do
