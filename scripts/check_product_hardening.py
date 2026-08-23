@@ -143,6 +143,18 @@ def main() -> int:
             ]),
             "camera readiness, lighting, movement and stability affect live guidance",
         ),
+        require(
+            "Automated reminders engine is protected & idempotent",
+            "expectedSecret" in read("web/src/app/api/cron/reminders/route.ts")
+            and "ON CONFLICT (booking_id, reminder_type, channel)" in read("web/src/lib/server/reminder-engine.ts"),
+            "CRON endpoint verifies secret and booking_reminder_logs enforces idempotency",
+        ),
+        require(
+            "Salon workspace includes client reminder relance",
+            "sendManualReminder" in read("web/src/components/workspace/WorkspaceBookingsPanel.tsx")
+            and "Relancer le client" in read("web/src/components/workspace/WorkspaceBookingsPanel.tsx"),
+            "salon owners can trigger instant reminders on demand from bookings panel",
+        ),
     ]
 
     passed = sum(checks)
