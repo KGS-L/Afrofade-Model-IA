@@ -206,10 +206,14 @@ jobs:
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
           if [ -d web ]; then
-            rsync -a --exclude 'node_modules' --exclude '.next' web/ "$TARGET_DIR/web/" 2>/dev/null || cp -r web "$TARGET_DIR/"
+            mkdir -p "$TARGET_DIR/web"
+            cp -r web/. "$TARGET_DIR/web/"
+            rm -rf "$TARGET_DIR/web/node_modules" "$TARGET_DIR/web/.next" "$TARGET_DIR/web/web"
           fi
           if [ -d api ]; then
-            rsync -a --exclude '__pycache__' --exclude '.venv' api/ "$TARGET_DIR/api/" 2>/dev/null || cp -r api "$TARGET_DIR/"
+            mkdir -p "$TARGET_DIR/api"
+            cp -r api/. "$TARGET_DIR/api/"
+            rm -rf "$TARGET_DIR/api/__pycache__" "$TARGET_DIR/api/.venv" "$TARGET_DIR/api/api"
           fi
           cd "$TARGET_DIR"
 
