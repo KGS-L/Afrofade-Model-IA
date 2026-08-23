@@ -213,15 +213,16 @@ jobs:
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
           if [ -d web ]; then
-            rm -rf "$TARGET_DIR/web/src" "$TARGET_DIR/web/web"
+            rm -rf "$TARGET_DIR/web"
             mkdir -p "$TARGET_DIR/web"
-            cp -r web/. "$TARGET_DIR/web/"
+            cp -r web/* "$TARGET_DIR/web/" 2>/dev/null || cp -r web/. "$TARGET_DIR/web/"
+            if [ -f web/.dockerignore ]; then cp web/.dockerignore "$TARGET_DIR/web/"; fi
             rm -rf "$TARGET_DIR/web/node_modules" "$TARGET_DIR/web/.next"
           fi
           if [ -d api ]; then
-            rm -rf "$TARGET_DIR/api/api"
+            rm -rf "$TARGET_DIR/api"
             mkdir -p "$TARGET_DIR/api"
-            cp -r api/. "$TARGET_DIR/api/"
+            cp -r api/* "$TARGET_DIR/api/" 2>/dev/null || cp -r api/. "$TARGET_DIR/api/"
             rm -rf "$TARGET_DIR/api/__pycache__" "$TARGET_DIR/api/.venv"
           fi
           cd "$TARGET_DIR"
@@ -237,7 +238,7 @@ jobs:
             done < .env.example
           bash scripts/ensure-internal-secrets.sh .env
 
-          run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
+          run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL" --skip-dns || true
           if command -v docker &>/dev/null && docker info &>/dev/null; then
             docker compose -f docker-compose.yml up -d --build
             docker compose -f docker-compose.yml ps
