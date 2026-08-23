@@ -236,6 +236,8 @@ jobs:
               clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
               if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
             done < .env.example
+          fi
+
           bash scripts/ensure-internal-secrets.sh .env
 
           run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL" --skip-dns || true
