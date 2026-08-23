@@ -20,9 +20,17 @@ export interface NextAuthConfig {
 }
 
 export function getAuthConfig(): NextAuthConfig {
+  const host = process.env.POSTGRES_HOST || 'localhost';
+  const port = process.env.POSTGRES_PORT || '5432';
+  const user = process.env.POSTGRES_USER || 'afrofade';
+  const password = process.env.POSTGRES_PASSWORD || 'afrofade_dev_pass';
+  const database = process.env.POSTGRES_DB || 'afrofade_dev';
+
   return {
     secret: process.env.NEXTAUTH_SECRET || 'afrofade_dev_nextauth_secret',
-    databaseUrl: process.env.DATABASE_URL || 'postgresql://afrofade:afrofade_secret_pass@localhost:5432/afrofade_db',
+    databaseUrl:
+      process.env.DATABASE_URL ||
+      `postgresql://${user}:${password}@${host}:${port}/${database}`,
     jwtExpiration: '7d',
   };
 }

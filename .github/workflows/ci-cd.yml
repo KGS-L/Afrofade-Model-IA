@@ -126,6 +126,7 @@ jobs:
           POSTGRES_HOST=afrofade-db
           POSTGRES_PORT=5432
           DATABASE_URL=postgresql://afrofade:afrofade_dev_pass@afrofade-db:5432/afrofade_dev
+          GENIUS_PAY_WEBHOOK_SECRET=ci-genius-pay-webhook-secret
           EOF
 
       - name: Build production containers only
@@ -156,7 +157,12 @@ jobs:
           exit 1
 
       - name: Run P0 security smoke tests
-        run: TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_e2e_integration.py
+        run: |
+          if ! TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_e2e_integration.py; then
+            echo "Smoke tests failed! Showing container logs:"
+            docker compose -f docker-compose.yml logs web
+            exit 1
+          fi
 
       - name: Run Customer Profile & Salon Onboarding simulation tests
         run: |

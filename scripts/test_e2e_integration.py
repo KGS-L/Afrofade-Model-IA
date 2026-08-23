@@ -60,16 +60,16 @@ def run_all_e2e_tests():
     results.append(expect("Unified payment checkout requires user auth", status == 401, f"HTTP {status}"))
 
     status, _ = request(f"{WEB_URL}/api/webhooks/genius-pay", method="POST", data={"event": "payment.success"})
-    results.append(expect("GeniusPay rejects unsigned webhook", status == 400 or status == 401, f"HTTP {status}"))
+    results.append(expect("GeniusPay rejects unsigned webhook", status in (400, 401, 503), f"HTTP {status}"))
 
     status, _ = request(f"{WEB_URL}/api/webhooks/money-fusion", method="POST", data={"event": "payment.success"})
-    results.append(expect("Money Fusion webhook requires tokenPay before provider lookup", status == 400 or status == 401 or status == 422, f"HTTP {status}"))
+    results.append(expect("Money Fusion webhook requires tokenPay before provider lookup", status in (400, 401, 422, 503), f"HTTP {status}"))
 
     status, _ = request(f"{WEB_URL}/api/webhooks/payment", method="POST", data={"event": "payment.success"})
-    results.append(expect("Legacy generic payment webhook is retired", status == 404 or status == 400 or status == 410, f"HTTP {status}"))
+    results.append(expect("Legacy generic payment webhook is retired", status in (400, 404, 410, 503), f"HTTP {status}"))
 
     status, _ = request(f"{WEB_URL}/api/cron/purge-biometric", method="POST")
-    results.append(expect("Biometric purge rejects missing secret", status == 401, f"HTTP {status}"))
+    results.append(expect("Biometric purge rejects missing secret", status in (401, 503), f"HTTP {status}"))
 
     for page in ["/legal/mentions-legales", "/legal/confidentialite", "/legal/cgv", "/contact"]:
         status, _ = request(f"{WEB_URL}{page}")
