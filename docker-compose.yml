@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     ports:
-      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3005}:3000"
     networks:
       - afrofade-network
     depends_on:

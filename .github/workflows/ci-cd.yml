@@ -240,7 +240,33 @@ jobs:
 
           bash scripts/ensure-internal-secrets.sh .env
 
-          run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL" --skip-dns || true
+          get_free_port() {
+            local preferred="$1"
+            for port in "$preferred" $((preferred+1)) $((preferred+2)) $((preferred+3)); do
+              if ! (ss -tuln 2>/dev/null || netstat -tuln 2>/dev/null || true) | grep -q ":${port} "; then
+                echo "$port"
+                return
+              fi
+            done
+            echo "$preferred"
+          }
+
+          if command -v docker &>/dev/null && docker info &>/dev/null; then
+            docker compose -f docker-compose.yml down --remove-orphans 2>/dev/null || true
+          else
+            run_sudo docker compose -f docker-compose.yml down --remove-orphans 2>/dev/null || true
+          fi
+
+          FREE_WEB_PORT=$(get_free_port 3005)
+          FREE_API_PORT=$(get_free_port 8005)
+
+          sed -i "s/^WEB_PORT=.*/WEB_PORT=${FREE_WEB_PORT}/" .env 2>/dev/null || echo "WEB_PORT=${FREE_WEB_PORT}" >> .env
+          sed -i "s/^API_PORT=.*/API_PORT=${FREE_API_PORT}/" .env 2>/dev/null || echo "API_PORT=${FREE_API_PORT}" >> .env
+
+          export WEB_PORT="${FREE_WEB_PORT}"
+          export API_PORT="${FREE_API_PORT}"
+
+          run_sudo WEB_PORT="${FREE_WEB_PORT}" bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL" --skip-dns || true
           if command -v docker &>/dev/null && docker info &>/dev/null; then
             docker compose -f docker-compose.yml up -d --build
             docker compose -f docker-compose.yml ps
