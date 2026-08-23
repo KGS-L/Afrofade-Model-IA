@@ -24,8 +24,8 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
+# Ensure Next.js 16 only uses proxy.ts and remove any duplicate middleware.ts
+RUN rm -rf src/src src/middleware.ts middleware.ts
 
 RUN npm run build
 
