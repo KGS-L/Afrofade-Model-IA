@@ -50,7 +50,8 @@ async function ensureTableSchema() {
      ADD COLUMN IF NOT EXISTS email VARCHAR(255),
      ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
      ADD COLUMN IF NOT EXISTS country VARCHAR(100),
-     ADD COLUMN IF NOT EXISTS nationality VARCHAR(100)`
+     ADD COLUMN IF NOT EXISTS nationality VARCHAR(100),
+     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
   );
   try {
     await query(
