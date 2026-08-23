@@ -259,12 +259,15 @@ jobs:
 
           FREE_WEB_PORT=$(get_free_port 3005)
           FREE_API_PORT=$(get_free_port 8005)
+          FREE_POSTGRES_PORT=$(get_free_port 5433)
 
           sed -i "s/^WEB_PORT=.*/WEB_PORT=${FREE_WEB_PORT}/" .env 2>/dev/null || echo "WEB_PORT=${FREE_WEB_PORT}" >> .env
           sed -i "s/^API_PORT=.*/API_PORT=${FREE_API_PORT}/" .env 2>/dev/null || echo "API_PORT=${FREE_API_PORT}" >> .env
+          sed -i "s/^POSTGRES_PORT=.*/POSTGRES_PORT=${FREE_POSTGRES_PORT}/" .env 2>/dev/null || echo "POSTGRES_PORT=${FREE_POSTGRES_PORT}" >> .env
 
           export WEB_PORT="${FREE_WEB_PORT}"
           export API_PORT="${FREE_API_PORT}"
+          export POSTGRES_PORT="${FREE_POSTGRES_PORT}"
 
           run_sudo WEB_PORT="${FREE_WEB_PORT}" bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL" --skip-dns || true
           if command -v docker &>/dev/null && docker info &>/dev/null; then
