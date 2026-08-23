@@ -206,14 +206,16 @@ jobs:
           cp -a scripts/* "$TARGET_DIR/scripts/"
           cp -a deploy/nginx/* "$TARGET_DIR/deploy/nginx/"
           if [ -d web ]; then
+            rm -rf "$TARGET_DIR/web/src" "$TARGET_DIR/web/web"
             mkdir -p "$TARGET_DIR/web"
             cp -r web/. "$TARGET_DIR/web/"
-            rm -rf "$TARGET_DIR/web/node_modules" "$TARGET_DIR/web/.next" "$TARGET_DIR/web/web"
+            rm -rf "$TARGET_DIR/web/node_modules" "$TARGET_DIR/web/.next"
           fi
           if [ -d api ]; then
+            rm -rf "$TARGET_DIR/api/api"
             mkdir -p "$TARGET_DIR/api"
             cp -r api/. "$TARGET_DIR/api/"
-            rm -rf "$TARGET_DIR/api/__pycache__" "$TARGET_DIR/api/.venv" "$TARGET_DIR/api/api"
+            rm -rf "$TARGET_DIR/api/__pycache__" "$TARGET_DIR/api/.venv"
           fi
           cd "$TARGET_DIR"
 
