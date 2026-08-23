@@ -198,8 +198,15 @@ jobs:
           DOMAIN: "afrofade.pro"
           EMAIL: "contact@afrofade.pro"
         run: |
+          run_sudo() {
+            if [ "$EUID" -eq 0 ]; then "$@"; elif [ -n "$VPS_SUDO_PASSWORD" ]; then echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"; else sudo -n "$@"; fi
+          }
+
           TARGET_DIR="${VPS_AFROFADE_PATH:-$HOME/projects/Afrofade}"
           echo "Dossier cible sur le VPS : $TARGET_DIR"
+          run_sudo mkdir -p "$TARGET_DIR" 2>/dev/null || mkdir -p "$TARGET_DIR"
+          run_sudo chown -R "$(id -u):$(id -g)" "$TARGET_DIR" 2>/dev/null || true
+
           mkdir -p "$TARGET_DIR/scripts" "$TARGET_DIR/deploy/nginx"
           cp -a docker-compose.yml "$TARGET_DIR/"
           if [ -f .env.example ]; then cp -a .env.example "$TARGET_DIR/"; fi
@@ -228,12 +235,6 @@ jobs:
               clean_key=$(echo "$key" | cut -d'=' -f1 | xargs)
               if ! grep -q "^${clean_key}=" .env; then echo "${key}=${value}" >> .env; fi
             done < .env.example
-          fi
-
-          run_sudo() {
-            if [ "$EUID" -eq 0 ]; then "$@"; elif [ -n "$VPS_SUDO_PASSWORD" ]; then echo "$VPS_SUDO_PASSWORD" | sudo -S "$@"; else sudo -n "$@"; fi
-          }
-
           bash scripts/ensure-internal-secrets.sh .env
 
           run_sudo bash scripts/configure-vps-nginx.sh --domain "$DOMAIN" --email "$EMAIL"
