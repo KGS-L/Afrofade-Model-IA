@@ -166,8 +166,16 @@ jobs:
 
       - name: Run Customer Profile & Salon Onboarding simulation tests
         run: |
-          TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_profile_update.py
-          TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_salon_onboarding.py
+          if ! TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_profile_update.py; then
+            echo "Profile update test failed! Web container logs:"
+            docker compose -f docker-compose.yml logs web
+            exit 1
+          fi
+          if ! TEST_WEB_URL=http://127.0.0.1:3005 TEST_API_URL=http://127.0.0.1:8005 python3 scripts/test_salon_onboarding.py; then
+            echo "Salon onboarding test failed! Web container logs:"
+            docker compose -f docker-compose.yml logs web
+            exit 1
+          fi
 
       - name: Stop production stack
         if: always()
