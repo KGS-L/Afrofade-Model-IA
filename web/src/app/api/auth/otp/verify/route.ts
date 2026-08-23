@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'E-mail et code OTP requis.' }, { status: 400 });
     }
 
-    let isValid = token === '123456'; // Fallback dev code
+    let isValid = process.env.NODE_ENV !== 'production' && token === '123456'; // Fallback dev code
 
     if (!isValid) {
       try {
@@ -31,8 +31,10 @@ export async function POST(request: NextRequest) {
           await query(`UPDATE public.auth_otps SET used = TRUE WHERE id = $1`, [result.rows[0].id]);
         }
       } catch (dbErr) {
-        console.warn('[OTP Verify] DB OTP check failed, defaulting to dev validation:', dbErr);
-        isValid = true;
+        console.warn('[OTP Verify] DB OTP check failed:', dbErr);
+        if (process.env.NODE_ENV !== 'production') {
+          isValid = true;
+        }
       }
     }
 
