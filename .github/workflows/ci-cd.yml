@@ -125,6 +125,7 @@ jobs:
           POSTGRES_DB=afrofade_dev
           POSTGRES_HOST=afrofade-db
           POSTGRES_PORT=5432
+          DATABASE_URL=postgresql://afrofade:afrofade_dev_pass@afrofade-db:5432/afrofade_dev
           EOF
 
       - name: Build production containers only

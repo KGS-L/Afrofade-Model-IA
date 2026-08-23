@@ -1,8 +1,14 @@
 import { Pool, QueryResultRow } from 'pg';
 
+const host = process.env.POSTGRES_HOST || 'localhost';
+const port = process.env.POSTGRES_PORT || '5432';
+const user = process.env.POSTGRES_USER || 'afrofade';
+const password = process.env.POSTGRES_PASSWORD || 'afrofade_dev_pass';
+const database = process.env.POSTGRES_DB || 'afrofade_dev';
+
 const connectionString =
   process.env.DATABASE_URL ||
-  'postgresql://afrofade:afrofade_secret_pass@localhost:5432/afrofade_db';
+  `postgresql://${user}:${password}@${host}:${port}/${database}`;
 
 let globalPool: Pool | null = null;
 
