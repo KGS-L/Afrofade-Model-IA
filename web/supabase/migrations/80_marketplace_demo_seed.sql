@@ -72,13 +72,5 @@ JOIN public.hair_taxonomy t ON (
 )
 ON CONFLICT DO NOTHING;
 
--- 6. Seed Review Aggregates
-INSERT INTO public.marketplace_review_aggregates(target_type, target_id, average_rating, review_count)
-VALUES
- ('professional', 'b0000000-0000-4000-b000-000000000001', 4.90, 28),
- ('professional', 'b0000000-0000-4000-b000-000000000002', 4.85, 42),
- ('salon', 'a0000000-0000-4000-a000-000000000001', 4.95, 65),
- ('salon', 'a0000000-0000-4000-a000-000000000002', 4.80, 19)
-ON CONFLICT (target_type, target_id) DO UPDATE SET
-  average_rating = EXCLUDED.average_rating,
-  review_count = EXCLUDED.review_count;
+-- 6. Review Aggregates are computed dynamically by the VIEW public.marketplace_review_aggregates
+-- (no static INSERT into view required)

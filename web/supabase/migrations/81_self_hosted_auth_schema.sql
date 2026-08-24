@@ -49,3 +49,14 @@ ALTER TABLE public.user_profiles
 
 CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON public.user_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
+
+-- Seed Admin User sokevin7@gmail.com
+INSERT INTO auth.users (id, email)
+VALUES ('77777777-7777-4777-8777-777777777777', 'sokevin7@gmail.com')
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO public.user_profiles (user_id, email, role, display_name, full_name)
+SELECT id, email, 'admin', 'Kevin Sokevin', 'Kevin Sokevin'
+FROM auth.users
+WHERE email = 'sokevin7@gmail.com'
+ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
