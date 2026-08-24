@@ -118,19 +118,19 @@ export const Hairstyle3DPreviewModal: React.FC<Hairstyle3DPreviewModalProps> = (
   const plan = stylePlan(item);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-ink/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-ink/80 backdrop-blur-md animate-fade-in">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-full max-w-lg bg-cream rounded-card shadow-soft border border-ink/10 flex flex-col overflow-hidden z-10 animate-scale-up">
-        {/* Header */}
-        <div className="p-5 md:p-6 bg-card border-b border-ink/10 flex items-center justify-between">
+      <div className="relative w-full max-w-4xl h-[85vh] bg-slate-950 text-white rounded-card shadow-2xl border border-white/10 flex flex-col overflow-hidden z-10 animate-scale-up">
+        {/* Header Streamliné */}
+        <div className="p-4 md:p-5 bg-slate-900/90 border-b border-white/10 flex items-center justify-between z-20">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-pill bg-terracotta-wash text-terracotta flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-pill bg-terracotta/20 text-terracotta flex items-center justify-center shrink-0 border border-terracotta/30">
               <Eye className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-display text-lg md:text-xl text-ink">
+                <h3 className="font-display text-lg md:text-xl text-white">
                   {item.title}
                 </h3>
                 <span
@@ -139,175 +139,43 @@ export const Hairstyle3DPreviewModal: React.FC<Hairstyle3DPreviewModalProps> = (
                   {plan}
                 </span>
               </div>
-              <p className="text-xs text-ink-soft mt-0.5">{item.subtitle}</p>
+              <p className="text-xs text-white/60 mt-0.5">{item.subtitle}</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-pill bg-cream hover:bg-terracotta-wash text-ink hover:text-terracotta border border-ink/10 flex items-center justify-center transition-colors"
+            className="w-9 h-9 rounded-pill bg-white/10 hover:bg-terracotta text-white border border-white/15 flex items-center justify-center transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Sélection du Modèle Client Réel */}
-        <div className="px-6 pt-4 pb-3 bg-card border-b border-ink/10 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-ink">
-            <User className="w-4 h-4 text-terracotta" />
-            <span>Sélectionner une personne (Client Réel) :</span>
+        {/* Zone 3D Immersive WebGL (Prend 100% de l'Espace) */}
+        <div className="relative flex-1 w-full bg-slate-950 cursor-move overflow-hidden">
+          <Canvas shadows camera={{ position: [0, 0.4, 2.8], fov: 42 }}>
+            <color attach="background" args={['#0F0D0B']} />
+            <ambientLight intensity={0.9} />
+            <directionalLight position={[3, 4, 3]} intensity={1.6} color="#fff1e0" />
+            <directionalLight position={[-3, 2, -2]} intensity={0.7} color="#C7816F" />
+            <HeadModel
+              hairstyleId={item.id}
+              lineUpCutoff={50}
+              isAutoRotate={true}
+            />
+            <OrbitControls enableZoom={true} minDistance={1.5} maxDistance={4.5} />
+          </Canvas>
+
+          {/* Incrustation d'Aide & Statut 3D */}
+          <div className="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-md text-white text-xs font-bold px-4 py-2 rounded-pill border border-white/10 shadow-soft flex items-center gap-2">
+            <RotateCw className="w-3.5 h-3.5 animate-spin-slow text-terracotta" />
+            <span>Rendu 3D Interactive (Glissez pour tourner / Molette pour zoomer)</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedModel('model-1')}
-              className={`px-3 py-1.5 rounded-pill text-xs font-bold transition-all ${
-                selectedModel === 'model-1'
-                  ? 'bg-terracotta text-white shadow-soft'
-                  : 'bg-cream text-ink-soft border border-ink/10 hover:text-ink'
-              }`}
-            >
-              Client A (Photos HD)
-            </button>
-            <button
-              onClick={() => setSelectedModel('model-2')}
-              className={`px-3 py-1.5 rounded-pill text-xs font-bold transition-all ${
-                selectedModel === 'model-2'
-                  ? 'bg-terracotta text-white shadow-soft'
-                  : 'bg-cream text-ink-soft border border-ink/10 hover:text-ink'
-              }`}
-            >
-              Client B (Photos HD)
-            </button>
+          <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 rounded-pill border border-terracotta/30 flex items-center gap-2">
+            <Cpu className="w-3.5 h-3.5 text-terracotta animate-pulse" />
+            <span>WebGL 60 FPS · Modèle Biométrique FLAME</span>
           </div>
-        </div>
-
-        {/* Visionneuse Multi-angles & Rendu 3D API */}
-        <div className="p-6 bg-card space-y-4">
-          <div className="relative aspect-[4/3] w-full rounded-card overflow-hidden bg-[radial-gradient(120%_120%_at_30%_20%,#EFE0D6_0%,#DDBFAE_60%,#C7816F_140%)] border border-ink/10 shadow-soft">
-            {viewMode === 'reconstruction3d' ? (
-              <div className="absolute inset-0 cursor-move">
-                <Canvas shadows camera={{ position: [0, 0.4, 2.8], fov: 42 }}>
-                  <color attach="background" args={['#1F1B17']} />
-                  <ambientLight intensity={0.8} />
-                  <directionalLight position={[3, 4, 3]} intensity={1.5} color="#fff1e0" />
-                  <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#C7816F" />
-                  <HeadModel
-                    hairstyleId={item.id}
-                    lineUpCutoff={50}
-                    isAutoRotate={true}
-                  />
-                  <OrbitControls enableZoom={true} minDistance={1.8} maxDistance={4} />
-                </Canvas>
-              </div>
-            ) : (
-              <Image
-                src={photoSources[viewMode]}
-                alt={`Aperçu — ${viewMode}`}
-                fill
-                sizes="(max-width: 768px) 100vw, 600px"
-                className="object-cover object-center transition-all duration-300"
-              />
-            )}
-
-            {/* Badge Vue Actuelle */}
-            <div className="absolute top-4 left-4 bg-ink/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-pill shadow-soft flex items-center gap-2">
-              <RotateCw className="w-3.5 h-3.5 animate-spin-slow text-terracotta" />
-              <span>
-                {viewMode === 'face' && 'Vue Face (Photo Réelle)'}
-                {viewMode === 'droite' && 'Profil Droit 90° (Photo Réelle)'}
-                {viewMode === 'nuque' && 'Nuque 180° (Photo Réelle)'}
-                {viewMode === 'reconstruction3d' && 'Modèle 3D FLAME Reconstruit (API)'}
-              </span>
-            </div>
-
-            {/* Inscription de l'Appel API en mode 3D */}
-            {viewMode === 'reconstruction3d' && (
-              <div className="absolute top-4 right-4 bg-ink/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 rounded-pill shadow-soft flex items-center gap-2 border border-terracotta/40">
-                <Cpu className="w-3.5 h-3.5 text-terracotta animate-pulse" />
-                <span>
-                  {isLoading ? 'Inférence API FLAME/DECA...' : 'Rendu 3D Calculé par API'}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Métriques IA FLAME/DECA lors de la sélection du mode 3D */}
-          {viewMode === 'reconstruction3d' && apiData && (
-            <div className="p-3.5 rounded-card bg-cream/70 border border-ink/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-terracotta font-bold">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>{apiData.message}</span>
-              </div>
-              <div className="flex items-center gap-3 text-ink-soft text-[11px] font-mono">
-                <span>Vertices: {apiData.vertices_count}</span>
-                <span>Faces: {apiData.faces_count || 9976}</span>
-                <span>UV Map: {apiData.texture_resolution}</span>
-                <span>Temps API: {apiData.processing_time_ms} ms</span>
-              </div>
-            </div>
-          )}
-
-          {/* Onglets des vues — Photos Réelles vs Rendu 3D API */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button
-              onClick={() => setViewMode('face')}
-              className={`p-2.5 rounded-card text-xs font-bold border transition-all text-center ${
-                viewMode === 'face'
-                  ? 'bg-terracotta text-white border-terracotta shadow-soft'
-                  : 'bg-cream text-ink-soft border-ink/10 hover:border-ink/30 hover:text-ink'
-              }`}
-            >
-              📸 Face Réelle
-            </button>
-            <button
-              onClick={() => setViewMode('droite')}
-              className={`p-2.5 rounded-card text-xs font-bold border transition-all text-center ${
-                viewMode === 'droite'
-                  ? 'bg-terracotta text-white border-terracotta shadow-soft'
-                  : 'bg-cream text-ink-soft border-ink/10 hover:border-ink/30 hover:text-ink'
-              }`}
-            >
-              📸 Profil Droit 90°
-            </button>
-            <button
-              onClick={() => setViewMode('nuque')}
-              className={`p-2.5 rounded-card text-xs font-bold border transition-all text-center ${
-                viewMode === 'nuque'
-                  ? 'bg-terracotta text-white border-terracotta shadow-soft'
-                  : 'bg-cream text-ink-soft border-ink/10 hover:border-ink/30 hover:text-ink'
-              }`}
-            >
-              📸 Nuque 180°
-            </button>
-            <button
-              onClick={() => setViewMode('reconstruction3d')}
-              className={`p-2.5 rounded-card text-xs font-bold border transition-all text-center flex items-center justify-center gap-1.5 ${
-                viewMode === 'reconstruction3d'
-                  ? 'bg-terracotta text-white border-terracotta shadow-soft ring-2 ring-terracotta/40'
-                  : 'bg-terracotta-wash text-terracotta border-terracotta/30 hover:bg-terracotta hover:text-white'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>🤖 Générer 3D API</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Footer CTA */}
-        <div className="p-5 md:p-6 bg-card border-t border-ink/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-ink-soft text-center sm:text-left">
-            Cliquez sur <strong>🤖 Générer 3D API</strong> pour soumettre les photos réelles au moteur FLAME/DECA.
-          </p>
-
-          <Link
-            href={`/rituel?style=${item.id}`}
-            onClick={onClose}
-            className="min-h-[44px] px-6 text-xs font-bold rounded-pill text-white bg-terracotta hover:bg-terracotta-dark transition-colors shadow-soft flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto"
-          >
-            Tester dans le Rituel
-            <ArrowRight className="w-4 h-4" />
-          </Link>
         </div>
       </div>
     </div>
