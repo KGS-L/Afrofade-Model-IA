@@ -40,6 +40,34 @@ GENERATED_MODELS_DIR = Path("/tmp/generated_models")
 GENERATED_MODEL_PATTERN = re.compile(r"^recon_[0-9]+\.glb$")
 
 
+class ReconstructionRequest(BaseModel):
+    photos_urls: List[str]
+    client_name: Optional[str] = None
+    preserve_skin_texture: Optional[bool] = True
+
+
+class ReconstructionResponse(BaseModel):
+    client_head_id: str
+    mesh_3d_url: str
+    vertex_count: int
+    face_count: int
+    reconstruction_time_sec: float
+
+
+class HeadJobRequest(BaseModel):
+    user_id: UUID
+    salon_id: Optional[UUID] = None
+    request_id: str
+    photos_urls: List[str]
+    client_name: str = "Client Afrofade"
+    preserve_skin_texture: bool = True
+
+
+@lru_cache()
+def get_persistent_job_queue() -> SupabasePostgresJobQueue:
+    return SupabasePostgresJobQueue()
+
+
 @app.middleware("http")
 async def require_internal_api_key(request: Request, call_next):
     if request.url.path in PUBLIC_PATHS:
