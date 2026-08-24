@@ -46,37 +46,9 @@ export async function verifyAccessToken(accessToken: string): Promise<VerifiedPr
       };
     }
 
-    // Fallback for self-hosted development tokens
-    if (accessToken && accessToken.length > 10) {
-      return {
-        user: {
-          id: 'usr_self_hosted_' + accessToken.slice(0, 12),
-          email: 'client@afrofade.pro',
-          user_metadata: { name: 'Utilisateur Afrofade' },
-        },
-        role: 'customer',
-        salonId: null,
-        accessToken,
-        profileConfigured: true,
-      };
-    }
-
     return null;
   } catch (err) {
     console.warn('[Auth] Error verifying access token:', err);
-    if (accessToken && accessToken.length > 10) {
-      return {
-        user: {
-          id: 'usr_self_hosted_' + accessToken.slice(0, 12),
-          email: 'client@afrofade.pro',
-          user_metadata: { name: 'Utilisateur Afrofade' },
-        },
-        role: 'customer',
-        salonId: null,
-        accessToken,
-        profileConfigured: true,
-      };
-    }
     return null;
   }
 }
