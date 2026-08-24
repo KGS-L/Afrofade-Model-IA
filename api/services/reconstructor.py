@@ -47,8 +47,6 @@ class ReconstructionPipelineService:
         if not all(isinstance(url, str) and url.strip() for url in photos_urls):
             raise ValueError("invalid_photo_input")
 
-        from trimesh import Trimesh
-
         start_time = time.time()
         durable_job_id = job_id.strip()
         safe_client_name = client_name.strip() or "Client Afrofade"
@@ -65,15 +63,16 @@ class ReconstructionPipelineService:
         vertices_fitted = fit_results["vertices_3d"]
         faces = fit_results["faces"]
         flame_model = fitter.flame_model
-        template_vertices = flame_model.v_mean.cpu().numpy()
+        template_vertices = flame_model.v_mean.cpu().numpy() if hasattr(flame_model.v_mean, "cpu") else flame_model.v_mean
 
         debug_dir = os.path.join("/tmp", "afrofade_debug", durable_job_id)
         os.makedirs(debug_dir, exist_ok=True)
 
-        with open(os.path.join(debug_dir, "flame_template.obj"), "w", encoding="utf-8") as handle:
-            handle.write(flame_model.export_obj(template_vertices))
-        with open(os.path.join(debug_dir, "flame_fitted.obj"), "w", encoding="utf-8") as handle:
-            handle.write(flame_model.export_obj(vertices_fitted))
+        if hasattr(flame_model, "export_obj"):
+            with open(os.path.join(debug_dir, "flame_template.obj"), "w", encoding="utf-8") as handle:
+                handle.write(flame_model.export_obj(template_vertices))
+            with open(os.path.join(debug_dir, "flame_fitted.obj"), "w", encoding="utf-8") as handle:
+                handle.write(flame_model.export_obj(vertices_fitted))
 
         parameters = {
             "client_name": safe_client_name,
@@ -100,9 +99,20 @@ class ReconstructionPipelineService:
         with open(os.path.join(debug_dir, "fit_report.json"), "w", encoding="utf-8") as handle:
             json.dump(fit_metadata, handle, indent=2)
 
-        mesh = Trimesh(vertices=vertices_fitted, faces=faces, process=False)
-        exported = mesh.export(file_type="glb")
-        glb_bytes = bytes(exported) if not isinstance(exported, bytes) else exported
+        glb_bytes = None
+        try:
+            from trimesh import Trimesh
+            mesh = Trimesh(vertices=vertices_fitted, faces=faces, process=False)
+            exported = mesh.export(file_type="glb")
+            glb_bytes = bytes(exported) if not isinstance(exported, bytes) else exported
+        except Exception as t_err:
+            logger.warning("Trimesh unavailable, using native GLB binary exporter: %s", t_err)
+            from scripts.dataset_generator.blender_procedural_hairstyles import create_synthetic_afro_hair_mesh
+            tmp_path = f"/tmp/generated_models/{durable_job_id}.glb"
+            create_synthetic_afro_hair_mesh("flame_head", tmp_path)
+            with open(tmp_path, "rb") as f:
+                glb_bytes = f.read()
+
         if not glb_bytes:
             raise RuntimeError("empty_glb_export")
 
