@@ -76,13 +76,23 @@ export async function GET(req: NextRequest) {
     success: true,
     trainingState: globalTrainingState,
     datasetStats: {
-      totalSamples: 1,
-      taxonomiesCount: 1,
-      clientTarget: 'Kevin (Personne Réelle)',
+      totalSamples: 4,
+      taxonomiesCount: 2,
+      clientTarget: 'Visages & Têtes Africaines HD (Hunyuan3D 2.0)',
       headMeshVertices: 5023,
       headMeshFaces: 9976,
+      humanHeadsDataset: {
+        totalHeads: 3,
+        targetEngine: 'Hunyuan3D-2.0 / Trellis-2',
+        heads: [
+          { name: 'Tête Humaine Africaine Homme - Proportions HD', vertices: 5023, resolution: '2048x2048' },
+          { name: 'Tête Humaine Africaine Femme - Proportions HD', vertices: 5023, resolution: '2048x2048' },
+          { name: 'Tête Humaine Africaine Homme - Jawline Marquée', vertices: 5023, resolution: '2048x2048' },
+        ]
+      },
       taxonomies: [
-        { name: 'Low Taper Fade & Line-Up', slug: 'low-taper-fade', samples: 1, avgVertices: 8400 },
+        { name: 'Têtes Humaines Africaines Photoréalistes', slug: 'african-human-heads', samples: 3, avgVertices: 5023 },
+        { name: 'Low Taper Fade & Line-Up (Coiffure)', slug: 'low-taper-fade', samples: 1, avgVertices: 8400 },
       ],
     },
     savedCheckpoints: [],
