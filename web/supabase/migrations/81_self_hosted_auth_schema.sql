@@ -30,15 +30,13 @@ CREATE INDEX IF NOT EXISTS idx_auth_otps_expires ON public.auth_otps(expires_at)
 CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'salon', 'admin')),
     salon_id UUID REFERENCES public.salons(id) ON DELETE SET NULL,
-    full_name VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Compléter la structure de public.user_profiles si la table existait déjà
+-- Compléter la structure de public.user_profiles
 ALTER TABLE public.user_profiles 
   ADD COLUMN IF NOT EXISTS email VARCHAR(255),
   ADD COLUMN IF NOT EXISTS display_name VARCHAR(255),
@@ -50,13 +48,15 @@ ALTER TABLE public.user_profiles
 CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON public.user_profiles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_email ON public.user_profiles(email);
 
--- Seed Admin User sokevin7@gmail.com
+-- Seed Admin User sokevin7@gmail.com & Demo Users
 INSERT INTO auth.users (id, email)
-VALUES ('77777777-7777-4777-8777-777777777777', 'sokevin7@gmail.com')
+VALUES 
+  ('77777777-7777-4777-8777-777777777777', 'sokevin7@gmail.com'),
+  ('00000000-0000-4000-8000-000000000005', 'admin@afrofade.dev')
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO public.user_profiles (user_id, email, role, display_name, full_name)
-SELECT id, email, 'admin', 'Kevin Sokevin', 'Kevin Sokevin'
-FROM auth.users
-WHERE email = 'sokevin7@gmail.com'
+VALUES
+  ('77777777-7777-4777-8777-777777777777', 'sokevin7@gmail.com', 'admin', 'Kevin Sokevin', 'Kevin Sokevin'),
+  ('00000000-0000-4000-8000-000000000005', 'admin@afrofade.dev', 'admin', 'Admin Afrofade', 'Admin Afrofade')
 ON CONFLICT (user_id) DO UPDATE SET role = 'admin';

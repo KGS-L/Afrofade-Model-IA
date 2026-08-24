@@ -4,6 +4,16 @@
 -- Enable UUID extension if not enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Ensure auth schema & users table exist for downstream migrations
+CREATE SCHEMA IF NOT EXISTS auth;
+
+CREATE TABLE IF NOT EXISTS auth.users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- 1. Table: salons
 CREATE TABLE IF NOT EXISTS salons (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -17,6 +27,40 @@ CREATE TABLE IF NOT EXISTS salons (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Table: user_profiles
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    email VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'salon', 'admin')),
+    salon_id UUID REFERENCES public.salons(id) ON DELETE SET NULL,
+    display_name VARCHAR(255),
+    full_name VARCHAR(255),
+    phone VARCHAR(50),
+    country VARCHAR(100),
+    nationality VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed Auth Users & Admin User sokevin7@gmail.com
+INSERT INTO auth.users (id, email)
+VALUES 
+  ('77777777-7777-4777-8777-777777777777', 'sokevin7@gmail.com'),
+  ('00000000-0000-4000-8000-000000000001', 'demo@afrofade.dev'),
+  ('00000000-0000-4000-8000-000000000002', 'karim@afrofade.dev'),
+  ('00000000-0000-4000-8000-000000000003', 'fatou@afrofade.dev'),
+  ('00000000-0000-4000-8000-000000000004', 'sylvain@afrofade.dev'),
+  ('00000000-0000-4000-8000-000000000005', 'admin@afrofade.dev'),
+  ('00000000-0000-4000-8000-000000000006', 'amina@afrofade.dev')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.user_profiles (user_id, email, role, display_name, full_name)
+VALUES
+  ('77777777-7777-4777-8777-777777777777', 'sokevin7@gmail.com', 'admin', 'Kevin Sokevin', 'Kevin Sokevin'),
+  ('00000000-0000-4000-8000-000000000005', 'admin@afrofade.dev', 'admin', 'Admin Afrofade', 'Admin Afrofade')
+ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
 
 -- 2. Table: subscriptions
 CREATE TABLE IF NOT EXISTS subscriptions (
