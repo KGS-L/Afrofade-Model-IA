@@ -20,6 +20,7 @@ import {
   Flame,
   Zap,
   Eye,
+  Maximize2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
@@ -201,7 +202,14 @@ export default function Admin3DStudioPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/admin/3d-studio/results"
+            className="min-h-[44px] rounded-pill bg-terracotta text-white px-5 text-xs font-bold inline-flex items-center gap-2 shadow-soft hover:bg-terracotta-dark transition-all"
+          >
+            <Maximize2 className="w-4 h-4" />
+            Galerie des Résultats
+          </Link>
           <button
             onClick={loadStudioData}
             disabled={busy}
