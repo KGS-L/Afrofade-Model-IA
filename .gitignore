@@ -72,3 +72,4 @@ htmlcov/
 Thumbs.db
 web/tsconfig.tsbuildinfo
 api/main.py
+api/data
