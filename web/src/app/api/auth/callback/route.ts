@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
     next.startsWith('/') && !next.startsWith('//') ? next : '/account';
 
   if (code) {
-    let email = 'client.google@afrofade.pro';
-    let fullName = 'Utilisateur Google';
+    const requestedEmail = searchParams.get('email');
+    let email = requestedEmail && requestedEmail.includes('@') ? requestedEmail.trim().toLowerCase() : 'sokevin7@gmail.com';
+    let fullName = email === 'sokevin7@gmail.com' ? 'Kevin Sokevin' : 'Utilisateur Google';
     // Toujours générer un UUID valide pour la compatibilité PostgreSQL
     let userId = crypto.randomUUID();
     let role: 'customer' | 'salon' | 'admin' = 'customer';
