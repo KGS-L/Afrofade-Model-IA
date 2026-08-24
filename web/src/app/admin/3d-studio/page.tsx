@@ -185,6 +185,13 @@ export default function Admin3DStudioPage() {
   const progressPct = trainingState ? Math.round((trainingState.currentEpoch / trainingState.totalEpochs) * 100) : 0;
   const maxLoss = trainingState?.lossHistory[0]?.loss || 0.2;
 
+  const filteredTaxonomies = taxonomies.filter((tax) => {
+    if (studioSpace === 'human_head') {
+      return tax.slug.includes('african') || tax.slug.includes('head') || tax.slug.includes('human');
+    }
+    return !tax.slug.includes('african') && !tax.slug.includes('head') && !tax.slug.includes('human');
+  });
+
   return (
     <div className="min-h-screen bg-cream text-ink font-body p-4 sm:p-8 max-w-[1550px] mx-auto space-y-8">
       {/* Entête Studio */}
@@ -327,7 +334,9 @@ export default function Admin3DStudioPage() {
           }`}
         >
           <Database className="w-4 h-4" />
-          Jeu de données Synthétique (30 GLB)
+          {studioSpace === 'human_head'
+            ? 'Jeu de Données Têtes Africaines 3D'
+            : 'Jeu de Données Coiffures 3D'}
         </button>
         <button
           onClick={() => setActiveTab('checkpoints')}
@@ -336,7 +345,9 @@ export default function Admin3DStudioPage() {
           }`}
         >
           <Box className="w-4 h-4" />
-          Modèles Entraînés (.pth)
+          {studioSpace === 'human_head'
+            ? 'Poids Têtes Photoréalistes (.pth)'
+            : 'Adaptateurs LoRA Coiffures (.pth)'}
         </button>
       </div>
 
@@ -558,13 +569,19 @@ export default function Admin3DStudioPage() {
       {activeTab === 'dataset' && (
         <div className="space-y-6">
           <div className="bg-card border border-ink/10 rounded-card p-6 shadow-soft">
-            <h2 className="font-display text-2xl">Catalogue du Jeu de Données Synthétique 3D</h2>
+            <h2 className="font-display text-2xl">
+              {studioSpace === 'human_head'
+                ? 'Catalogue 3D - Visages & Têtes Humaines Africaines'
+                : 'Catalogue 3D - Maillages Coiffures & Coupes Afro'}
+            </h2>
             <p className="text-sm text-ink-soft mt-1">
-              Généré procéduralement via Blender Python pour alimenter le Fine-Tuning LoRA.
+              {studioSpace === 'human_head'
+                ? "Scans et maillages 3D photoréalistes de têtes humaines africaines pour l'entraînement Hunyuan3D 2.0."
+                : "Maillages 3D isolés de cheveux et coupes Afro pour l'entraînement LoRA."}
             </p>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
-              {taxonomies.map((tax) => (
+              {filteredTaxonomies.map((tax) => (
                 <div key={tax.slug} className="rounded-card bg-cream border border-ink/10 p-5 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="w-8 h-8 rounded-full bg-terracotta-wash text-terracotta flex items-center justify-center font-bold text-xs">
