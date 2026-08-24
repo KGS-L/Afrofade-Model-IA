@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Activity,
   ArrowRight,
+  Cpu,
   CreditCard,
   RefreshCw,
   ShieldCheck,
@@ -176,13 +177,22 @@ export default function AdminPage() {
               Paiements, comptes, salons, revenus et pipeline IA depuis une seule console.
             </p>
           </div>
-          <button
-            onClick={() => void load()}
-            className="min-h-[44px] px-5 rounded-pill border border-ink/15 bg-cream hover:bg-terracotta-wash/50 text-sm font-bold inline-flex items-center gap-2 shadow-soft transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 text-terracotta" />
-            Actualiser
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/3d-studio"
+              className="min-h-[44px] rounded-pill bg-terracotta text-white px-5 text-xs font-bold inline-flex items-center gap-2 shadow-soft hover:bg-terracotta-dark transition-all"
+            >
+              <Cpu className="w-4 h-4" />
+              Studio IA 3D
+            </Link>
+            <button
+              onClick={() => void load()}
+              className="min-h-[44px] rounded-pill border border-ink/15 px-4 text-xs font-bold inline-flex items-center gap-2 hover:bg-ink/5"
+            >
+              <RefreshCw className="w-4 h-4 text-terracotta" />
+              Actualiser
+            </button>
+          </div>
         </div>
 
         {error && (

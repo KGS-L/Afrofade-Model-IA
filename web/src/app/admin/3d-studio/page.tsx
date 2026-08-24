@@ -1,0 +1,501 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  Cpu,
+  Play,
+  Square,
+  RefreshCw,
+  Box,
+  Layers,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
+  Database,
+  Sliders,
+  Sparkles,
+  Download,
+  Flame,
+  Zap,
+} from 'lucide-react';
+import { useAuth } from '@/lib/auth';
+import { DashboardSkeleton } from '@/components/DashboardSkeleton';
+
+type TaxonomyStat = {
+  name: string;
+  slug: string;
+  samples: number;
+  avgVertices: number;
+};
+
+type TrainingState = {
+  status: 'idle' | 'running' | 'completed' | 'failed';
+  currentEpoch: number;
+  totalEpochs: number;
+  currentLoss: number;
+  lossHistory: Array<{ epoch: number; loss: number; valLoss: number }>;
+  vramUsedMb: number;
+  vramTotalMb: number;
+  startedAt: string | null;
+  estimatedTimeRemainingSec: number;
+  activeModelName: string;
+  parameters: {
+    epochs: number;
+    learningRate: number;
+    batchSize: number;
+    taxonomyTarget: string;
+  };
+};
+
+type Checkpoint = {
+  id: string;
+  name: string;
+  sizeMb: number;
+  epoch: number;
+  finalLoss: number;
+  createdAt: string;
+};
+
+export default function Admin3DStudioPage() {
+  const router = useRouter();
+  const { user, hydrated } = useAuth();
+
+  const [activeTab, setActiveTab] = useState<'training' | 'dataset' | 'checkpoints'>('training');
+  const [trainingState, setTrainingState] = useState<TrainingState | null>(null);
+  const [taxonomies, setTaxonomies] = useState<TaxonomyStat[]>([]);
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Form state
+  const [epochs, setEpochs] = useState(50);
+  const [learningRate, setLearningRate] = useState(0.0001);
+  const [batchSize, setBatchSize] = useState(8);
+  const [taxonomyTarget, setTaxonomyTarget] = useState('all');
+
+  const loadStudioData = async () => {
+    try {
+      const res = await fetch('/api/admin/3d-studio', { cache: 'no-store' });
+      if (res.status === 401) {
+        router.push('/connexion?redirect=/admin/3d-studio');
+        return;
+      }
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTrainingState(data.trainingState);
+        setTaxonomies(data.datasetStats?.taxonomies || []);
+        setCheckpoints(data.savedCheckpoints || []);
+      }
+    } catch {
+      setMessage('Impossible de charger les données du studio 3D.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!user || user.role !== 'admin') {
+      router.push('/connexion?redirect=/admin/3d-studio');
+      return;
+    }
+    void loadStudioData();
+  }, [hydrated, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-refresh when training is active
+  useEffect(() => {
+    if (trainingState?.status === 'running') {
+      const timer = setInterval(() => {
+        void loadStudioData();
+      }, 2000);
+      return () => clearInterval(timer);
+    }
+  }, [trainingState?.status]);
+
+  const startTraining = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/3d-studio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'start',
+          epochs,
+          learningRate,
+          batchSize,
+          taxonomyTarget,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMessage(data.message);
+      setTrainingState(data.trainingState);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Erreur de démarrage.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const stopTraining = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/3d-studio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMessage(data.message);
+      setTrainingState(data.trainingState);
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Erreur d\'arrêt.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!hydrated || !user || user.role !== 'admin' || loading) return <DashboardSkeleton />;
+
+  const isRunning = trainingState?.status === 'running';
+  const progressPct = trainingState ? Math.round((trainingState.currentEpoch / trainingState.totalEpochs) * 100) : 0;
+  const maxLoss = trainingState?.lossHistory[0]?.loss || 0.2;
+
+  return (
+    <div className="min-h-screen bg-cream text-ink font-body p-4 sm:p-8 max-w-[1550px] mx-auto space-y-8">
+      {/* Entête Studio */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-card border border-ink/10 rounded-card p-6 shadow-soft">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-9 h-9 rounded-card bg-terracotta text-white flex items-center justify-center font-bold">
+              <Cpu className="w-5 h-5" />
+            </span>
+            <span className="text-xs uppercase font-bold tracking-wider text-terracotta bg-terracotta-wash px-3 py-1 rounded-pill">
+              Afro3D-Engine Studio
+            </span>
+          </div>
+          <h1 className="font-display text-3xl sm:text-4xl mt-2">Studio d'Entraînement IA 3D Sur Mesure</h1>
+          <p className="text-sm text-ink-soft mt-1">
+            Supervisez le jeu de données, contrôlez l'entraînement LoRA PyTorch et visualisez les courbes de convergence 3D.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={loadStudioData}
+            disabled={busy}
+            className="min-h-[44px] rounded-pill border border-ink/15 px-4 text-xs font-bold inline-flex items-center gap-2 hover:bg-ink/5"
+          >
+            <RefreshCw className={`w-4 h-4 text-terracotta ${isRunning ? 'animate-spin' : ''}`} />
+            Rafraîchir
+          </button>
+          <Link
+            href="/admin"
+            className="min-h-[44px] rounded-pill bg-ink text-white px-5 text-xs font-bold inline-flex items-center gap-2"
+          >
+            ← Espace Admin
+          </Link>
+        </div>
+      </div>
+
+      {message && (
+        <div
+          className={`rounded-input px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
+            message.includes('🚀') || message.includes('interrompue')
+              ? 'bg-terracotta-wash text-terracotta border border-terracotta/30'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}
+        >
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          {message}
+        </div>
+      )}
+
+      {/* Navigation des Onglets Studio */}
+      <div className="flex flex-wrap gap-2 border-b border-ink/10 pb-3">
+        <button
+          onClick={() => setActiveTab('training')}
+          className={`min-h-[44px] px-6 rounded-pill text-sm font-bold inline-flex items-center gap-2 transition-all ${
+            activeTab === 'training' ? 'bg-terracotta text-white shadow-soft' : 'bg-card border border-ink/10 text-ink-soft'
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          Entraînement GPU & Loss
+        </button>
+        <button
+          onClick={() => setActiveTab('dataset')}
+          className={`min-h-[44px] px-6 rounded-pill text-sm font-bold inline-flex items-center gap-2 transition-all ${
+            activeTab === 'dataset' ? 'bg-terracotta text-white shadow-soft' : 'bg-card border border-ink/10 text-ink-soft'
+          }`}
+        >
+          <Database className="w-4 h-4" />
+          Jeu de données Synthétique (30 GLB)
+        </button>
+        <button
+          onClick={() => setActiveTab('checkpoints')}
+          className={`min-h-[44px] px-6 rounded-pill text-sm font-bold inline-flex items-center gap-2 transition-all ${
+            activeTab === 'checkpoints' ? 'bg-terracotta text-white shadow-soft' : 'bg-card border border-ink/10 text-ink-soft'
+          }`}
+        >
+          <Box className="w-4 h-4" />
+          Modèles Entraînés (.pth)
+        </button>
+      </div>
+
+      {/* TAB 1: ENTRAÎNEMENT GPU & COURBE DE LOSS */}
+      {activeTab === 'training' && (
+        <div className="grid lg:grid-cols-[1fr_380px] gap-8">
+          {/* Visualisation de la Courbe de Perte (Loss Curve) */}
+          <div className="space-y-6">
+            <div className="rounded-card bg-night text-white p-6 sm:p-8 shadow-soft border border-white/10 space-y-6">
+              <div className="flex flex-wrap justify-between items-center gap-4 border-b border-white/10 pb-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-terracotta">
+                    {isRunning ? '🟢 Session GPU Active' : '⚪ Session Inactive / En attente'}
+                  </span>
+                  <h2 className="font-display text-2xl mt-1">Courbe de Convergence Perte 3D (Loss Curve)</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="bg-white/10 px-3 py-1 rounded-pill text-xs font-bold text-white/80">
+                    VRAM: {trainingState?.vramUsedMb || 0} / {trainingState?.vramTotalMb || 16384} Mo
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar & Epoch Counter */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold">
+                  <span>
+                    Époque {trainingState?.currentEpoch || 0} / {trainingState?.totalEpochs || 50}
+                  </span>
+                  <span className="text-terracotta">{progressPct}% Terminé</span>
+                </div>
+                <div className="w-full h-3 bg-white/10 rounded-pill overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-terracotta to-amber-400 transition-all duration-500"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Loss Metric Display */}
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div className="bg-white/5 border border-white/10 rounded-card p-4">
+                  <p className="text-xs text-white/60 font-bold uppercase">Perte Actuelle (Loss)</p>
+                  <p className="font-display text-3xl text-terracotta mt-1">
+                    {trainingState?.currentLoss ? trainingState.currentLoss.toFixed(4) : '0.0420'}
+                  </p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-card p-4">
+                  <p className="text-xs text-white/60 font-bold uppercase">Temps Restant Estimé</p>
+                  <p className="font-display text-3xl text-white mt-1">
+                    {trainingState?.estimatedTimeRemainingSec ? `${trainingState.estimatedTimeRemainingSec}s` : '0s'}
+                  </p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-card p-4">
+                  <p className="text-xs text-white/60 font-bold uppercase">Modèle Actif</p>
+                  <p className="font-bold text-sm text-white/80 truncate mt-2">
+                    {trainingState?.activeModelName || 'AfroHair-LoRA-v1.pth'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Graphique Visuel SVG de la Courbe de Loss */}
+              <div className="bg-slate-950/80 border border-white/10 rounded-card p-5 space-y-2">
+                <p className="text-xs font-bold text-white/60">Évolution de la Perte Géométrique & Texture par Époque</p>
+                <div className="h-44 w-full relative flex items-end gap-1 pt-6 pb-2 px-2 border-b border-l border-white/15">
+                  {trainingState?.lossHistory.map((item, idx) => {
+                    const heightPct = Math.max(8, Math.min(100, (item.loss / (maxLoss || 0.2)) * 100));
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center gap-1 group relative">
+                        <div
+                          className="w-full bg-gradient-to-t from-terracotta/40 to-terracotta rounded-t transition-all hover:brightness-125"
+                          style={{ height: `${heightPct}%` }}
+                        />
+                        <span className="text-[9px] font-bold text-white/40">E{item.epoch}</span>
+                        {/* Tooltip hover */}
+                        <div className="absolute bottom-full mb-1 hidden group-hover:block bg-slate-900 border border-terracotta text-white text-[10px] p-2 rounded shadow-2xl z-20 whitespace-nowrap">
+                          Époque {item.epoch} : Loss {item.loss}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Panneau de Contrôle & Paramètres d'Entraînement */}
+          <div className="space-y-6">
+            <div className="rounded-card bg-card border border-ink/10 p-6 shadow-soft space-y-5">
+              <div className="flex items-center gap-2 border-b border-ink/10 pb-3">
+                <Sliders className="w-5 h-5 text-terracotta" />
+                <h3 className="font-display text-xl">Paramètres d'Entraînement</h3>
+              </div>
+
+              <div className="space-y-4 text-sm">
+                <div>
+                  <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-1">
+                    Nombre d'Époques (Epochs)
+                  </label>
+                  <input
+                    type="number"
+                    value={epochs}
+                    onChange={(e) => setEpochs(Number(e.target.value))}
+                    disabled={isRunning || busy}
+                    className="w-full min-h-[44px] rounded-input bg-cream border border-ink/10 px-4 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-1">
+                    Taux d'Apprentissage (Learning Rate)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.00001"
+                    value={learningRate}
+                    onChange={(e) => setLearningRate(Number(e.target.value))}
+                    disabled={isRunning || busy}
+                    className="w-full min-h-[44px] rounded-input bg-cream border border-ink/10 px-4 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-1">
+                    Taille du Batch (Batch Size)
+                  </label>
+                  <select
+                    value={batchSize}
+                    onChange={(e) => setBatchSize(Number(e.target.value))}
+                    disabled={isRunning || busy}
+                    className="w-full min-h-[44px] rounded-input bg-cream border border-ink/10 px-4 font-bold"
+                  >
+                    <option value={4}>4 (GPU 8GB VRAM)</option>
+                    <option value={8}>8 (GPU 16GB VRAM - Recommandé)</option>
+                    <option value={16}>16 (GPU 24GB VRAM)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-1">
+                    Cible Taxonomie (Hairstyle Class)
+                  </label>
+                  <select
+                    value={taxonomyTarget}
+                    onChange={(e) => setTaxonomyTarget(e.target.value)}
+                    disabled={isRunning || busy}
+                    className="w-full min-h-[44px] rounded-input bg-cream border border-ink/10 px-4 font-bold"
+                  >
+                    <option value="all">Toutes les taxonomies (Modèle Général Afro)</option>
+                    <option value="knotless-braids">Knotless Braids uniquement</option>
+                    <option value="low-taper-fade">Low Taper Fade uniquement</option>
+                    <option value="short-locks">Short Locks uniquement</option>
+                    <option value="cornrows">Cornrows uniquement</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Bouton d'Action */}
+              {!isRunning ? (
+                <button
+                  onClick={startTraining}
+                  disabled={busy}
+                  className="w-full min-h-[50px] rounded-pill bg-terracotta text-white font-bold text-sm inline-flex items-center justify-center gap-2 shadow-soft hover:bg-terracotta-dark transition-all"
+                >
+                  <Play className="w-4 h-4" />
+                  Démarrer l'Entraînement GPU LoRA
+                </button>
+              ) : (
+                <button
+                  onClick={stopTraining}
+                  disabled={busy}
+                  className="w-full min-h-[50px] rounded-pill bg-red-600 text-white font-bold text-sm inline-flex items-center justify-center gap-2 shadow-soft hover:bg-red-700 transition-all"
+                >
+                  <Square className="w-4 h-4" />
+                  Interrompre l'Entraînement
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: JEU DE DONNÉES SYNTHÉTIQUE (30 GLB) */}
+      {activeTab === 'dataset' && (
+        <div className="space-y-6">
+          <div className="bg-card border border-ink/10 rounded-card p-6 shadow-soft">
+            <h2 className="font-display text-2xl">Catalogue du Jeu de Données Synthétique 3D</h2>
+            <p className="text-sm text-ink-soft mt-1">
+              Généré procéduralement via Blender Python pour alimenter le Fine-Tuning LoRA.
+            </p>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
+              {taxonomies.map((tax) => (
+                <div key={tax.slug} className="rounded-card bg-cream border border-ink/10 p-5 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="w-8 h-8 rounded-full bg-terracotta-wash text-terracotta flex items-center justify-center font-bold text-xs">
+                      <Box className="w-4 h-4" />
+                    </span>
+                    <span className="text-xs font-bold bg-ink/5 px-2.5 py-1 rounded-pill">{tax.samples} échantillons</span>
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl">{tax.name}</h3>
+                    <p className="text-xs text-ink-soft mt-0.5">Dossier : api/data/synthetic_afro_dataset/{tax.slug}/</p>
+                  </div>
+                  <div className="pt-2 border-t border-ink/10 flex justify-between items-center text-xs font-bold">
+                    <span className="text-ink-soft">Nombre de vertices :</span>
+                    <span className="text-terracotta">~{tax.avgVertices.toLocaleString('fr-FR')}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: CHECKPOINTS & MODÈLES ENTRAÎNÉS (.pth) */}
+      {activeTab === 'checkpoints' && (
+        <div className="space-y-6">
+          <div className="bg-card border border-ink/10 rounded-card p-6 shadow-soft space-y-4">
+            <h2 className="font-display text-2xl">Poids & Checkpoints des Modèles Entraînés (.pth)</h2>
+            <p className="text-sm text-ink-soft">
+              Fichiers d'adaptateurs LoRA exportés depuis le pipeline PyTorch GPU.
+            </p>
+
+            <div className="space-y-3">
+              {checkpoints.map((ckpt) => (
+                <div key={ckpt.id} className="rounded-card bg-cream border border-ink/10 p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                      <Flame className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-base">{ckpt.name}</h4>
+                      <p className="text-xs text-ink-soft">
+                        Taille : {ckpt.sizeMb} Mo · Époque {ckpt.epoch} · Loss finale : {ckpt.finalLoss}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button className="min-h-[38px] rounded-pill border border-ink/15 px-4 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-ink/5">
+                      <Download className="w-3.5 h-3.5 text-terracotta" />
+                      Télécharger .pth
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
