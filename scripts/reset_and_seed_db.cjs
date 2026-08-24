@@ -41,6 +41,23 @@ async function resetAndSeedDatabase() {
       ON CONFLICT (id) DO NOTHING;
       CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS $$ SELECT NULL::UUID $$;
       CREATE OR REPLACE FUNCTION auth.role() RETURNS TEXT LANGUAGE sql STABLE AS $$ SELECT 'authenticated'::TEXT $$;
+      CREATE SCHEMA IF NOT EXISTS storage;
+      CREATE TABLE IF NOT EXISTS storage.buckets (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          public BOOLEAN DEFAULT FALSE,
+          file_size_limit BIGINT,
+          allowed_mime_types TEXT[]
+      );
+      CREATE TABLE IF NOT EXISTS storage.objects (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          bucket_id TEXT REFERENCES storage.buckets(id),
+          name TEXT,
+          owner UUID,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          metadata JSONB
+      );
       GRANT ALL ON SCHEMA public TO public;
       GRANT ALL ON SCHEMA public TO ${user};
       GRANT ALL ON SCHEMA auth TO ${user};

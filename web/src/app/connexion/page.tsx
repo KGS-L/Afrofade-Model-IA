@@ -12,13 +12,14 @@ function ConnexionInner() {
   const params = useSearchParams();
   const requestedNext = params.get('next');
   const nextUrl = requestedNext?.startsWith('/') && !requestedNext.startsWith('//') ? requestedNext : '/dashboard';
-  const { user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle } = useAuth();
+  const { user, hydrated, loginWithEmail, verifyEmailOtp, loginWithGoogle, logout } = useAuth();
 
   React.useEffect(() => {
-    if (hydrated && user) {
-      router.replace(nextUrl);
+    if (hydrated && user && requestedNext) {
+      const destination = user.role === 'admin' ? '/admin' : user.role === 'salon' ? '/dashboard' : '/account';
+      router.replace(requestedNext || destination);
     }
-  }, [hydrated, user, nextUrl, router]);
+  }, [hydrated, user, requestedNext, router]);
 
   const [method, setMethod] = useState<'choix' | 'otp-envoye'>('choix');
   const [email, setEmail] = useState('');
@@ -169,6 +170,19 @@ function ConnexionInner() {
               <h1 className="font-display text-2xl sm:text-3xl text-ink">Connexion / Inscription</h1>
               <p className="text-sm text-ink-soft">Connectez-vous pour accéder à votre espace Afrofade.</p>
             </div>
+
+            {user && (
+              <div className="rounded-card bg-amber-50 border border-amber-200 text-amber-900 p-4 text-xs space-y-2 text-center">
+                <p>Connecté actuellement en tant que : <strong>{user.email || user.name}</strong> ({user.role})</p>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="px-4 py-2 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-pill shadow-sm transition-all"
+                >
+                  Se déconnecter pour changer de compte
+                </button>
+              </div>
+            )}
 
             {errorMessage && (
               <div className="rounded-input bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-xs font-medium flex items-center gap-2">
