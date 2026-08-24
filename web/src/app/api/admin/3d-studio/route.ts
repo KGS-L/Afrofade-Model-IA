@@ -76,21 +76,16 @@ export async function GET(req: NextRequest) {
     success: true,
     trainingState: globalTrainingState,
     datasetStats: {
-      totalSamples: 30,
-      taxonomiesCount: 6,
+      totalSamples: 1,
+      taxonomiesCount: 1,
+      clientTarget: 'Kevin (Personne Réelle)',
+      headMeshVertices: 5023,
+      headMeshFaces: 9976,
       taxonomies: [
-        { name: 'Knotless Braids', slug: 'knotless-braids', samples: 5, avgVertices: 12500 },
-        { name: 'Low Taper Fade', slug: 'low-taper-fade', samples: 5, avgVertices: 8400 },
-        { name: 'Short Locks', slug: 'short-locks', samples: 5, avgVertices: 9600 },
-        { name: 'Cornrows', slug: 'cornrows', samples: 5, avgVertices: 11200 },
-        { name: 'Afro Twists', slug: 'afro-twists', samples: 5, avgVertices: 10400 },
-        { name: 'Sculpted Beard', slug: 'beard-sculpted', samples: 5, avgVertices: 6200 },
+        { name: 'Low Taper Fade & Line-Up', slug: 'low-taper-fade', samples: 1, avgVertices: 8400 },
       ],
     },
-    savedCheckpoints: [
-      { id: 'ckpt_v1_final', name: 'afrohair_v1_final.pth', sizeMb: 148, epoch: 50, finalLoss: 0.015, createdAt: '2026-08-24T10:00:00Z' },
-      { id: 'ckpt_v1_ep30', name: 'afrohair_v1_ep30.pth', sizeMb: 148, epoch: 30, finalLoss: 0.042, createdAt: '2026-08-24T09:30:00Z' },
-    ],
+    savedCheckpoints: [],
   });
 }
 
