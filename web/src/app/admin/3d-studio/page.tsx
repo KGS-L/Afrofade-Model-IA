@@ -597,29 +597,6 @@ export default function Admin3DStudioPage() {
               )}
             </div>
 
-            {studioSpace === 'human_head' && (
-              <div className="mt-6 bg-gradient-to-r from-terracotta to-amber-600 text-white p-5 sm:p-6 rounded-card shadow-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-pill bg-white/20">
-                      👑 Privilège Administrateur
-                    </span>
-                  </div>
-                  <h3 className="font-display text-xl sm:text-2xl">Tester le Rituel avec ma Propre Tête</h3>
-                  <p className="text-xs opacity-90 max-w-xl">
-                    Scannez votre vrai visage ou importez vos photos pour générer la reconstruction 3D photoréaliste de votre propre tête (0 crédit consommé).
-                  </p>
-                </div>
-                <Link
-                  href="/rituel"
-                  className="min-h-[46px] px-6 rounded-pill bg-white text-terracotta font-bold text-xs inline-flex items-center gap-2 shadow-soft hover:bg-cream transition-all shrink-0"
-                >
-                  <Sparkles className="w-4 h-4 text-terracotta" />
-                  Lancer le Scan & Tester le Rituel
-                </Link>
-              </div>
-            )}
-
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
               {filteredTaxonomies.map((tax) => (
                 <div key={tax.slug} className="rounded-card bg-cream border border-ink/10 p-5 space-y-3">
