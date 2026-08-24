@@ -29,6 +29,7 @@ interface HeadModelProps {
   modelUrl?: string;
   isClayMode?: boolean;
   strictModel?: boolean;
+  renderHead?: boolean;
 }
 
 export function HeadModel({
@@ -39,6 +40,7 @@ export function HeadModel({
   modelUrl,
   isClayMode = false,
   strictModel = true,
+  renderHead = true,
 }: HeadModelProps) {
   const headGroupRef = useRef<THREE.Group>(null);
   const [loadedScene, setLoadedScene] = useState<THREE.Group | null>(null);
@@ -125,7 +127,7 @@ export function HeadModel({
     <group ref={headGroupRef} position={[0, -0.55, 0]}>
       {loadedScene ? (
         <primitive object={loadedScene} scale={[1, 1, 1]} position={[0, 0, 0]} />
-      ) : renderProceduralBase ? (
+      ) : (renderProceduralBase && renderHead) ? (
         <>
           <mesh position={[0, 0.14, -0.04]}>
             <cylinderGeometry args={[0.3, 0.38, 0.85, 24]} />

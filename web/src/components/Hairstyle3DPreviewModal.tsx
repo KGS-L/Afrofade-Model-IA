@@ -162,6 +162,7 @@ export const Hairstyle3DPreviewModal: React.FC<Hairstyle3DPreviewModalProps> = (
               hairstyleId={item.id}
               lineUpCutoff={50}
               isAutoRotate={true}
+              renderHead={false}
             />
             <OrbitControls enableZoom={true} minDistance={1.5} maxDistance={4.5} />
           </Canvas>
