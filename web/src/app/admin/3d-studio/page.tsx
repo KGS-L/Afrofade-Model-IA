@@ -76,6 +76,7 @@ export default function Admin3DStudioPage() {
   const [previewItem, setPreviewItem] = useState<HairstyleItem | null>(null);
 
   // Form state
+  const [studioSpace, setStudioSpace] = useState<'human_head' | 'hairstyle_only'>('human_head');
   const [targetType, setTargetType] = useState<'human_head' | 'hairstyle_only'>('human_head');
   const [epochs, setEpochs] = useState(50);
   const [learningRate, setLearningRate] = useState(0.0001);
@@ -228,6 +229,73 @@ export default function Admin3DStudioPage() {
         </div>
       </div>
 
+      {/* Séparation Nette des 2 Studios IA 3D */}
+      <div className="grid sm:grid-cols-2 gap-4 bg-card p-3 rounded-card border border-ink/10 shadow-soft">
+        <button
+          onClick={() => {
+            setStudioSpace('human_head');
+            setTargetType('human_head');
+            setTaxonomyTarget('hunyuan-head-african');
+          }}
+          className={`p-4 rounded-input text-left flex items-start gap-4 transition-all ${
+            studioSpace === 'human_head'
+              ? 'bg-terracotta text-white shadow-soft ring-2 ring-terracotta/40'
+              : 'bg-cream text-ink hover:bg-ink/5'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold ${
+            studioSpace === 'human_head' ? 'bg-white/20 text-white' : 'bg-terracotta-wash text-terracotta'
+          }`}>
+            <User className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-lg">Studio 1 : Tête Humaine Photoréaliste</h2>
+              {studioSpace === 'human_head' && (
+                <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-pill bg-white/20">
+                  Focus Actif
+                </span>
+              )}
+            </div>
+            <p className="text-xs opacity-80 mt-1">
+              Génération & Fine-tuning 3D de têtes et visages humains africains (Hunyuan3D 2.0 / Latents 3D PBR).
+            </p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => {
+            setStudioSpace('hairstyle_only');
+            setTargetType('hairstyle_only');
+            setTaxonomyTarget('low-taper-fade');
+          }}
+          className={`p-4 rounded-input text-left flex items-start gap-4 transition-all ${
+            studioSpace === 'hairstyle_only'
+              ? 'bg-terracotta text-white shadow-soft ring-2 ring-terracotta/40'
+              : 'bg-cream text-ink hover:bg-ink/5'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 font-bold ${
+            studioSpace === 'hairstyle_only' ? 'bg-white/20 text-white' : 'bg-terracotta-wash text-terracotta'
+          }`}>
+            <Box className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-lg">Studio 2 : Coiffure 3D Seule</h2>
+              {studioSpace === 'hairstyle_only' && (
+                <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-pill bg-white/20">
+                  Focus Actif
+                </span>
+              )}
+            </div>
+            <p className="text-xs opacity-80 mt-1">
+              Modélisation 3D pure du maillage des cheveux et coupes Afro sans géométrie de tête humaine.
+            </p>
+          </div>
+        </button>
+      </div>
+
       {message && (
         <div
           className={`rounded-input px-5 py-4 text-sm font-semibold flex items-center gap-3 ${
@@ -283,7 +351,11 @@ export default function Admin3DStudioPage() {
                   <span className="text-[10px] uppercase font-bold tracking-widest text-terracotta">
                     {isRunning ? '🟢 Session GPU Active' : '⚪ Session Inactive / En attente'}
                   </span>
-                  <h2 className="font-display text-2xl mt-1">Courbe de Convergence Perte 3D (Loss Curve)</h2>
+                  <h2 className="font-display text-2xl mt-1">
+                    {studioSpace === 'human_head'
+                      ? 'Convergence Perte 3D Tête Humaine Photoréaliste (Identity & Skin Loss)'
+                      : 'Convergence Perte 3D Coiffure Seule (Mesh Hair Loss)'}
+                  </h2>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="bg-white/10 px-3 py-1 rounded-pill text-xs font-bold text-white/80">
