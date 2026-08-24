@@ -19,9 +19,12 @@ import {
   Download,
   Flame,
   Zap,
+  Eye,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
+import { Hairstyle3DPreviewModal } from '@/components/Hairstyle3DPreviewModal';
+import { HairstyleItem } from '@/components/HairstyleCatalog';
 
 type TaxonomyStat = {
   name: string;
@@ -69,12 +72,24 @@ export default function Admin3DStudioPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<HairstyleItem | null>(null);
 
   // Form state
   const [epochs, setEpochs] = useState(50);
   const [learningRate, setLearningRate] = useState(0.0001);
   const [batchSize, setBatchSize] = useState(8);
   const [taxonomyTarget, setTaxonomyTarget] = useState('all');
+
+  const open3DPreview = (name: string, category: 'fade' | 'locks' | 'tresses' | 'afro' | 'barbe', slug: string) => {
+    setPreviewItem({
+      id: slug || 'fade_taper_low',
+      category: category || 'fade',
+      title: name || 'Low Taper Fade & Line-Up',
+      subtitle: `Rendu 3D haute fidélité du modèle LoRA pour la catégorie ${name}.`,
+      color: '#1a110b',
+      isPremium: false,
+    });
+  };
 
   const loadStudioData = async () => {
     try {
@@ -328,6 +343,17 @@ export default function Admin3DStudioPage() {
                   })}
                 </div>
               </div>
+
+              {/* Bouton de Visualisation 3D WebGL */}
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => open3DPreview(trainingState?.activeModelName || 'Low Taper Fade', 'fade', 'low-taper-fade')}
+                  className="min-h-[44px] rounded-pill bg-terracotta text-white px-5 text-xs font-bold inline-flex items-center gap-2 shadow-soft hover:bg-terracotta-dark transition-all"
+                >
+                  <Eye className="w-4 h-4" />
+                  Visualiser le Rendu 3D en Direct (WebGL 60 FPS)
+                </button>
+              </div>
             </div>
           </div>
 
@@ -453,6 +479,13 @@ export default function Admin3DStudioPage() {
                     <span className="text-ink-soft">Nombre de vertices :</span>
                     <span className="text-terracotta">~{tax.avgVertices.toLocaleString('fr-FR')}</span>
                   </div>
+                  <button
+                    onClick={() => open3DPreview(tax.name, tax.slug.includes('fade') ? 'fade' : tax.slug.includes('locks') ? 'locks' : tax.slug.includes('braid') || tax.slug.includes('cornrow') ? 'tresses' : tax.slug.includes('beard') ? 'barbe' : 'afro', tax.slug)}
+                    className="w-full min-h-[38px] rounded-pill border border-ink/15 text-ink hover:bg-ink/5 px-3 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-all mt-2"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-terracotta" />
+                    Inspecter le Modèle GLB 3D
+                  </button>
                 </div>
               ))}
             </div>
@@ -485,6 +518,13 @@ export default function Admin3DStudioPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => open3DPreview(ckpt.name, 'fade', 'low-taper-fade')}
+                      className="min-h-[38px] rounded-pill bg-terracotta text-white px-4 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-terracotta-dark transition-all"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Visualiser en 3D
+                    </button>
                     <button className="min-h-[38px] rounded-pill border border-ink/15 px-4 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-ink/5">
                       <Download className="w-3.5 h-3.5 text-terracotta" />
                       Télécharger .pth
@@ -496,6 +536,9 @@ export default function Admin3DStudioPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Prévisualisation 3D Interactive (WebGL 60 FPS) */}
+      <Hairstyle3DPreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
     </div>
   );
 }
