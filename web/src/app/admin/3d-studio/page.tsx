@@ -447,57 +447,28 @@ export default function Admin3DStudioPage() {
               </div>
 
               <div className="space-y-4 text-sm">
-                {/* Choix Distinct : Tête Humaine vs Coiffure Seule */}
-                <div>
-                  <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-2">
-                    Objet d'Entraînement 3D (Distinction Nette)
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTargetType('human_head');
-                        setTaxonomyTarget('hunyuan-head-african');
-                      }}
-                      disabled={isRunning || busy}
-                      className={`p-3.5 rounded-card border text-left flex flex-col justify-between gap-2 transition-all ${
-                        targetType === 'human_head'
-                          ? 'bg-terracotta text-white border-terracotta shadow-soft'
-                          : 'bg-cream text-ink border-ink/10 hover:border-ink/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 font-bold text-xs">
-                        <User className="w-4 h-4 shrink-0" />
-                        <span>Tête Humaine Photoréaliste</span>
-                      </div>
-                      <span className="text-[10px] opacity-80 leading-tight">
-                        Génération & Fine-tuning 3D d'une tête humaine (Hunyuan3D 2.0 / Visages Africains).
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTargetType('hairstyle_only');
-                        setTaxonomyTarget('low-taper-fade');
-                      }}
-                      disabled={isRunning || busy}
-                      className={`p-3.5 rounded-card border text-left flex flex-col justify-between gap-2 transition-all ${
-                        targetType === 'hairstyle_only'
-                          ? 'bg-terracotta text-white border-terracotta shadow-soft'
-                          : 'bg-cream text-ink border-ink/10 hover:border-ink/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 font-bold text-xs">
-                        <Box className="w-4 h-4 shrink-0" />
-                        <span>Coiffure 3D Seule (Isolée)</span>
-                      </div>
-                      <span className="text-[10px] opacity-80 leading-tight">
-                        Modélisation 3D pure du maillage de cheveux sans géométrie de tête humaine.
-                      </span>
-                    </button>
+                {/* Statut de la Cible Actuelle Sélectionnée en Haut */}
+                {studioSpace === 'human_head' ? (
+                  <div className="bg-terracotta-wash border border-terracotta/30 rounded-card p-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-terracotta">
+                      <User className="w-4 h-4 shrink-0" />
+                      <span>Cible : Tête Humaine Photoréaliste (Hunyuan3D 2.0)</span>
+                    </div>
+                    <span className="text-[10px] bg-terracotta text-white font-bold px-2.5 py-1 rounded-pill uppercase tracking-wider">
+                      Tête Humaine
+                    </span>
                   </div>
-                </div>
+                ) : (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-card p-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-800">
+                      <Box className="w-4 h-4 shrink-0 text-amber-600" />
+                      <span>Cible : Coiffure 3D Seule (Maillage Cheveux)</span>
+                    </div>
+                    <span className="text-[10px] bg-amber-600 text-white font-bold px-2.5 py-1 rounded-pill uppercase tracking-wider">
+                      Coiffure Seule
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-1">
