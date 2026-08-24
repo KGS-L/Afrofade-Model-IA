@@ -162,7 +162,7 @@ export const Hairstyle3DPreviewModal: React.FC<Hairstyle3DPreviewModalProps> = (
               hairstyleId={item.id}
               lineUpCutoff={50}
               isAutoRotate={true}
-              renderHead={false}
+              renderHead={item.id.includes('head') || item.id.includes('african') || item.id === 'hunyuan-head-african'}
             />
             <OrbitControls enableZoom={true} minDistance={1.5} maxDistance={4.5} />
           </Canvas>
@@ -170,12 +170,12 @@ export const Hairstyle3DPreviewModal: React.FC<Hairstyle3DPreviewModalProps> = (
           {/* Incrustation d'Aide & Statut 3D */}
           <div className="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-md text-white text-xs font-bold px-4 py-2 rounded-pill border border-white/10 shadow-soft flex items-center gap-2">
             <RotateCw className="w-3.5 h-3.5 animate-spin-slow text-terracotta" />
-            <span>Rendu 3D Interactive (Glissez pour tourner / Molette pour zoomer)</span>
+            <span>Rendu 3D Interactif (Glissez pour tourner / Molette pour zoomer)</span>
           </div>
 
           <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 rounded-pill border border-terracotta/30 flex items-center gap-2">
             <Cpu className="w-3.5 h-3.5 text-terracotta animate-pulse" />
-            <span>WebGL 60 FPS · Modèle Biométrique FLAME</span>
+            <span>WebGL 60 FPS · Modèle Photoréaliste Hunyuan3D 2.0</span>
           </div>
         </div>
       </div>

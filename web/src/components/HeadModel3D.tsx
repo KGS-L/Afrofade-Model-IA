@@ -94,8 +94,9 @@ export function HeadModel({
 
   const hairColor = isClayMode ? '#555555' : hairstyleColor || HAIR_DEFAULT;
   const isBald = hairstyleId === 'bald';
+  const isHeadAsset = hairstyleId.includes('head') || hairstyleId.includes('african') || hairstyleId === 'bald';
   const renderProceduralBase = !loadedScene && (!modelUrl || !strictModel);
-  const renderHair = !isBald && (!strictModel || !modelUrl || modelState === 'loaded');
+  const renderHair = !isBald && !isHeadAsset && !loadedScene && (!strictModel || !modelUrl || modelState === 'loaded');
 
   const afroClusters = useMemo(() => {
     const random = mulberry32(7);
