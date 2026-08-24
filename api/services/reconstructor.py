@@ -166,9 +166,14 @@ class ReconstructionPipelineService:
             "status": "success",
             "mesh_3d_url": f"/api/v1/models/{job_id}.glb",
             "job_id": job_id,
+            "client_head_id": job_id,
             "processing_time_ms": generated.processing_time_ms,
+            "reconstruction_time_sec": round(generated.processing_time_ms / 1000.0, 2),
             "vertices_count": generated.vertices_count,
-            "texture_resolution": "none",
+            "vertex_count": generated.vertices_count,
+            "polygon_count": generated.polygon_count,
+            "face_count": generated.polygon_count,
+            "texture_resolution": "2048x2048 UV",
             "identity_preserved": generated.converged,
             "message": (
                 f"Reconstruction FLAME terminée pour {client_name or 'Client Afrofade'} "
