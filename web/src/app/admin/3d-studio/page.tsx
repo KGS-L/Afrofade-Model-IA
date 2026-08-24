@@ -18,9 +18,9 @@ import {
   Sparkles,
   Download,
   Flame,
-  Zap,
   Eye,
   Maximize2,
+  User,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { DashboardSkeleton } from '@/components/DashboardSkeleton';
@@ -76,10 +76,11 @@ export default function Admin3DStudioPage() {
   const [previewItem, setPreviewItem] = useState<HairstyleItem | null>(null);
 
   // Form state
+  const [targetType, setTargetType] = useState<'human_head' | 'hairstyle_only'>('human_head');
   const [epochs, setEpochs] = useState(50);
   const [learningRate, setLearningRate] = useState(0.0001);
   const [batchSize, setBatchSize] = useState(8);
-  const [taxonomyTarget, setTaxonomyTarget] = useState('all');
+  const [taxonomyTarget, setTaxonomyTarget] = useState('hunyuan-head-african');
 
   const open3DPreview = (name: string, category: 'fade' | 'locks' | 'tresses' | 'afro' | 'barbe', slug: string) => {
     setPreviewItem({
@@ -374,6 +375,58 @@ export default function Admin3DStudioPage() {
               </div>
 
               <div className="space-y-4 text-sm">
+                {/* Choix Distinct : Tête Humaine vs Coiffure Seule */}
+                <div>
+                  <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-2">
+                    Objet d'Entraînement 3D (Distinction Nette)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetType('human_head');
+                        setTaxonomyTarget('hunyuan-head-african');
+                      }}
+                      disabled={isRunning || busy}
+                      className={`p-3.5 rounded-card border text-left flex flex-col justify-between gap-2 transition-all ${
+                        targetType === 'human_head'
+                          ? 'bg-terracotta text-white border-terracotta shadow-soft'
+                          : 'bg-cream text-ink border-ink/10 hover:border-ink/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        <User className="w-4 h-4 shrink-0" />
+                        <span>Tête Humaine Photoréaliste</span>
+                      </div>
+                      <span className="text-[10px] opacity-80 leading-tight">
+                        Génération & Fine-tuning 3D d'une tête humaine (Hunyuan3D 2.0 / Visages Africains).
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetType('hairstyle_only');
+                        setTaxonomyTarget('low-taper-fade');
+                      }}
+                      disabled={isRunning || busy}
+                      className={`p-3.5 rounded-card border text-left flex flex-col justify-between gap-2 transition-all ${
+                        targetType === 'hairstyle_only'
+                          ? 'bg-terracotta text-white border-terracotta shadow-soft'
+                          : 'bg-cream text-ink border-ink/10 hover:border-ink/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 font-bold text-xs">
+                        <Box className="w-4 h-4 shrink-0" />
+                        <span>Coiffure 3D Seule (Isolée)</span>
+                      </div>
+                      <span className="text-[10px] opacity-80 leading-tight">
+                        Modélisation 3D pure du maillage de cheveux sans géométrie de tête humaine.
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block font-bold text-xs uppercase tracking-wider text-ink-soft mb-1">
                     Nombre d'Époques (Epochs)
