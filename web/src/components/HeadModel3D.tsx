@@ -129,34 +129,122 @@ export function HeadModel({
       {loadedScene ? (
         <primitive object={loadedScene} scale={[1, 1, 1]} position={[0, 0, 0]} />
       ) : (renderProceduralBase && renderHead) ? (
-        <>
-          <mesh position={[0, 0.14, -0.04]}>
-            <cylinderGeometry args={[0.3, 0.38, 0.85, 24]} />
-            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.6} />
+        <group position={[0, 0, 0]}>
+          {/* Cou & Tronc Ergonomique */}
+          <mesh position={[0, 0.18, -0.05]} rotation={[0.08, 0, 0]}>
+            <cylinderGeometry args={[0.32, 0.40, 0.75, 32]} />
+            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.55} metalness={0.02} />
           </mesh>
-          <mesh position={[0, -0.34, 0]} scale={[1.6, 0.42, 0.9]}>
-            <sphereGeometry args={[0.65, 32, 24]} />
-            <meshStandardMaterial color={isClayMode ? '#777' : '#2b2b33'} roughness={0.85} />
+
+          {/* Épaules / Buste */}
+          <mesh position={[0, -0.32, -0.02]} scale={[1.65, 0.45, 0.95]}>
+            <sphereGeometry args={[0.65, 32, 32]} />
+            <meshStandardMaterial color={isClayMode ? '#666' : '#231f20'} roughness={0.8} />
           </mesh>
-          <mesh position={[0, 1.02, 0]} scale={[1, 1.16, 1.02]}>
-            <sphereGeometry args={[0.88, 64, 64]} />
-            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.52} metalness={0.04} />
+
+          {/* Boîte Crânienne (Crâne principal) */}
+          <mesh position={[0, 1.08, -0.02]} scale={[0.92, 1.08, 0.98]}>
+            <sphereGeometry args={[0.82, 64, 64]} />
+            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.44} metalness={0.03} />
           </mesh>
-          <mesh position={[0, 0.76, 0.14]} scale={[0.8, 0.68, 0.9]}>
-            <sphereGeometry args={[0.62, 48, 48]} />
-            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.52} metalness={0.04} />
+
+          {/* Visage Avant & Mâchoire (Mandibule sculptée) */}
+          <mesh position={[0, 0.82, 0.18]} scale={[0.78, 0.85, 0.88]}>
+            <sphereGeometry args={[0.68, 64, 64]} />
+            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.44} metalness={0.03} />
           </mesh>
+
+          {/* Menton Sculpté */}
+          <mesh position={[0, 0.46, 0.42]} scale={[0.42, 0.32, 0.45]}>
+            <sphereGeometry args={[0.35, 32, 32]} />
+            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.44} metalness={0.03} />
+          </mesh>
+
+          {/* Pommettes & Joues */}
           {[-1, 1].map((side) => (
-            <mesh key={side} position={[side * 0.86, 1.02, 0.02]} scale={[0.45, 1, 0.75]}>
-              <sphereGeometry args={[0.14, 24, 24]} />
-              <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.55} />
+            <mesh key={`cheek-${side}`} position={[side * 0.38, 0.84, 0.45]} scale={[0.38, 0.32, 0.35]}>
+              <sphereGeometry args={[0.3, 32, 32]} />
+              <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.44} metalness={0.03} />
             </mesh>
           ))}
-          <mesh position={[0, 0.94, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
-            <coneGeometry args={[0.13, 0.34, 24]} />
-            <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.45} />
-          </mesh>
-        </>
+
+          {/* Nez Photoréaliste (Arête + Bout + Narines) */}
+          <group position={[0, 0.86, 0.72]}>
+            {/* Arête du nez */}
+            <mesh position={[0, 0.08, 0.02]} rotation={[-0.22, 0, 0]}>
+              <boxGeometry args={[0.12, 0.28, 0.14]} />
+              <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.40} />
+            </mesh>
+            {/* Bout du nez */}
+            <mesh position={[0, -0.06, 0.08]} scale={[0.16, 0.14, 0.15]}>
+              <sphereGeometry args={[0.8, 32, 32]} />
+              <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN} roughness={0.40} />
+            </mesh>
+            {/* Narines (gauche & droite) */}
+            {[-1, 1].map((side) => (
+              <mesh key={`nostril-${side}`} position={[side * 0.09, -0.08, 0.04]} scale={[0.08, 0.06, 0.08]}>
+                <sphereGeometry args={[0.7, 16, 16]} />
+                <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.6} />
+              </mesh>
+            ))}
+          </group>
+
+          {/* Yeux Anatomiques Complet (Globes + Iris + Pupilles + Paupières) */}
+          {[-1, 1].map((side) => (
+            <group key={`eye-${side}`} position={[side * 0.28, 0.96, 0.62]}>
+              {/* Globe Oculaire (Sclère Blanche) */}
+              <mesh scale={[0.12, 0.09, 0.10]}>
+                <sphereGeometry args={[0.9, 32, 32]} />
+                <meshStandardMaterial color="#f0ede6" roughness={0.15} metalness={0.1} />
+              </mesh>
+              {/* Iris Marron Chaud */}
+              <mesh position={[0, 0, 0.07]} scale={[0.06, 0.06, 0.02]}>
+                <cylinderGeometry args={[0.9, 0.9, 0.5, 32]} />
+                <meshStandardMaterial color="#2d1a0e" roughness={0.2} />
+              </mesh>
+              {/* Pupille Noire */}
+              <mesh position={[0, 0, 0.08]} scale={[0.03, 0.03, 0.02]}>
+                <cylinderGeometry args={[0.9, 0.9, 0.5, 32]} />
+                <meshStandardMaterial color="#050505" roughness={0.1} />
+              </mesh>
+              {/* Arcade Sourcilière */}
+              <mesh position={[0, 0.09, -0.02]} rotation={[0, 0, side * -0.15]} scale={[0.18, 0.04, 0.08]}>
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial color={isClayMode ? CLAY_COLOR : '#1b110b'} roughness={0.9} />
+              </mesh>
+            </group>
+          ))}
+
+          {/* Lèvres Humaines Dessinées (Philtrum + Lèvre Supérieure + Lèvre Inférieure) */}
+          <group position={[0, 0.66, 0.70]}>
+            {/* Lèvre Supérieure */}
+            <mesh position={[0, 0.025, 0]} scale={[0.24, 0.05, 0.10]}>
+              <sphereGeometry args={[0.8, 32, 32]} />
+              <meshStandardMaterial color={isClayMode ? CLAY_COLOR : '#683e33'} roughness={0.45} />
+            </mesh>
+            {/* Lèvre Inférieure */}
+            <mesh position={[0, -0.025, 0.01]} scale={[0.22, 0.06, 0.11]}>
+              <sphereGeometry args={[0.8, 32, 32]} />
+              <meshStandardMaterial color={isClayMode ? CLAY_COLOR : '#724338'} roughness={0.45} />
+            </mesh>
+          </group>
+
+          {/* Oreilles Détaillées (Helix & Lobe) */}
+          {[-1, 1].map((side) => (
+            <group key={`ear-${side}`} position={[side * 0.72, 0.92, -0.02]} rotation={[0.1, side * 0.2, side * -0.1]}>
+              {/* Pavillon */}
+              <mesh scale={[0.10, 0.26, 0.18]}>
+                <sphereGeometry args={[0.8, 32, 32]} />
+                <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.5} />
+              </mesh>
+              {/* Lobe */}
+              <mesh position={[0, -0.18, 0.02]} scale={[0.08, 0.10, 0.09]}>
+                <sphereGeometry args={[0.8, 24, 24]} />
+                <meshStandardMaterial color={isClayMode ? CLAY_COLOR : SKIN_DARK} roughness={0.5} />
+              </mesh>
+            </group>
+          ))}
+        </group>
       ) : null}
 
       {renderHair && (

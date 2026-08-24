@@ -84,11 +84,14 @@ export default function Admin3DStudioPage() {
   const [taxonomyTarget, setTaxonomyTarget] = useState('hunyuan-head-african');
 
   const open3DPreview = (name: string, category: 'fade' | 'locks' | 'tresses' | 'afro' | 'barbe', slug: string) => {
+    const isHead = slug.includes('african') || slug.includes('head') || slug.includes('human');
     setPreviewItem({
-      id: slug || 'fade_taper_low',
-      category: category || 'fade',
-      title: name || 'Low Taper Fade & Line-Up',
-      subtitle: `Rendu 3D haute fidélité du modèle LoRA pour la catégorie ${name}.`,
+      id: slug || 'hunyuan-head-african',
+      category: isHead ? 'afro' : (category || 'fade'),
+      title: isHead ? 'Tête Humaine Africaine Photoréaliste' : (name || 'Low Taper Fade & Line-Up'),
+      subtitle: isHead
+        ? "Modélisation 3D photoréaliste de la tête et du visage humain (Hunyuan3D 2.0 / PBR Skin)."
+        : `Rendu 3D haute fidélité du maillage de coiffure pour la catégorie ${name}.`,
       color: '#1a110b',
       isPremium: false,
     });
