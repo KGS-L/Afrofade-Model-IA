@@ -26,7 +26,6 @@ interface AuthContextValue {
   subscribe: (plan: PlanName, amount: number, term: TermId, provider?: PaymentProvider) => Promise<void>;
 }
 
-const STORAGE_KEY = 'afrofade_auth_v1';
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 interface ServerSessionUser {
@@ -65,27 +64,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  const persist = useCallback((next: AuthUser | null) => {
-    setUser(next);
-    try {
-      if (next) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      else window.localStorage.removeItem(STORAGE_KEY);
-    } catch {}
-  }, []);
-
   useEffect(() => {
-    let cached: AuthUser | null = null;
     let paymentPollTimer: number | null = null;
     let paymentPollStopTimer: number | null = null;
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      cached = raw ? (JSON.parse(raw) as AuthUser) : null;
-    } catch {}
 
     const clearStaleSession = () => {
-      persist(null);
+      setUser(null);
       try {
-        window.localStorage.removeItem(STORAGE_KEY);
         document.cookie = 'afrofade_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       } catch {}
     };
@@ -93,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchServerSession()
       .then((serverUser) => {
         if (serverUser) {
-          persist(mergeServerUser(serverUser, cached));
+          setUser(mergeServerUser(serverUser, null));
         } else {
           clearStaleSession();
         }
@@ -107,13 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const serverUser = await fetchServerSession();
           if (!serverUser) return;
-          setUser((previous) => {
-            const next = mergeServerUser(serverUser, previous);
-            try {
-              window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-            } catch {}
-            return next;
-          });
+          setUser((previous) => mergeServerUser(serverUser, previous));
           if (serverUser.subscription && paymentPollTimer !== null) {
             window.clearInterval(paymentPollTimer);
             paymentPollTimer = null;
@@ -130,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (paymentPollTimer !== null) window.clearInterval(paymentPollTimer);
       if (paymentPollStopTimer !== null) window.clearTimeout(paymentPollStopTimer);
     };
-  }, [persist]);
+  }, []);
 
   const loginWithEmail = useCallback(async (email: string) => {
     try {
@@ -169,14 +148,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           everSubscribed: false,
         };
 
-        persist(mergeServerUser(serverUser, user));
+        setUser(mergeServerUser(serverUser, user));
         return true;
       } catch (err) {
         console.warn('[Auth] Unable to verify OTP:', err);
         return false;
       }
     },
-    [persist, user]
+    [user]
   );
 
   const loginWithGoogle = useCallback(async (nextUrl = '/account') => {
@@ -186,17 +165,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     await fetch('/api/auth/session', { method: 'DELETE' });
-    persist(null);
-  }, [persist]);
+    setUser(null);
+    try {
+      window.localStorage.removeItem('afrofade_auth_v1');
+    } catch {}
+  }, []);
 
   const updateProfile = useCallback((patch: Partial<SalonProfileFields>) => {
     setUser((prev) => {
       if (!prev) return prev;
-      const next = { ...prev, profile: { ...prev.profile, ...patch } };
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
+      return { ...prev, profile: { ...prev.profile, ...patch } };
     });
   }, []);
 
