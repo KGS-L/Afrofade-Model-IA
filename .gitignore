@@ -70,3 +70,5 @@ htmlcov/
 *.swo
 .DS_Store
 Thumbs.db
+web/tsconfig.tsbuildinfo
+api/main.py
