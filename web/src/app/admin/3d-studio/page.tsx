@@ -572,16 +572,53 @@ export default function Admin3DStudioPage() {
       {activeTab === 'dataset' && (
         <div className="space-y-6">
           <div className="bg-card border border-ink/10 rounded-card p-6 shadow-soft">
-            <h2 className="font-display text-2xl">
-              {studioSpace === 'human_head'
-                ? 'Catalogue 3D - Visages & Têtes Humaines Africaines'
-                : 'Catalogue 3D - Maillages Coiffures & Coupes Afro'}
-            </h2>
-            <p className="text-sm text-ink-soft mt-1">
-              {studioSpace === 'human_head'
-                ? "Scans et maillages 3D photoréalistes de têtes humaines africaines pour l'entraînement Hunyuan3D 2.0."
-                : "Maillages 3D isolés de cheveux et coupes Afro pour l'entraînement LoRA."}
-            </p>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="font-display text-2xl">
+                  {studioSpace === 'human_head'
+                    ? 'Catalogue 3D - Visages & Têtes Humaines Africaines'
+                    : 'Catalogue 3D - Maillages Coiffures & Coupes Afro'}
+                </h2>
+                <p className="text-sm text-ink-soft mt-1">
+                  {studioSpace === 'human_head'
+                    ? "Scans et maillages 3D photoréalistes de têtes humaines africaines pour l'entraînement Hunyuan3D 2.0."
+                    : "Maillages 3D isolés de cheveux et coupes Afro pour l'entraînement LoRA."}
+                </p>
+              </div>
+
+              {studioSpace === 'human_head' && (
+                <Link
+                  href="/rituel"
+                  className="min-h-[44px] px-5 rounded-pill bg-terracotta text-white font-bold text-xs inline-flex items-center gap-2 shadow-soft hover:bg-terracotta-dark transition-all shrink-0"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Tester le Rituel avec ma Tête (Gratuit Admin)
+                </Link>
+              )}
+            </div>
+
+            {studioSpace === 'human_head' && (
+              <div className="mt-6 bg-gradient-to-r from-terracotta to-amber-600 text-white p-5 sm:p-6 rounded-card shadow-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-pill bg-white/20">
+                      👑 Privilège Administrateur
+                    </span>
+                  </div>
+                  <h3 className="font-display text-xl sm:text-2xl">Tester le Rituel avec ma Propre Tête</h3>
+                  <p className="text-xs opacity-90 max-w-xl">
+                    Scannez votre vrai visage ou importez vos photos pour générer la reconstruction 3D photoréaliste de votre propre tête (0 crédit consommé).
+                  </p>
+                </div>
+                <Link
+                  href="/rituel"
+                  className="min-h-[46px] px-6 rounded-pill bg-white text-terracotta font-bold text-xs inline-flex items-center gap-2 shadow-soft hover:bg-cream transition-all shrink-0"
+                >
+                  <Sparkles className="w-4 h-4 text-terracotta" />
+                  Lancer le Scan & Tester le Rituel
+                </Link>
+              </div>
+            )}
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
               {filteredTaxonomies.map((tax) => (

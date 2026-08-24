@@ -105,7 +105,11 @@ export default function RituelPage() {
       return;
     }
     if (user.role === 'admin') {
-      setAccess({ loading: false, allowed: false, message: 'Le compte administrateur ne consomme pas le moteur de production.' });
+      setAccess({
+        loading: false,
+        allowed: true,
+        message: '👑 Accès Administrateur Débloqué : Vos tests du Rituel 3D sont 100% GRATUITS et illimités !',
+      });
       return;
     }
 

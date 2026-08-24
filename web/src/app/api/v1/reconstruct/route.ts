@@ -34,9 +34,6 @@ export async function POST(request: NextRequest) {
   try {
     const principal = await getVerifiedPrincipal(request);
     if (!principal) return NextResponse.json({ error: 'Authentification requise.' }, { status: 401 });
-    if (principal.role === 'admin') {
-      return NextResponse.json({ error: 'La reconstruction n’est pas disponible depuis un compte administrateur.' }, { status: 403 });
-    }
 
     const body = await request.json();
     const payloadPhotos = body?.photos_urls || body?.photos;
@@ -162,8 +159,9 @@ export async function POST(request: NextRequest) {
 
       const meshGlbUrl = `/api/v1/models/${jobId}.glb`;
       let usage: unknown;
-
-      if (principal.role === 'customer') {
+      if (principal.role === 'admin') {
+        usage = { admin_free_test: true, balance: 999, head_id: jobId };
+      } else if (principal.role === 'customer') {
         const { data, error } = await supabaseAdmin.rpc('finalize_customer_reconstruction', {
           p_user_id: principal.user.id,
           p_mesh_url: meshGlbUrl,
