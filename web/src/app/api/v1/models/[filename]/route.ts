@@ -21,7 +21,9 @@ export async function GET(
     const supabaseAdmin = getServiceSupabase();
     let authorized = false;
 
-    if (principal.role === 'customer') {
+    if (principal.role === 'admin') {
+      authorized = true;
+    } else if (principal.role === 'customer') {
       const { data, error } = await supabaseAdmin
         .from('customer_heads')
         .select('id')
