@@ -10,6 +10,12 @@ import time
 import logging
 
 try:
+    from PIL import Image, ImageDraw
+except ImportError:
+    Image = None
+    ImageDraw = None
+
+try:
     import numpy as np
 except ImportError:
     class DummyNumpy:
@@ -173,6 +179,10 @@ class SharedIdentityFitter:
         """
         Dessine les landmarks FLAME reprojetés (vert) par-dessus les landmarks MediaPipe (rouge).
         """
+        if Image is None or ImageDraw is None:
+            logger.warning("PIL Image/ImageDraw unavailable, skipping proof image save.")
+            return
+
         if os.path.exists(base_proof_path):
             img = Image.open(base_proof_path).convert("RGB")
         else:
