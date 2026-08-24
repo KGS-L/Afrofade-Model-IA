@@ -82,9 +82,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cached = raw ? (JSON.parse(raw) as AuthUser) : null;
     } catch {}
 
+    const clearStaleSession = () => {
+      persist(null);
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+        document.cookie = 'afrofade_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      } catch {}
+    };
+
     fetchServerSession()
-      .then((serverUser) => (serverUser ? persist(mergeServerUser(serverUser, cached)) : persist(null)))
-      .catch(() => persist(null))
+      .then((serverUser) => {
+        if (serverUser) {
+          persist(mergeServerUser(serverUser, cached));
+        } else {
+          clearStaleSession();
+        }
+      })
+      .catch(() => clearStaleSession())
       .finally(() => setHydrated(true));
 
     const paymentPending = new URLSearchParams(window.location.search).get('payment') === 'pending';
