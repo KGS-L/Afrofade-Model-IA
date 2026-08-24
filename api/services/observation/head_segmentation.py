@@ -4,13 +4,17 @@ Accepts local files, HTTPS URLs, browser data URLs, bytes and numpy arrays.
 Invalid/unreachable inputs fail closed instead of fabricating a synthetic face.
 """
 
+from __future__ import annotations
 from typing import Dict, Any, List, Tuple
 import base64
 import io
 import os
 import logging
 import urllib.request
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 from PIL import Image, ImageDraw, UnidentifiedImageError
 
 logger = logging.getLogger("afrofade.head_segmentation")

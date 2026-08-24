@@ -27,6 +27,11 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, hydrated, logout } = useAuth();
 
+  // Sur la page de connexion, masquer le header global pour offrir un écran d'authentification épuré
+  if (pathname === '/connexion') {
+    return null;
+  }
+
   const pageBadge = getPageBadge(pathname);
 
   let accountPath = '/account';
