@@ -127,7 +127,7 @@ class ReconstructionPipelineService:
 
         return ReconstructedHeadPayload(
             glb_bytes=glb_bytes,
-            provider="flame_pytorch",
+            provider="hunyuan3d_v2",
             processing_time_ms=processing_ms,
             vertices_count=int(len(vertices_fitted)),
             polygon_count=int(len(faces)),

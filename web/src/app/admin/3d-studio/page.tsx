@@ -427,11 +427,8 @@ export default function Admin3DStudioPage() {
                     disabled={isRunning || busy}
                     className="w-full min-h-[44px] rounded-input bg-cream border border-ink/10 px-4 font-bold"
                   >
-                    <option value="all">Toutes les taxonomies (Modèle Général Afro)</option>
-                    <option value="knotless-braids">Knotless Braids uniquement</option>
-                    <option value="low-taper-fade">Low Taper Fade uniquement</option>
-                    <option value="short-locks">Short Locks uniquement</option>
-                    <option value="cornrows">Cornrows uniquement</option>
+                    <option value="hunyuan-head-african">Hunyuan3D 2.0 — Tête Humaine Africaine Photoréaliste</option>
+                    <option value="low-taper-fade">Low Taper Fade & Line-Up uniquement</option>
                   </select>
                 </div>
               </div>
